@@ -1,0 +1,79 @@
+[package]
+name = "luapkg"
+version = "0.1.0"
+edition = "2021"
+description = "A minimal Lua package manager built on rattler"
+
+[[bin]]
+name = "luapkg"
+path = "src/main.rs"
+
+[features]
+default = ["rustls-tls"]
+rustls-tls = [
+    "reqwest/rustls-tls",
+    "reqwest/rustls-tls-native-roots",
+    "rattler/rustls-tls",
+    "rattler_cache/rustls-tls",
+    "rattler_networking/rustls-tls",
+    "rattler_repodata_gateway/rustls-tls",
+]
+
+[dependencies]
+# Core rattler crates — the heart of the book.
+# In a real project these would be crates.io versions; here we use the local
+# workspace so the book can be developed without network access.
+rattler = { path = "references/rattler/crates/rattler", default-features = false, features = ["indicatif"] }
+rattler_cache = { path = "references/rattler/crates/rattler_cache", default-features = false }
+rattler_conda_types = { path = "references/rattler/crates/rattler_conda_types", default-features = false }
+rattler_digest = { path = "references/rattler/crates/rattler_digest", default-features = false }
+rattler_networking = { path = "references/rattler/crates/rattler_networking", default-features = false, features = ["system-integration"] }
+rattler_package_streaming = { path = "references/rattler/crates/rattler_package_streaming", default-features = false }
+rattler_repodata_gateway = { path = "references/rattler/crates/rattler_repodata_gateway", default-features = false, features = ["gateway"] }
+rattler_shell = { path = "references/rattler/crates/rattler_shell", default-features = false }
+rattler_solve = { path = "references/rattler/crates/rattler_solve", default-features = false, features = ["resolvo"] }
+rattler_index = { path = "references/rattler/crates/rattler_index", default-features = false }
+rattler_virtual_packages = { path = "references/rattler/crates/rattler_virtual_packages", default-features = false }
+
+# Async runtime
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process"] }
+
+# CLI argument parsing
+clap = { version = "4", features = ["derive", "color", "suggestions"] }
+
+# Error handling — miette gives beautiful terminal diagnostics
+miette = { version = "7", features = ["fancy"] }
+thiserror = "2"
+
+# Serialization — manifest I/O
+serde = { version = "1", features = ["derive"] }
+toml = "0.9"
+
+# HTTP client (versions must match what rattler expects)
+reqwest = { version = "0.12", default-features = false, features = ["stream"] }
+reqwest-middleware = "0.4"
+
+# Progress bars
+indicatif = "0.18"
+
+# Console formatting
+console = "0.16"
+
+# Timestamps for package metadata
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
+
+# SHA-256 for paths.json integrity data
+sha2 = "0.10"
+
+# JSON serialization used directly in build command
+serde_json = "1"
+
+# Temporary directory for build workspace
+tempfile = "3"
+
+# Directory walking for collecting build outputs
+walkdir = "2"
+
+# Logging / tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }

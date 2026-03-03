@@ -1,0 +1,43 @@
+references/
+
+# Rust build artifacts
+/target/
+
+# luapkg environment (installed packages)
+.luapkg/
+
+# Built conda packages (example build outputs)
+examples/output/
+examples/**/output/
+**/*.conda
+
+# Editor / IDE
+.idea
+.vscode
+*.iml
+
+# macOS
+.DS_Store
+
+# Environment config files (bind-mounted in dev container, not project files)
+.bash_profile
+.bashrc
+.gitconfig
+.zprofile
+.zshrc
+.profile
+.ripgreprc
+.mcp.json
+
+# Git internals that may appear as stray files in dev containers
+/HEAD
+/config
+/hooks
+/refs
+/objects
+
+# Claude Code session data
+.claude/
+
+# mdBook output
+book/book/

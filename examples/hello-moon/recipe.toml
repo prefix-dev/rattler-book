@@ -1,0 +1,14 @@
+[package]
+name        = "hello-moon"
+version     = "0.1.0"
+build_number = 0
+license     = "MIT"
+description = "Demo app: searches a package DB using moonjson, mooncolor, moontemplate"
+
+[requirements]
+build = ["lua >=5.4"]
+run   = ["lua >=5.4", "moonjson >=0.1", "mooncolor >=0.1", "moontemplate >=0.1"]
+
+[build]
+script = "build.lua"
+noarch = true

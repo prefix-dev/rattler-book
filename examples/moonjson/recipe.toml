@@ -1,0 +1,14 @@
+[package]
+name        = "moonjson"
+version     = "0.1.0"
+build_number = 0
+license     = "MIT"
+description = "A tiny pure-Lua JSON encoder/decoder"
+
+[requirements]
+# No build-time deps beyond Lua itself (added automatically by luapkg build).
+run = ["lua >=5.4"]
+
+[build]
+script = "build.lua"
+noarch = true

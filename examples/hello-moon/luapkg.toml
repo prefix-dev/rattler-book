@@ -1,0 +1,24 @@
+# hello-moon — example app demonstrating luapkg
+#
+# Build the library packages first (from the examples/ directory):
+#
+#   cd examples/moonjson     && luapkg build --output-dir ../channel
+#   cd examples/mooncolor    && luapkg build --output-dir ../channel
+#   cd examples/moontemplate && luapkg build --output-dir ../channel
+#
+# Then install and run:
+#
+#   cd examples/hello-moon
+#   luapkg install
+#   luapkg run lua bin/hello-moon.lua
+#   luapkg run lua bin/hello-moon.lua json
+
+[project]
+name     = "hello-moon"
+channels = ["conda-forge", "../channel"]   # ../channel = locally built packages
+
+[dependencies]
+lua          = ">=5.4"
+moonjson     = "*"
+mooncolor    = "*"
+moontemplate = "*"
