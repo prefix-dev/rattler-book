@@ -222,13 +222,10 @@ for entry in archive.entries()? {
 }
 ```
 
-`zstd::Decoder` wraps any `Read` and decompresses on the fly.
-`tar::Archive` wraps any `Read` and parses tar headers on the fly.
-`std::io::copy` moves data from the tar entry to the destination file in
-a fixed-size buffer.
-
-At no point does the entire archive reside in memory.  This is how rattler can
-install a 500 MB package on a machine with only 256 MB RAM.
+The decompressor, tar parser, and file writer are chained together so that data
+flows through in small chunks.  At no point does the entire archive reside in
+memory.  This is how rattler can install a 500 MB package on a machine with only
+256 MB RAM.
 
 ## Summary
 

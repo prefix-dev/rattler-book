@@ -221,16 +221,13 @@ A few points about the recipe schema:
 - Source paths can be absolute or relative to the recipe file. The default
   `"."` means the directory containing `recipe.toml`.
 
-The `#[serde(default)]` annotations on fields make the entire `[source]`,
-`[channels]`, `[requirements]`, and `[build]` sections optional.
+The `#[serde(default)]` annotations make the `[source]`, `[channels]`,
+`[requirements]`, and `[build]` sections optional.
 
 ## The build script prelude
 
 Writing a build script that manually uses `os.execute("cp ...")` works but is
 tedious.  We embed a Lua prelude that provides helper functions.
-
-`include_str!` reads a file *at compile time* and bakes it into the binary as a
-`&str`.  No file path needed at runtime, no missing-file errors.
 
 The prelude defines helpers like `install_lua(pattern)`,
 `install_bin(path)`, `install_share(path, pkg_name)` and sets globals like
@@ -881,12 +878,17 @@ We create two directories:
 - **`install_prefix`**: the "fake root" where the build script installs files.
   Everything in here ends up in the package.
 
-`tempfile::tempdir()` creates a temporary directory and returns a `TempDir`
-handle.  When the handle is dropped (at the end of `execute`), the directory
-is automatically deleted.  This is the RAII pattern: resource cleanup tied to
-object lifetime.
+The temporary directory is automatically cleaned up when `work_dir` goes out of
+scope.
 
-The two-prefix design is build isolation. Tools in `build_prefix` (compilers, interpreters, build utilities) are available during the build but never leak into the final package. Without this separation, a build tool could accidentally end up as a runtime dependency, making the package larger and less portable. This is the same principle behind Debian's Build-Depends vs Depends, and it is a key requirement for reproducible builds.
+!!! info "Build isolation"
+
+    The two-prefix design is build isolation. Tools in `build_prefix`
+    (compilers, interpreters, build utilities) are available during the build
+    but never leak into the final package. Without this separation, a build tool
+    could accidentally end up as a runtime dependency, making the package larger
+    and less portable. This is the same principle behind Debian's Build-Depends
+    vs Depends, and it is a key requirement for reproducible builds.
 
 ## Step 2: Install build dependencies
 
@@ -915,10 +917,6 @@ We reuse `install_from_manifest`, the same function `luapkg install` uses.  We
 construct a temporary `Manifest` pointing at `build_prefix` instead of the
 project's environment.
 
-`"splitn(2, ' ')"` splits the string at most twice: `"lua >=5.4"` becomes
-`["lua", ">=5.4"]`.  The `n` in `splitn` is the maximum number of parts, not
-splits.
-
 ## Step 3: Run the build script
 
 We locate the Lua interpreter in the build prefix and run the user's build script through a wrapper that loads the prelude first.
@@ -936,10 +934,6 @@ let wrapper_src = format!(
 We write a tiny Lua wrapper that loads the prelude then runs the user's script.
 We use a wrapper file rather than `-e '...'` so that error messages show correct
 line numbers and the real filename instead of `<string>`.
-
-Using `{:?}` (debug format) for path strings inserts proper Lua string escaping;
-if the path contains backslashes (Windows) or special characters, they'll be
-correctly escaped as Lua string literals.
 
 ```rust
 let status = tokio::process::Command::new(lua_bin)
@@ -982,10 +976,6 @@ let index = IndexJson {
 };
 ```
 
-`PackageName` and `VersionWithSource` are rattler's strongly-typed wrappers that
-validate their inputs.  `PackageName::from_str("lua 5.4")` returns an error
-because spaces aren't allowed in package names; you catch bad recipe data early.
-
 The `noarch` field is a design axis worth understanding. When `noarch` is true (as it is for pure-Lua packages), the package is built once and works on all platforms, stored under the `noarch/` subdirectory. When false, the package is platform-specific and must be built separately for each target. Choosing `noarch` where possible reduces build and hosting costs, but any package containing compiled code or platform-specific paths must be built per-platform.
 
 ### `info/paths.json`
@@ -1023,9 +1013,6 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
 }
 ```
 
-`WalkDir` recursively walks a directory tree.  `.filter_map(|e| e.ok())` skips
-entries that failed (permission errors, etc.) rather than halting.
-
 The SHA-256 hash is computed with the `sha2` crate:
 
 ```rust
@@ -1049,10 +1036,6 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
 ```
 
 We read the file in 64 KiB chunks to avoid loading the entire file into memory.
-The `loop` / `break` pattern here is a manual streaming read; `BufReader::read`
-returns `0` when the file is exhausted.  `rattler_digest::Sha256Hash` is a type
-alias for `sha2::digest::Output<Sha256>`, the same type that
-`Sha256::finalize()` returns, so no conversion is needed.
 
 ## Step 5: Pack into `.conda`
 
@@ -1118,7 +1101,14 @@ channels = ["./output", "conda-forge"]
 moonshine = ">=0.3"
 ```
 
-For a production package manager, local indexing is only the first step. You would also need a way to push packages to a remote server, sign them so consumers can verify authenticity, and define a trust model (who is allowed to publish, and how do you revoke a compromised key). These are substantial features that we skip in luapkg, but they are the difference between a local build tool and a real distribution system.
+!!! note "Beyond local indexing"
+
+    For a production package manager, local indexing is only the first step. You
+    would also need a way to push packages to a remote server, sign them so
+    consumers can verify authenticity, and define a trust model (who is allowed
+    to publish, and how do you revoke a compromised key). These are substantial
+    features that we skip in luapkg, but they are the difference between a local
+    build tool and a real distribution system.
 
 ## Summary
 

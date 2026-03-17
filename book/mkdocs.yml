@@ -27,13 +27,16 @@ theme:
     - navigation.sections
     - navigation.expand
     - navigation.top
+    - navigation.footer
+    - navigation.tabs
     - content.code.copy
+    - content.code.annotate
     - search.suggest
     - search.highlight
     - toc.integrate
 
 nav:
-  - Introduction: introduction.md
+  - Introduction: index.md
   - Part I — Building a Package Manager:
     - 1. What Is a Package Manager?: ch01-what-is-a-package-manager.md
     - 2. Setting Up the Project: ch02-project-setup.md
@@ -53,6 +56,10 @@ nav:
 plugins:
   - search
   - entangled
+  - redirects:
+      redirect_maps:
+        'introduction.md': 'index.md'
+  - print-site
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -66,6 +73,9 @@ markdown_extensions:
   - def_list
   - admonition
   - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
   - toc:
       permalink: true
   - tables

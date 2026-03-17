@@ -151,7 +151,14 @@ rattler caches repodata on disk so it doesn't re-download on every run.
 - Windows: `%APPDATA%\rattler\`
 
 By sharing this cache with pixi and rattler-build, packages are downloaded only
-once across all tools. The cache keys are content hashes, not name-plus-version pairs. This matters because the same package version can be rebuilt (with a different build number or build string), and content-addressed keys prevent stale cache hits when a rebuild produces different files.
+once across all tools.
+
+!!! tip "Content-addressed caching"
+
+    The cache keys are content hashes, not name-plus-version pairs. This
+    matters because the same package version can be rebuilt (with a different
+    build number or build string), and content-addressed keys prevent stale
+    cache hits when a rebuild produces different files.
 
 ## The HTTP client
 
@@ -188,24 +195,6 @@ Middleware intercepts every request and response, allowing:
 
 Web frameworks use the same pattern: a chain of handlers, each calling
 `next.run(request)` to pass to the next one.
-
-### `Arc`: sharing ownership
-
-```rust
-.with_arc(Arc::new(AuthenticationMiddleware::from_env_and_defaults()?))
-```
-
-`Arc<T>` is **atomically reference counted**, a smart pointer that allows
-multiple owners.  When you clone an `Arc`, you get a new pointer to the *same*
-allocation; the data is freed when the last `Arc` is dropped.
-
-We use `Arc` here because `reqwest_middleware` needs to clone the middleware
-internally (to send it to multiple threads), but `AuthenticationMiddleware` may
-hold state (credentials) that we don't want to copy.
-
-> **`Arc` vs `Rc`**: `Rc` is the single-threaded version; `Arc` is
-> thread-safe.  Since we're using Tokio with multiple threads, we always use
-> `Arc`.
 
 ## Channels
 
@@ -305,7 +294,14 @@ The naive approach fetches all of `repodata.json` and loads it into RAM.  For
 conda-forge that file is ~300 MB.  That's slow on the first run and wasteful when
 you only need packages starting with `lua`.
 
-The sparse and sharded formats exist because conda-forge outgrew the full-file approach. With over 200,000 packages, the full `repodata.json` exceeds 300 MB. Downloading and parsing that on every install was the single biggest latency bottleneck for conda users. Sharding shifts work to the server (pre-splitting repodata by package name) to save the client from downloading data it will never read.
+!!! info "Why sharding exists"
+
+    The sparse and sharded formats exist because conda-forge outgrew the
+    full-file approach. With over 200,000 packages, the full `repodata.json`
+    exceeds 300 MB. Downloading and parsing that on every install was the single
+    biggest latency bottleneck for conda users. Sharding shifts work to the
+    server (pre-splitting repodata by package name) to save the client from
+    downloading data it will never read.
 
 The sparse approach works differently:
 
@@ -369,14 +365,8 @@ where
 }
 ```
 
-This is a small generic wrapper in `src/progress.rs`.  It accepts any type `F`
-that implements `IntoFuture`, which includes both `Future`s and types that
-convert *into* a `Future` (like `gateway.query(...)` before you `await` it).
-
-The `impl Into<Cow<'static, str>>` bound on `msg` accepts either `&'static str`
-or `String` without the caller thinking about it.  `Cow` (**C**lone **o**n
-**W**rite) is an enum that's either borrowed (`&str`) or owned (`String`).  It
-lets library functions accept both without forcing an allocation.
+This is a small generic wrapper in `src/progress.rs` that accepts any
+`IntoFuture` (like `gateway.query(...)` before you `await` it).
 
 ## Summary
 

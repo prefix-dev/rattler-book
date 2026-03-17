@@ -17,7 +17,12 @@ many environments use it. Content-addressed keys (rather than name-plus-version)
 
 **2. Hard links**
 
-Packages in the cache are immutable after extraction. No tool or environment modifies them in place. This invariant is what makes hard-linking safe: multiple environments can share the same inodes because nobody writes to them.
+!!! info "Why hard-linking is safe"
+
+    Packages in the cache are immutable after extraction. No tool or environment
+    modifies them in place. This invariant is what makes hard-linking safe:
+    multiple environments can share the same inodes because nobody writes to
+    them.
 
 Files are *hard-linked* from the cache into the target prefix.  A hard link is a
 second directory entry pointing to the same inode.  The data on disk is stored
@@ -33,7 +38,12 @@ cross-volume), rattler falls back to copying.
 
 **3. Transactions**
 
-A naive package manager that unpacks files one by one can leave an environment half-installed if the process is interrupted. Partial installs are one of the most common failure modes in package management and often require manual cleanup.
+!!! warning "Partial installs"
+
+    A naive package manager that unpacks files one by one can leave an
+    environment half-installed if the process is interrupted. Partial installs
+    are one of the most common failure modes in package management and often
+    require manual cleanup.
 
 The Installer computes a **transaction**, a diff between the currently-installed
 state and the desired state, and applies only the changes:
@@ -63,13 +73,6 @@ We configure the installer with a builder and then call `.install()` to apply th
         .context("installing packages")?;
 ```
 
-This is the **builder pattern**, a common Rust idiom for constructing objects
-with many optional parameters.  Each `with_*` method returns `Self`, enabling
-the fluent chain.
-
-The builder collects configuration; `.install(&prefix, solution)` does the
-actual work asynchronously.
-
 ### `with_reporter`
 
 `IndicatifReporter` is a rattler-provided reporter that shows per-package
@@ -91,7 +94,15 @@ example).
 The installer needs to know which packages were *directly* requested (as opposed
 to installed as transitive dependencies).  It records this in the
 `conda-meta/*.json` files so that future updates can correctly distinguish "user
-wants this" from "installed because something else needed it". This distinction drives automatic cleanup: when a direct dependency is removed, the installer can garbage-collect its transitive dependencies that nothing else needs. Both npm and pip added this tracking late in their development, and the lack of it caused years of accumulated orphan packages in user environments.
+wants this" from "installed because something else needed it".
+
+!!! info "Tracking direct vs transitive"
+
+    This distinction drives automatic cleanup: when a direct dependency is
+    removed, the installer can garbage-collect its transitive dependencies that
+    nothing else needs. Both npm and pip added this tracking late in their
+    development, and the lack of it caused years of accumulated orphan packages
+    in user environments.
 
 ## Reading the result
 
@@ -266,9 +277,8 @@ fn split_spec(spec: &str) -> (&str, &str) {
 This splits `"lua >=5.4"` into `("lua", ">=5.4")` or `"luarocks"` into
 `("luarocks", "*")`.
 
-`spec.find(|c: char| c.is_whitespace() || c == '=')` uses a closure as a
-pattern.  `String::find` accepts anything that implements `Pattern`: a char, a
-`&str`, or a closure `Fn(char) -> bool`.
+We split on the first whitespace or `=` character to separate the package name
+from the version constraint.
 
 ## The prefix directory
 
@@ -325,7 +335,7 @@ records the package name, version, build, all installed files, and their hashes.
 
 - The `Installer` computes a transaction (diff) and applies only the changes.
 - Files are hard-linked from the central cache into the prefix.
-- The builder pattern lets you configure complex objects step by step.
+- The `Installer` builder lets you configure complex objects step by step.
 
 In the next chapter we see how to *use* the installed environment by generating
 a shell activation script.

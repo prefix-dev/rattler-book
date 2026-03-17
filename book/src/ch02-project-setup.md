@@ -97,10 +97,11 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 The rattler crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) implement the conda specification. The rest of the dependency list is general-purpose infrastructure: `clap` for CLI parsing, `tokio` for async I/O, `reqwest` for HTTP, and so on.
 
-> **Why so many rattler crates?**  rattler is split into fine-grained crates so
-> you can depend on only the parts you need.  A tool that only needs to solve
-> dependencies doesn't have to pull in the HTTP stack.  We use most of them, so
-> the list is long.
+!!! question "Why so many rattler crates?"
+
+    rattler is split into fine-grained crates so you can depend on only the
+    parts you need.  A tool that only needs to solve dependencies doesn't have
+    to pull in the HTTP stack.  We use most of them, so the list is long.
 
 Package managers surface errors from many sources (network, filesystem, solver conflicts, malformed metadata), so `miette` with `features = ["fancy"]` is worth pulling in early. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string.
 
@@ -216,7 +217,14 @@ async fn async_main() -> miette::Result<()> {
 }
 ```
 
-The runtime configuration splits available CPU cores between two pools. `worker_threads` handles async work (HTTP requests, futures polling), while `max_blocking_threads` handles synchronous operations that would stall the async scheduler (file I/O, archive extraction, solver runs). Giving the blocking pool more threads prevents slow disk operations from starving network requests.
+!!! info "Thread pool sizing"
+
+    The runtime configuration splits available CPU cores between two pools.
+    `worker_threads` handles async work (HTTP requests, futures polling), while
+    `max_blocking_threads` handles synchronous operations that would stall the
+    async scheduler (file I/O, archive extraction, solver runs). Giving the
+    blocking pool more threads prevents slow disk operations from starving
+    network requests.
 
 Let's take it section by section.
 
@@ -240,7 +248,6 @@ control.
 - We set up a Rust project with a clean module tree.
 - Clap's derive macros turn struct definitions into a full CLI parser.
 - Tokio provides the async runtime; we configure two thread pools.
-- `?` and `miette` handle error propagation and display.
 
 In the next chapter we implement the simplest command: `luapkg init`, which
 writes the project manifest.

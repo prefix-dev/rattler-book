@@ -93,7 +93,14 @@ interfere.
 System package managers (`apt`, `brew`) install into global directories.  Conda
 doesn't.
 
-The trade-off is packaging scope: to keep an environment truly self-contained, you need to package everything it depends on, down to low-level libraries like zlib and OpenSSL that system package managers normally provide. That means someone has to build and maintain all of those packages. conda-forge makes this practical by providing a large shared collection of reusable recipes, so you don't have to repackage the world yourself.
+!!! note "The packaging trade-off"
+
+    To keep an environment truly self-contained, you need to package everything
+    it depends on, down to low-level libraries like zlib and OpenSSL that system
+    package managers normally provide. That means someone has to build and
+    maintain all of those packages. conda-forge makes this practical by providing
+    a large shared collection of reusable recipes, so you don't have to
+    repackage the world yourself.
 
 ### Virtual packages
 

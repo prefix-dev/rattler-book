@@ -113,30 +113,6 @@ let activation_env = tokio::task::spawn_blocking(move || {
 It then runs that script and diffs the two snapshots, returning only the changed
 variables as a `HashMap<String, String>`.
 
-## Why `spawn_blocking`?
-
-`run_activation` is synchronous; it shells out and waits for the child process
-to complete.  In an async context (Tokio), blocking the thread stalls the
-entire thread pool worker, starving other futures.
-
-`tokio::task::spawn_blocking` moves the closure to a dedicated thread from
-Tokio's blocking thread pool (the `max_blocking_threads` pool we configured in
-`main`).  The async code `await`s the result without blocking.
-
-```rust
-tokio::task::spawn_blocking(move || {
-    // This runs on a blocking thread, safe to block here
-    activator.run_activation(current_vars, None)
-})
-.await              // async wait for the blocking thread to finish
-.into_diagnostic()? // JoinError: the blocking thread panicked
-.into_diagnostic()? // ActivationError: activation itself failed
-```
-
-The double `.into_diagnostic()?` handles two distinct failure modes:
-- The `JoinError` from `spawn_blocking` (the closure panicked).
-- The `ActivationError` from `run_activation` itself.
-
 ## Spawning the child process
 
 ```rust
@@ -169,7 +145,10 @@ without capturing stdout/stderr.
 
 ## Propagating the exit code
 
-Without exit code propagation, `luapkg run` is unusable in CI: a failing test would appear as a successful pipeline step.
+!!! warning "Exit code propagation"
+
+    Without exit code propagation, `luapkg run` is unusable in CI: a failing
+    test would appear as a successful pipeline step.
 
 ```rust
 if !status.success() {

@@ -15,7 +15,13 @@ A child process cannot modify the environment of its parent.  That's a Unix
 rule with no exceptions.  So when you run `luapkg shell`, it can't just set
 `PATH` for you; it has to print a script that you evaluate in your shell.
 
-`luapkg shell` and `luapkg run` (Chapter 8) represent a design fork. `shell` generates a script the user evaluates, which means it must know the user's shell dialect. `run` spawns a child process with the right environment variables, which is shell-agnostic but only lasts for one command. Most package managers end up needing both.
+!!! info "`shell` vs `run`"
+
+    `luapkg shell` and `luapkg run` (Chapter 8) represent a design fork.
+    `shell` generates a script the user evaluates, which means it must know the
+    user's shell dialect. `run` spawns a child process with the right
+    environment variables, which is shell-agnostic but only lasts for one
+    command. Most package managers end up needing both.
 
 ```bash
 eval $(luapkg shell)         # bash / zsh
@@ -136,9 +142,7 @@ ShellEnum::from_env().unwrap_or_else(|| Bash.into())
 returns `Option<ShellEnum>`.  If the shell isn't recognized, we fall back to
 Bash, which has the widest compatibility.
 
-`Bash.into()` uses the `Into` trait to convert `Bash` (the unit struct) into
-`ShellEnum::Bash(Bash)`.  The `.into()` method is available whenever `From` is
-implemented; `From<Bash> for ShellEnum` is implemented by rattler.
+`Bash.into()` converts the `Bash` struct into `ShellEnum::Bash(Bash)`.
 
 ## `Activator::from_path`
 
@@ -186,7 +190,16 @@ export CONDA_DEFAULT_ENV="/home/user/my-app/.luapkg/env"
 The user evaluates this, and from that point `lua`, `luarocks`, etc. are on their
 PATH.
 
-You might notice that a Lua package manager is setting `CONDA_PREFIX` and `CONDA_SHLVL`. This is because rattler implements conda's activation protocol, and these variables are part of that protocol. The benefit is compatibility: any tool that understands conda environments (editors, CI systems, other package managers) will recognize our environment. The cost is the naming confusion, since "CONDA" has nothing to do with Lua. A production tool could alias these variables, but you would lose the ecosystem compatibility.
+!!! note "Why `CONDA_` variables?"
+
+    You might notice that a Lua package manager is setting `CONDA_PREFIX` and
+    `CONDA_SHLVL`. This is because rattler implements conda's activation
+    protocol, and these variables are part of that protocol. The benefit is
+    compatibility: any tool that understands conda environments (editors, CI
+    systems, other package managers) will recognize our environment. The cost is
+    the naming confusion, since "CONDA" has nothing to do with Lua. A production
+    tool could alias these variables, but you would lose the ecosystem
+    compatibility.
 
 ## Summary
 

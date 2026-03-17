@@ -47,6 +47,35 @@ walks through one part of the implementation.
 the SAT solver, the networking stack.  These chapters stand alone; you can read
 them in any order.
 
+## Literate programming
+
+This book uses [Entangled], a literate programming tool.  The code blocks in
+each chapter are the actual source code.  Entangled extracts them from the
+Markdown into real files that compile and run.
+
+Code blocks that produce a file look like this:
+
+~~~markdown
+``` {.rust file=src/main.rs}
+fn main() { }
+```
+~~~
+
+The `file=` attribute tells Entangled where to write the code.  You can tangle
+all files with:
+
+```console
+pixi run tangle
+```
+
+And stitch source-file edits back into the Markdown with:
+
+```console
+pixi run stitch
+```
+
+[Entangled]: https://entangled.github.io/
+
 ## Running the examples
 
 The easiest way to get started is with [pixi], which manages the Rust toolchain

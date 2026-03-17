@@ -120,11 +120,9 @@ impl<T> Arena<T> {
 }
 ```
 
-`Id<T>` is a `u32` index, not a pointer.  This has several advantages:
-- Cache-friendly: related items are adjacent in memory.
-- Smaller: a `u32` index is 4 bytes; a pointer is 8 bytes.
-- No lifetime annotations: indices don't borrow.
-- Fast: integer comparison vs pointer dereferencing.
+`Id<T>` is a `u32` index, not a pointer.  This keeps items adjacent in memory
+(cache-friendly), uses half the space of a pointer, and avoids the need for
+lifetime annotations.
 
 ### The watch list optimization
 

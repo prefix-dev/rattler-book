@@ -130,20 +130,6 @@ This simpler form is used because the solver doesn't need to know *what kind* of
 virtual package it is.  The name and version are sufficient to match against
 dependency specs.
 
-The conversion is via `From`:
-
-```rust
-impl From<VirtualPackage> for GenericVirtualPackage {
-    fn from(v: VirtualPackage) -> Self {
-        GenericVirtualPackage {
-            name: v.as_generic().name,
-            version: v.as_generic().version,
-            build_string: v.as_generic().build_string,
-        }
-    }
-}
-```
-
 ## Overriding for cross-compilation
 
 When building packages for a different platform (cross-compiling), you want the

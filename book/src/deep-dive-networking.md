@@ -51,22 +51,10 @@ let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
     .build();
 ```
 
-Each middleware implements a trait:
-
-```rust
-#[async_trait]
-pub trait Middleware: Send + Sync {
-    async fn handle(
-        &self,
-        req: Request,
-        extensions: &mut Extensions,
-        next: Next<'_>,
-    ) -> Result<Response>;
-}
-```
-
-`next.run(req, extensions).await` passes the request to the next middleware in
-the chain (or to the actual HTTP client if this is the last middleware).
+Each middleware implements the `Middleware` trait.  Its `handle` method receives
+the request and a `next` handle; calling `next.run(req, extensions).await`
+passes the request to the next middleware in the chain (or to the actual HTTP
+client if this is the last middleware).
 
 ## `AuthenticationMiddleware`
 
@@ -164,9 +152,9 @@ let middleware_client = ClientBuilder::new(raw_client.clone())
     .build();
 ```
 
-`raw_client.clone()` is cheap (just an `Arc` clone).  We use the raw client for
-`OciMiddleware` (which internally makes follow-up requests) and the middleware
-client for everything else.
+Cloning `reqwest::Client` is cheap (it shares the connection pool internally).
+We use the raw client for `OciMiddleware` (which internally makes follow-up
+requests) and the middleware client for everything else.
 
 The client maintains persistent TCP connections and reuses them across requests
 to the same host.  This matters for repodata fetching: hundreds of shard files
@@ -174,20 +162,9 @@ from the same server can share a handful of connections.
 
 ## Streaming responses for large files
 
-```rust
-// Conceptually (from rattler_repodata_gateway internals)
-let response = client.get(url).send().await?;
-let mut stream = response.bytes_stream();
-
-while let Some(chunk) = stream.next().await {
-    let bytes = chunk?;
-    // process chunk
-}
-```
-
-`bytes_stream()` returns an async stream of byte chunks.  The HTTP response body
-is never fully loaded into memory; we process each chunk as it arrives.  This
-is how rattler downloads a 300 MB `repodata.json` without needing 300 MB of RAM.
+Response bodies are consumed as async streams of byte chunks, so the HTTP
+response is never fully loaded into memory.  This is how rattler downloads a
+300 MB `repodata.json` without needing 300 MB of RAM.
 
 ## Retry middleware
 

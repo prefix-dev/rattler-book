@@ -83,7 +83,15 @@ When rattler installs a package, it writes a JSON file to
 installed.  `collect_from_prefix` reads all of those files.
 
 We pass the installed packages to the solver as **locked packages**: versions the
-solver should prefer to keep if possible.  Without this, every `luapkg install` could silently upgrade transitive dependencies even when the manifest hasn't changed. That kind of drift is a common source of "it worked yesterday" bugs. Locking gives you environmental stability: the solver only changes what it must to satisfy new or modified constraints.
+solver should prefer to keep if possible.
+
+!!! warning "Why locking matters"
+
+    Without locking, every `luapkg install` could silently upgrade transitive
+    dependencies even when the manifest hasn't changed. That kind of drift is a
+    common source of "it worked yesterday" bugs. Locking gives you environmental
+    stability: the solver only changes what it must to satisfy new or modified
+    constraints.
 
 ## Building the solver task
 
@@ -104,9 +112,8 @@ We assemble the installed packages, virtual packages, specs, and repodata into a
 ```
 
 `SolverTask::from_iter(&repo_data)` builds the task's `available_packages` field
-from our repodata.  The `..SolverTask::from_iter(...)` syntax is **struct update
-syntax**: it fills in all fields from the base expression, then overrides the
-explicitly-named ones.
+from our repodata.  We override the remaining fields with our specs, locked
+packages, and virtual packages.
 
 The complete `SolverTask` contains:
 
@@ -118,7 +125,12 @@ The complete `SolverTask` contains:
 | `virtual_packages` | Host system capabilities |
 | `pinned_packages` | Packages that must stay at a specific version |
 
-The difference between locked and pinned is important: locked packages are a *preference* that the solver may override if constraints demand it, while pinned packages are a *hard constraint* that the solver must satisfy or report as a conflict.
+!!! tip "Locked vs pinned"
+
+    The difference between locked and pinned is important: locked packages are a
+    *preference* that the solver may override if constraints demand it, while
+    pinned packages are a *hard constraint* that the solver must satisfy or
+    report as a conflict.
 
 ## Running the solver
 
@@ -149,12 +161,6 @@ pub fn with_spinner_sync<T, F: FnOnce() -> T>(msg: impl Into<Cow<'static, str>>,
     result
 }
 ```
-
-Note that we *don't* use `spawn_blocking` here even though this is synchronous
-code inside an async context.  For short operations (solver typically finishes in
-milliseconds) it's fine to run directly.  For long-running synchronous work
-(parsing huge files, hashing data) you'd use `tokio::task::spawn_blocking` to
-avoid blocking the async scheduler.
 
 ## What the solver returns
 
