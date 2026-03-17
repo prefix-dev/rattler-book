@@ -1,4 +1,5 @@
 site_name: The Rattler Book
+site_url: https://prefix-dev.github.io/luapkg/
 site_description: Building a package manager with rattler
 docs_dir: src
 site_dir: book
