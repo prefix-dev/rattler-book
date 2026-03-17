@@ -2,8 +2,10 @@
 
 Every `luapkg` project is described by a single file: `luapkg.toml`.  In this
 chapter we implement the `init` command (which creates it) and the `Manifest`
-struct (which parses it).  Along the way we cover serde, error handling with
-miette, and Rust's `Option` type.
+struct (which parses it).  We also cover serde, error handling with miette, and
+Rust's `Option` type.
+
+A manifest records human intent: which packages the user wants and from which channels. It is distinct from a lock file, which records the exact versions the solver chose, including transitive dependencies. The manifest says "I want `lua >=5.4`"; a lock file says "install `lua 5.4.7 build h5eee18b_0` from conda-forge, plus these 12 transitive dependencies at these exact versions." We implement only the manifest in luapkg, but understanding the distinction matters for any package manager design.
 
 ## What the manifest looks like
 
@@ -20,7 +22,7 @@ luarocks = "*"
 The `[project]` section contains metadata; `[dependencies]` maps package names
 to version constraints.
 
-## Rust concept: structs and serde
+## Modeling the manifest
 
 We model the manifest as nested Rust structs:
 
@@ -51,15 +53,19 @@ fn default_channels() -> Vec<String> {
 }
 ```
 
+Channels are listed in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine does not silently pick up a different channel list.
+
+Defaulting to `conda-forge` is an opinionated choice. conda-forge is the largest community channel and covers most packages, so it is the right default for getting started. A production package manager might require an explicit channel list to avoid surprises, but for luapkg the convenience outweighs the risk.
+
 The `#[derive(Serialize, Deserialize)]` attributes tell serde how to convert
-between the struct and any serialization format (TOML, JSON, YAML, …).  We use
+between the struct and any serialization format (TOML, JSON, YAML, ...).  We use
 TOML for the manifest file.
 
 ### `#[serde(default)]`
 
 When a field is marked `#[serde(default)]`, serde uses the type's `Default`
 implementation if the key is absent in the file.  For `HashMap`, the default is
-an empty map — so `[dependencies]` is optional.
+an empty map, so `[dependencies]` is optional.
 
 ```toml
 # This is a valid luapkg.toml with no dependencies:
@@ -85,6 +91,8 @@ If `channels` is missing from the TOML, serde calls `default_channels()` to get
 
 ## Reading and writing TOML
 
+TOML works well for manifests because it is readable without documentation, preserves comments on round-trip (with the right library), and has strict typing that catches mistakes like quoting a number.
+
 ```rust
 pub fn from_path(path: &Path) -> miette::Result<Self> {
     let content = std::fs::read_to_string(path)
@@ -100,96 +108,6 @@ pub fn from_path(path: &Path) -> miette::Result<Self> {
 `std::fs::read_to_string` returns `Result<String, std::io::Error>`.  We convert
 that to `miette::Result` with `into_diagnostic()`, then attach a context message
 with `with_context`.
-
-## Rust concept: error handling with `miette`
-
-Rust has no exceptions.  Errors are values, returned as `Result<T, E>`.
-
-For library code, the idiomatic error type is something from `thiserror` — an
-enum with variants for each distinct error condition.  But for CLI *application*
-code, we want to display errors nicely to the user without enumerating every
-possible failure.  That's what `miette` is for.
-
-`miette::Result<T>` is an alias for `Result<T, miette::Report>`.  A `Report`
-can wrap *any* error that implements `std::error::Error`, and it knows how to
-render it with colors, source location pointers, and contextual messages.
-
-```rust
-// Convert any std error → miette::Report
-.into_diagnostic()?
-
-// Attach extra context (shown in the error output)
-.with_context(|| "while reading the manifest")?
-```
-
-If the user runs `luapkg install` without a `luapkg.toml`, they see:
-
-```
-Error: No `luapkg.toml` found in `/home/user/my-project`.
-       Run `luapkg init` to create one.
-```
-
-Compare this to a bare `unwrap()` panic with a cryptic backtrace.  `miette` is
-what makes a tool feel polished.
-
-### The `bail!` macro
-
-Sometimes you detect an error condition yourself rather than propagating a
-library error:
-
-```rust
-if manifest_path.exists() {
-    miette::bail!(
-        "`{MANIFEST_FILENAME}` already exists in `{}`. \
-         Delete it first if you want to re-initialise.",
-        cwd.display()
-    );
-}
-```
-
-`bail!` constructs a `miette::Report` from a format string and returns it
-immediately from the current function.  It's equivalent to:
-
-```rust
-return Err(miette::miette!("...").into());
-```
-
-## Rust concept: `Option<T>`
-
-Looking at the `init` command:
-
-```rust
-#[derive(Debug, Parser)]
-pub struct Args {
-    /// Name of the project.  Defaults to the current directory name.
-    pub name: Option<String>,
-    ...
-}
-```
-
-`Option<String>` is how Rust expresses "this argument may or may not be
-provided".  It's an enum with two variants: `Some(String)` and `None`.
-
-We use `unwrap_or_else` to supply a fallback:
-
-```rust
-let name = args.name.unwrap_or_else(|| {
-    cwd.file_name()
-        .and_then(|n| n.to_str())
-        .unwrap_or("my-lua-project")
-        .to_string()
-});
-```
-
-`unwrap_or_else` takes a **closure** — an anonymous function written with `||`
-syntax.  The closure is only called if `args.name` is `None`.  If it's `Some`,
-the inner `String` is returned directly.
-
-The chained `.and_then(|n| n.to_str())` pattern is idiomatic Option-chaining.
-`file_name()` returns `Option<&OsStr>`, and `.to_str()` converts it to
-`Option<&str>` (which can fail if the path contains non-UTF-8 bytes).  If
-either step returns `None`, the whole chain short-circuits to `None`, and we fall
-back to `"my-lua-project"`.
 
 ## Implementing `luapkg init`
 
@@ -232,18 +150,16 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 }
 ```
 
-A few things to note:
-
 **`HashMap::from([...])`** is a convenient way to construct a `HashMap` from an
 array of tuples.  Each tuple is `(key, value)`.
 
 **`console::style("✔").green()`** uses the `console` crate to color terminal
-output.  It gracefully degrades when stdout isn't a terminal (redirected to a
+output.  It degrades gracefully when stdout isn't a terminal (redirected to a
 file, CI, etc.).
 
 **`Ok(())`**: every `async fn` that returns `miette::Result<()>` must end with
 `Ok(())` (or an early return via `?` or `bail!`).  The `()` unit type is Rust's
-"void" — a value that carries no information.
+"void", a value that carries no information.
 
 ## `Manifest::find_in_dir`
 
@@ -269,6 +185,8 @@ It returns a tuple `(PathBuf, Manifest)` because callers sometimes need to
 *write back* to the same path (e.g., `luapkg add` modifies the manifest before
 installing).
 
+`find_in_dir` only looks in the directory you pass it. An alternative design, used by Cargo and npm, walks up the directory tree until it finds a manifest. Walk-up is convenient when you run commands from a subdirectory, but it introduces ambiguity: which manifest did the tool find? For luapkg we chose current-directory-only because it is simpler to reason about and avoids accidentally operating on a parent project.
+
 ## The `pub const` pattern
 
 ```rust
@@ -277,7 +195,7 @@ pub const MANIFEST_FILENAME: &str = "luapkg.toml";
 
 Constants in Rust are inlined at compile time.  Making it a `const` in
 `manifest.rs` and importing it everywhere means there's a single source of truth
-for the filename.  The `&str` type is a string slice — a reference to a string
+for the filename.  The `&str` type is a string slice, a reference to a string
 stored in the binary's read-only data segment.
 
 ## Running `luapkg init`
@@ -304,9 +222,6 @@ lua = ">=5.4"
 - `Manifest` is a plain Rust struct derived from `Serialize`/`Deserialize`.
 - `serde` handles TOML reading and writing.
 - `miette` provides friendly error messages with context.
-- `Option<T>` represents optional values; `.unwrap_or_else(closure)` supplies
-  defaults.
-- `bail!` creates and returns an error from a format string.
 
 In the next chapter we'll implement `luapkg install`, starting with the first
 step: fetching package metadata from a conda channel.

@@ -5,6 +5,8 @@ repodata is for: a channel's catalog of available packages.  In this chapter we
 set up the rattler `Gateway` and use it to fetch repodata for our requested
 packages.
 
+Repodata is the contract between server and client. The channel publishes it; the package manager consumes it. How you design this contract determines download speed, caching behavior, and how much work the client does before it can even start solving.
+
 ## What is repodata?
 
 Every conda channel serves a file called `repodata.json` for each supported
@@ -30,7 +32,7 @@ platform.  The file lists every available package with its metadata:
 
 For a large channel like conda-forge, this file can be **hundreds of megabytes**.
 Loading the whole thing into RAM for every `luapkg install` would be slow.  This
-is why rattler ships a "sparse repodata" trick and a sharded format — we'll look
+is why rattler ships a "sparse repodata" trick and a sharded format; we'll look
 at those at the end of this chapter.
 
 ## MatchSpecs: describing what you want
@@ -79,18 +81,6 @@ let specs: Vec<MatchSpec> = manifest
     .collect::<miette::Result<_>>()?;
 ```
 
-### Rust concept: iterators and `collect`
-
-`HashMap::iter()` returns an iterator over `(&String, &String)` pairs.  `.map()`
-transforms each pair using a closure.  `.collect()` gathers the results back into
-a collection.
-
-The return type annotation `collect::<miette::Result<_>>()` tells `collect` to
-accumulate `miette::Result<MatchSpec>` values into a
-`miette::Result<Vec<MatchSpec>>`.  This is a standard Rust pattern: if any element
-is an error, the whole `collect` returns that error.  The `_` lets the compiler
-infer the inner type (`MatchSpec`).
-
 ## The cache directory
 
 rattler caches repodata on disk so it doesn't re-download on every run.
@@ -107,7 +97,7 @@ rattler_cache::ensure_cache_dir(&cache_dir)
 - Windows: `%APPDATA%\rattler\`
 
 By sharing this cache with pixi and rattler-build, packages are downloaded only
-once across all tools.
+once across all tools. The cache keys are content hashes, not name-plus-version pairs. This matters because the same package version can be rebuilt (with a different build number or build string), and content-addressed keys prevent stale cache hits when a rebuild produces different files.
 
 ## The HTTP client
 
@@ -130,6 +120,8 @@ let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
     .build();
 ```
 
+The `.no_gzip()` call disables reqwest's automatic gzip decompression. This is a format-level decision: repodata files are already served as `.json.zst` or `.json.bz2` by the channel, and rattler handles that decompression itself. Letting reqwest also decompress would either double-decompress or interfere with rattler's streaming parser.
+
 ### `reqwest_middleware` and the middleware pattern
 
 `reqwest_middleware` wraps `reqwest::Client` to allow pluggable middleware.
@@ -140,8 +132,8 @@ Middleware intercepts every request and response, allowing:
 - **OciMiddleware**: transparently translates `oci://` URLs to the OCI registry
   API so you can use container registries as conda channels
 
-This is the same middleware pattern you'll find in web frameworks — a chain of
-handlers, each calling `next.run(request)` to pass to the next one.
+Web frameworks use the same pattern: a chain of handlers, each calling
+`next.run(request)` to pass to the next one.
 
 ### `Arc`: sharing ownership
 
@@ -149,7 +141,7 @@ handlers, each calling `next.run(request)` to pass to the next one.
 .with_arc(Arc::new(AuthenticationMiddleware::from_env_and_defaults()?))
 ```
 
-`Arc<T>` is **atomically reference counted** — a smart pointer that allows
+`Arc<T>` is **atomically reference counted**, a smart pointer that allows
 multiple owners.  When you clone an `Arc`, you get a new pointer to the *same*
 allocation; the data is freed when the last `Arc` is dropped.
 
@@ -179,12 +171,12 @@ channel (`"conda-forge"`) or an explicit URL
 (`"https://conda.anaconda.org/conda-forge"`), and it can construct the sub-URLs
 for different platforms.
 
-`ChannelConfig` provides the base URL for named channels — by default
+`ChannelConfig` provides the base URL for named channels, by default
 `https://conda.anaconda.org/`.  You can override it with a local mirror.
 
 ## The Gateway
 
-Now we arrive at the main actor: `rattler_repodata_gateway::Gateway`.
+The main type here is `rattler_repodata_gateway::Gateway`.
 
 ```rust
 let gateway = Gateway::builder()
@@ -201,7 +193,7 @@ let gateway = Gateway::builder()
     .finish();
 ```
 
-The Gateway is a long-lived object — in a real application you'd create it once
+The Gateway is a long-lived object; in a real application you'd create it once
 and reuse it.  It manages:
 - The on-disk repodata cache
 - A package cache (for downloaded archives)
@@ -229,15 +221,14 @@ let repo_data: Vec<RepoData> = with_spinner(
 `gateway.query(...)` builds a `Query` object.  `.recursive(true)` makes the
 critical difference: instead of only fetching records for the directly-requested
 packages, it recursively fetches records for their dependencies, and their
-dependencies' dependencies, and so on — until the transitive closure is
-complete.
+dependencies' dependencies, until the transitive closure is complete.
 
 We pass two platforms: `Platform::current()` (e.g., `linux-64`) and
 `Platform::NoArch`.  NoArch covers pure-Lua packages that work on every
 platform.
 
 The query returns a `Vec<RepoData>`, one entry per channel/platform combination.
-Each `RepoData` is a set of `RepoDataRecord`s — enriched package descriptors
+Each `RepoData` is a set of `RepoDataRecord`s, enriched package descriptors
 that include the download URL alongside the metadata.
 
 ## The sparse repodata trick
@@ -248,6 +239,8 @@ The naive approach fetches all of `repodata.json` and loads it into RAM.  For
 conda-forge that file is ~300 MB.  That's slow on the first run and wasteful when
 you only need packages starting with `lua`.
 
+The sparse and sharded formats exist because conda-forge outgrew the full-file approach. With over 200,000 packages, the full `repodata.json` exceeds 300 MB. Downloading and parsing that on every install was the single biggest latency bottleneck for conda users. Sharding shifts work to the server (pre-splitting repodata by package name) to save the client from downloading data it will never read.
+
 The sparse approach works differently:
 
 1. Download a compact **name index** that maps package names to the byte ranges
@@ -257,9 +250,9 @@ The sparse approach works differently:
 3. Cache those ranges separately.
 4. When transitive deps ask for `libgcc-ng`, fetch only those ranges.
 
-This dramatically reduces both download size and parse time.  The sharded format
-goes further: the index is split into small `shard` files, one per package name,
-so you only download the shards you need.
+This reduces both download size and parse time.  The sharded format goes further:
+the index is split into small `shard` files, one per package name, so you only
+download the shards you need.
 
 rattler supports all three formats (plain JSON, sparse, sharded) transparently.
 Setting `sharded_enabled: true` tells it to prefer the sharded format when
@@ -283,12 +276,12 @@ where
 ```
 
 This is a small generic wrapper in `src/progress.rs`.  It accepts any type `F`
-that implements `IntoFuture` — which includes both `Future`s and types that
+that implements `IntoFuture`, which includes both `Future`s and types that
 convert *into* a `Future` (like `gateway.query(...)` before you `await` it).
 
 The `impl Into<Cow<'static, str>>` bound on `msg` accepts either `&'static str`
 or `String` without the caller thinking about it.  `Cow` (**C**lone **o**n
-**W**rite) is an enum that's either borrowed (`&str`) or owned (`String`) — it
+**W**rite) is an enum that's either borrowed (`&str`) or owned (`String`).  It
 lets library functions accept both without forcing an allocation.
 
 ## Summary
@@ -297,8 +290,6 @@ lets library functions accept both without forcing an allocation.
 - MatchSpecs describe what packages to look for.
 - The `Gateway` fetches repodata efficiently using sparse or sharded formats.
 - We query with `.recursive(true)` to get all transitive dependencies.
-- `Arc` allows multiple owners of shared state across threads.
-- `Cow` avoids unnecessary string allocations in generic APIs.
 
 In the next chapter we take the repodata and run it through the solver to pick
 the exact versions to install.

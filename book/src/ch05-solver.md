@@ -1,8 +1,10 @@
 # Chapter 5: Solving Dependencies
 
 We have a list of packages the user asked for and a catalog of all available
-package versions.  Now we need to find a *consistent set* — versions that
+package versions.  Now we need to find a *consistent set*, versions that
 satisfy all constraints simultaneously.  This is the solver's job.
+
+As discussed in Chapter 1, conda enforces the "exactly one version per package" constraint. This single rule is what makes solving NP-hard, and it is the reason we need a SAT-based solver instead of a simple graph traversal.
 
 ## Why solving is hard
 
@@ -20,7 +22,7 @@ And the catalog says:
 - `json-lib 2.1` (latest)
 - `json-lib 1.9`
 
-The solver tries `web-server 2.0` + `json-lib 2.1` — that works.  Done.
+The solver tries `web-server 2.0` + `json-lib 2.1`.  That works.  Done.
 
 But now add another constraint:
 ```toml
@@ -37,6 +39,8 @@ ecosystems have structure that makes good heuristics very effective.
 [SAT]: https://en.wikipedia.org/wiki/Boolean_satisfiability_problem
 
 ## Virtual packages
+
+Virtual packages model the host system as if it were a package. Instead of special-casing "requires glibc 2.17" as a platform check, the solver treats `__glibc` as a regular dependency that happens to be provided by the OS. This lets package authors express system requirements using the same constraint syntax they use for library dependencies.
 
 Before calling the solver, we detect what the host system provides:
 
@@ -58,29 +62,10 @@ This probes the system for things like:
 - `__osx =14.4` — macOS version
 
 Packages can list these as dependencies.  A CUDA-accelerated package might say
-`__cuda >=11.0` — the solver will refuse to install it on a machine without CUDA.
+`__cuda >=11.0`; the solver will refuse to install it on a machine without CUDA.
 
 `GenericVirtualPackage` is a simpler wrapper around `VirtualPackage` that
 stores the name and version as strings, which is what the solver expects.
-
-### Rust concept: `.into_iter().map(...).collect()`
-
-This is the Rust iterator pattern in its canonical form:
-
-```rust
-some_vec
-    .into_iter()                // consume Vec, produce Iterator
-    .map(GenericVirtualPackage::from) // transform each element
-    .collect()                  // gather back into Vec
-```
-
-`into_iter()` consumes the vector, giving ownership of each element to the
-closure.  This contrasts with `.iter()`, which borrows, and `.iter_mut()`, which
-mutably borrows.
-
-`GenericVirtualPackage::from` is a method reference — instead of writing
-`|v| GenericVirtualPackage::from(v)`, we pass the function directly.  This works
-when the `From` trait is implemented.
 
 ## Reading the existing installation
 
@@ -96,9 +81,7 @@ When rattler installs a package, it writes a JSON file to
 installed.  `collect_from_prefix` reads all of those files.
 
 We pass the installed packages to the solver as **locked packages**: versions the
-solver should prefer to keep if possible.  This makes re-running `luapkg install`
-idempotent — if nothing changed in the manifest, the solver returns the same
-solution.
+solver should prefer to keep if possible.  Without this, every `luapkg install` could silently upgrade transitive dependencies even when the manifest hasn't changed. That kind of drift is a common source of "it worked yesterday" bugs. Locking gives you environmental stability: the solver only changes what it must to satisfy new or modified constraints.
 
 ## Building the solver task
 
@@ -131,6 +114,8 @@ The complete `SolverTask` contains:
 | `virtual_packages` | Host system capabilities |
 | `pinned_packages` | Packages that must stay at a specific version |
 
+The difference between locked and pinned is important: locked packages are a *preference* that the solver may override if constraints demand it, while pinned packages are a *hard constraint* that the solver must satisfy or report as a conflict.
+
 ## Running the solver
 
 ```rust
@@ -143,7 +128,7 @@ let solution: Vec<RepoDataRecord> = with_spinner_sync("Solving", || {
 ```
 
 `resolvo::Solver.solve(solver_task)` is synchronous and CPU-bound.  We run it in
-`with_spinner_sync` — a version of our spinner helper that works with synchronous
+`with_spinner_sync`, a version of our spinner helper that works with synchronous
 closures:
 
 ```rust
@@ -190,28 +175,7 @@ satisfy `>=5.4`.  The conda convention is:
 
 This biases the solver toward fresh versions for things you asked for, while
 keeping the rest of your environment stable.  resolvo implements these priorities
-through a scoring system, not a separate post-processing step.
-
-## Rust concept: `FnOnce` and closures
-
-```rust
-with_spinner_sync("Solving", || {
-    resolvo::Solver.solve(solver_task)
-})
-```
-
-The `||` starts a closure with no arguments.  The closure *captures* `solver_task`
-from the surrounding scope.  The type bound `F: FnOnce() -> T` means the closure
-can be called exactly once — appropriate here since we only solve once.
-
-Rust has three closure traits:
-- `FnOnce`: can be called once, may consume captured variables
-- `FnMut`: can be called multiple times with mutable access to captures
-- `Fn`: can be called multiple times with shared access
-
-The compiler automatically picks the most restrictive trait that still works for
-what the closure does.  Since `solver_task` is moved into the closure and
-consumed by `.solve()`, the compiler uses `FnOnce`.
+through a scoring system, not a separate post-processing step. Without the "prefer locked for transitive deps" rule, adding one new package could cascade upgrades across your entire environment.
 
 ## Printing progress
 
@@ -233,8 +197,7 @@ a `std::time::Duration`; `.as_secs_f64()` converts it to seconds as a `f64`.
 - `PrefixRecord::collect_from_prefix` reads what's currently installed.
 - The `SolverTask` bundles available packages, specs, locked packages, and
   virtual packages.
-- The solver returns an exact list of `RepoDataRecord`s — one per package to
+- The solver returns an exact list of `RepoDataRecord`s, one per package to
   install.
-- `FnOnce` is the closure trait for closures that may consume their captures.
 
-In the next chapter we take the solver's output and actually install the packages.
+In the next chapter we take the solver's output and install the packages.

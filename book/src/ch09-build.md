@@ -4,6 +4,8 @@ We've covered installing packages from existing channels.  Now let's close the
 loop: building a new package from source and publishing it so others can install
 it.
 
+"Closing the loop" means moving from consumer to producer. Up to now, luapkg only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like conda-build or rattler-build) to create new packages. By adding a build command, luapkg becomes self-sufficient for the Lua ecosystem: you can write a library, package it, host it on a local channel, and install it with the same tool.
+
 This chapter covers:
 - Parsing a `recipe.toml`
 - Installing build-time dependencies
@@ -88,15 +90,17 @@ let install_prefix = work_dir.path().join("install_prefix");
 
 We create two directories:
 
-- **`build_prefix`** — where build-time dependencies are installed.  The Lua
+- **`build_prefix`**: where build-time dependencies are installed.  The Lua
   interpreter lives here.  These never appear in the final package.
-- **`install_prefix`** — the "fake root" where the build script installs files.
+- **`install_prefix`**: the "fake root" where the build script installs files.
   Everything in here ends up in the package.
 
 `tempfile::tempdir()` creates a temporary directory and returns a `TempDir`
 handle.  When the handle is dropped (at the end of `execute`), the directory
 is automatically deleted.  This is the RAII pattern: resource cleanup tied to
 object lifetime.
+
+The two-prefix design is build isolation. Tools in `build_prefix` (compilers, interpreters, build utilities) are available during the build but never leak into the final package. Without this separation, a build tool could accidentally end up as a runtime dependency, making the package larger and less portable. This is the same principle behind Debian's Build-Depends vs Depends, and it is a key requirement for reproducible builds.
 
 ## Step 2: Install build dependencies
 
@@ -119,7 +123,7 @@ let build_manifest = Manifest {
 install_from_manifest(&build_manifest, build_prefix.clone()).await?;
 ```
 
-We reuse `install_from_manifest` — the same function `luapkg install` uses.  We
+We reuse `install_from_manifest`, the same function `luapkg install` uses.  We
 construct a temporary `Manifest` pointing at `build_prefix` instead of the
 project's environment.
 
@@ -140,7 +144,7 @@ let wrapper_src = format!(
 ```
 
 We write a tiny Lua wrapper that loads the prelude then runs the user's script.
-Using `{:?}` (debug format) for path strings inserts proper Lua string escaping —
+Using `{:?}` (debug format) for path strings inserts proper Lua string escaping;
 if the path contains backslashes (Windows) or special characters, they'll be
 correctly escaped as Lua string literals.
 
@@ -183,7 +187,9 @@ let index = IndexJson {
 
 `PackageName` and `VersionWithSource` are rattler's strongly-typed wrappers that
 validate their inputs.  `PackageName::from_str("lua 5.4")` returns an error
-because spaces aren't allowed in package names — you catch bad recipe data early.
+because spaces aren't allowed in package names; you catch bad recipe data early.
+
+The `noarch` field is a design axis worth understanding. When `noarch` is true (as it is for pure-Lua packages), the package is built once and works on all platforms, stored under the `noarch/` subdirectory. When false, the package is platform-specific and must be built separately for each target. Choosing `noarch` where possible reduces build and hosting costs, but any package containing compiled code or platform-specific paths must be built per-platform.
 
 ### `info/paths.json`
 
@@ -237,7 +243,7 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
 ```
 
 We read the file in 64 KiB chunks to avoid loading the entire file into memory.
-The `loop` / `break` pattern here is a manual streaming read — `BufReader::read`
+The `loop` / `break` pattern here is a manual streaming read; `BufReader::read`
 returns `0` when the file is exhausted.
 
 ## Step 5: Pack into `.conda`
@@ -260,8 +266,8 @@ write_conda_package(
 2. Compresses each group into a `.tar.zst` archive.
 3. Wraps both archives and a `metadata.json` into an uncompressed ZIP.
 
-The `.conda` format is specifically designed so that tools can `mmap` the outer
-ZIP directory and jump directly to the inner archive they need.
+The `.conda` format is designed so that tools can `mmap` the outer ZIP directory
+and jump directly to the inner archive they need.
 
 ## Step 6: Index the channel
 
@@ -278,13 +284,13 @@ index_fs(IndexFsConfig {
 .await?;
 ```
 
-After packing, the output directory is not yet a valid conda channel — it has
+After packing, the output directory is not yet a valid conda channel; it has
 packages but no `repodata.json`.  `rattler_index::index_fs` scans the directory,
 reads every `.conda` file's `info/index.json`, and writes:
 
-- `output/noarch/repodata.json` — plain JSON catalog
-- `output/noarch/repodata.json.zst` — compressed version
-- `output/noarch/repodata_shards.msgpack.zst` — sharded format
+- `output/noarch/repodata.json`, the plain JSON catalog
+- `output/noarch/repodata.json.zst`, a compressed version
+- `output/noarch/repodata_shards.msgpack.zst`, the sharded format
 
 Once indexed, the output directory can be used as a channel directly:
 
@@ -297,51 +303,15 @@ channels = ["./output", "conda-forge"]
 moonshine = ">=0.3"
 ```
 
-## Rust concept: `include_str!`
-
-```rust
-const BUILD_PRELUDE: &str = include_str!("../build_prelude.lua");
-```
-
-`include_str!` is a macro that reads a file at compile time and embeds its
-contents as a `&'static str` in the binary.  The path is relative to the current
-source file.
-
-Benefits:
-- No file-not-found errors at runtime.
-- The Lua code is visible in the repository.
-- The binary is self-contained — no need to install data files alongside it.
-
-The standard library also has `include_bytes!` for binary files.
-
-## Rust concept: RAII and `Drop`
-
-```rust
-let work_dir = tempfile::tempdir()?;
-// work_dir contains build_prefix and install_prefix
-// ... do the build ...
-// work_dir is dropped here → directory is deleted
-```
-
-Rust's ownership system enables **RAII** (Resource Acquisition Is
-Initialization): a resource is tied to an object's lifetime.  When the object
-goes out of scope, its `Drop` implementation runs and cleans up.
-
-`TempDir::drop` deletes the temporary directory.  This happens even if the
-function returns early due to an error — Rust's destructor semantics guarantee it.
-
-Compare to C, where you'd need `goto cleanup` patterns or (in C++) RAII in its
-full complexity.  In Rust, RAII is the default — you can't forget to clean up.
+For a production package manager, local indexing is only the first step. You would also need a way to push packages to a remote server, sign them so consumers can verify authenticity, and define a trust model (who is allowed to publish, and how do you revoke a compromised key). These are substantial features that we skip in luapkg, but they are the difference between a local build tool and a real distribution system.
 
 ## Summary
 
 - A `recipe.toml` describes how to build a package.
-- `include_str!` embeds the build prelude at compile time.
 - Build deps are installed into a temporary prefix; run deps go into `info/index.json`.
 - `paths.json` lists every file with its SHA-256 hash.
 - `write_conda_package` produces the `.conda` archive format.
 - `rattler_index` turns the output directory into a valid conda channel.
-- RAII ensures temporary directories are cleaned up automatically.
 
 With `luapkg build` working, our package manager is feature-complete.  In Part II
 we'll dive deeper into the underlying mechanisms.

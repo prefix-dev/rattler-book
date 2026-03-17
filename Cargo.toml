@@ -20,20 +20,18 @@ rustls-tls = [
 ]
 
 [dependencies]
-# Core rattler crates — the heart of the book.
-# In a real project these would be crates.io versions; here we use the local
-# workspace so the book can be developed without network access.
-rattler = { path = "references/rattler/crates/rattler", default-features = false, features = ["indicatif"] }
-rattler_cache = { path = "references/rattler/crates/rattler_cache", default-features = false }
-rattler_conda_types = { path = "references/rattler/crates/rattler_conda_types", default-features = false }
-rattler_digest = { path = "references/rattler/crates/rattler_digest", default-features = false }
-rattler_networking = { path = "references/rattler/crates/rattler_networking", default-features = false, features = ["system-integration"] }
-rattler_package_streaming = { path = "references/rattler/crates/rattler_package_streaming", default-features = false }
-rattler_repodata_gateway = { path = "references/rattler/crates/rattler_repodata_gateway", default-features = false, features = ["gateway"] }
-rattler_shell = { path = "references/rattler/crates/rattler_shell", default-features = false }
-rattler_solve = { path = "references/rattler/crates/rattler_solve", default-features = false, features = ["resolvo"] }
-rattler_index = { path = "references/rattler/crates/rattler_index", default-features = false }
-rattler_virtual_packages = { path = "references/rattler/crates/rattler_virtual_packages", default-features = false }
+# Core rattler crates
+rattler = { version = "0.40.0", default-features = false, features = ["indicatif"] }
+rattler_cache = { version = "0.6.15", default-features = false }
+rattler_conda_types = { version = "0.44.0", default-features = false }
+rattler_digest = { version = "1.2.2", default-features = false }
+rattler_networking = { version = "0.26.3", default-features = false, features = ["system-integration"] }
+rattler_package_streaming = { version = "0.24.3", default-features = false }
+rattler_repodata_gateway = { version = "0.27.0", default-features = false, features = ["gateway"] }
+rattler_shell = { version = "0.26.3", default-features = false }
+rattler_solve = { version = "5.0.0", default-features = false, features = ["resolvo"] }
+rattler_index = { version = "0.27.17", default-features = false }
+rattler_virtual_packages = { version = "2.3.12", default-features = false }
 
 # Async runtime
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "process"] }

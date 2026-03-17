@@ -2,7 +2,7 @@
 
 This chapter is a precise reference for what's inside a conda package.  You
 don't need to read it to build `luapkg`, but if you're debugging a packaging
-problem or writing tooling that reads package archives, it's invaluable.
+problem or writing tooling that reads package archives, you'll want it.
 
 ## The two formats
 
@@ -37,7 +37,7 @@ lua-5.4.7-h5eee18b_0.conda
 └── info-lua-5.4.7-h5eee18b_0.tar.zst     (zstd-compressed tar)
 ```
 
-The outer ZIP is not compressed — the compression happens in the inner tars.
+The outer ZIP is not compressed; the compression happens in the inner tars.
 Because ZIP stores a central directory at the end, tools can `mmap` the file,
 seek to the directory, and jump directly to the `info-*.tar.zst` without reading
 the payload.
@@ -57,13 +57,13 @@ indexers, search tools).
 
 #### `pkg-*.tar.zst`
 
-Contains everything else — the actual payload files.  Useful for installers that
-already have metadata and only need to extract files.
+Contains the actual payload files.  Useful for installers that already have
+metadata and only need to extract files.
 
 ## The `info/index.json`
 
-This is the heart of every conda package.  It's read by the solver, the
-installer, and every other tool in the ecosystem.
+Every tool in the conda ecosystem reads this file: the solver, the installer,
+the indexer.
 
 ```json
 {
@@ -98,7 +98,7 @@ the compiler or a dep changed.
 fixes but the same source version.  The solver prefers higher build numbers.
 
 **`subdir`**: the platform this package was compiled for (`linux-64`,
-`osx-arm64`, `win-64`, `noarch`, …).
+`osx-arm64`, `win-64`, `noarch`, ...).
 
 **`depends`**: runtime dependencies as MatchSpec strings.  Enforced at install
 time by the solver.
@@ -174,7 +174,7 @@ When rattler installs a package, it writes a JSON file to
 }
 ```
 
-This is the **prefix record** — rattler's `PrefixRecord` type.  It's used by:
+This is the **prefix record**, rattler's `PrefixRecord` type.  It's used by:
 - The solver (to know what's installed)
 - The installer (to compute the transaction diff)
 - Uninstall tools (to know which files to remove)
@@ -195,8 +195,8 @@ rattler uses `zstd` through the `rattler_package_streaming` crate, which also
 handles tar creation/extraction and the ZIP wrapper.
 
 For comparison:
-- `.tar.bz2`: bzip2 compression — high ratio, very slow (single-threaded)
-- `.conda` inner tars: zstd — good ratio, very fast, parallel
+- `.tar.bz2`: bzip2 compression, high ratio, very slow (single-threaded)
+- `.conda` inner tars: zstd, good ratio, very fast, parallel
 
 The practical effect: a modern `.conda` package installs roughly 5-10x faster
 than a `.tar.bz2` of equivalent content, because zstd decompression saturates
@@ -204,9 +204,9 @@ available cores.
 
 ## Streaming readers and writers
 
-A key design pattern in rattler's package streaming code is the use of
-*streaming* I/O.  Instead of reading an entire archive into memory and then
-processing it, you process it chunk by chunk:
+A key design pattern in rattler's package streaming code is *streaming* I/O.
+Instead of reading an entire archive into memory and then processing it, you
+process it chunk by chunk:
 
 ```rust
 // Conceptually (simplified)

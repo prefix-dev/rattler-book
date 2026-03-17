@@ -1,7 +1,7 @@
 # Deep Dive: The resolvo SAT Solver
 
-The dependency solver is the most mathematically interesting component of any
-package manager.  In this chapter we explore how resolvo works — from the
+The dependency solver is the most mathematically interesting component of a
+package manager.  In this chapter we explore how resolvo works, from the
 connection to SAT to the specific optimizations that make it fast in practice.
 
 ## Dependency solving as SAT
@@ -62,7 +62,7 @@ Learned clause: NOT (web-server_2_0 AND legacy-plugin)
 ```
 
 The learned clause is added to the formula and persists for the rest of the
-search.  This can dramatically prune the search space.
+search.  This can prune large sections of the search space.
 
 ## resolvo's design
 
@@ -77,8 +77,8 @@ Key design decisions:
 ### Lazy candidate generation
 
 In traditional SAT, all clauses are known upfront.  In package solving, the
-"clauses" are the dependency constraints of each package — and you might not
-know what those constraints are until you decide to install a package.
+"clauses" are the dependency constraints of each package, and you might not
+know those constraints until you decide to install a package.
 
 resolvo's `DependencyProvider` trait allows lazy fetching:
 
@@ -92,15 +92,15 @@ pub trait DependencyProvider {
 }
 ```
 
-The solver calls `get_dependencies` only for the packages it's actually
-considering.  In a large channel like conda-forge, this means you never load
-dependency data for the thousands of packages you don't need.
+The solver calls `get_dependencies` only for the packages it's considering.
+In a large channel like conda-forge, this means you never load dependency data
+for the thousands of packages you don't need.
 
 ### Arena allocators
 
-resolvo uses **arena allocators** for performance.  Instead of allocating each
-package record on the heap separately (which involves many small `malloc` calls
-and pointer chasing), records are packed into a single large array:
+resolvo uses **arena allocators** for performance.  Records are packed into a
+single large array rather than allocated individually on the heap (which would
+involve many small `malloc` calls and pointer chasing):
 
 ```rust
 pub struct Arena<T> {
@@ -133,7 +133,7 @@ famous MiniSat solver).
 
 For each clause `(A OR B OR C OR ...)`, we "watch" two of its literals.  When a
 watched literal becomes false, we try to find another literal to watch.  If we
-can't (because all other literals are also false), we've found a unit clause —
+can't (because all other literals are also false), we've found a unit clause;
 the remaining watched literal must be true.
 
 This avoids scanning all clauses on every assignment change.  Instead we maintain
@@ -165,15 +165,15 @@ This is one of resolvo's distinctive features:
 
 ```
 The following packages are incompatible:
-  • luarocks 3.11 requires json-lib >=2.0
-  • legacy-plugin 1.0 requires json-lib <2.0
+  * luarocks 3.11 requires json-lib >=2.0
+  * legacy-plugin 1.0 requires json-lib <2.0
   Therefore json-lib cannot be installed.
 
   And because you requested both luarocks and legacy-plugin,
   no solution exists.
 ```
 
-Generating this explanation is non-trivial — the solver must trace back through
+Generating this explanation is non-trivial.  The solver must trace back through
 its conflict graph to find the minimal set of incompatibilities.
 
 ## The conda scoring model
@@ -197,12 +197,12 @@ The resolvo solver uses this ordering to guide its search.
 ## Practical performance
 
 For typical conda environments (10-50 packages), resolvo solves in milliseconds.
-For large environments (hundreds of packages), it can take a few seconds — which
+For large environments (hundreds of packages), it can take a few seconds, which
 is why we show a spinner.
 
-The bottleneck is usually not the SAT solving itself but the repodata loading —
+The bottleneck is usually not the SAT solving itself but repodata loading:
 fetching and parsing package metadata.  This is why the Gateway's sparse/sharded
-format is so important: it avoids loading millions of records for the vast
+format is so important.  It avoids loading millions of records for the vast
 majority of conda-forge packages that aren't relevant to your request.
 
 ## libsolv: the alternative backend

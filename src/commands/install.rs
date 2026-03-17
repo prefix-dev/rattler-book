@@ -198,7 +198,7 @@ pub async fn install_from_manifest(
         .into_diagnostic()
         .context("detecting virtual packages")?
         .into_iter()
-        .map(GenericVirtualPackage::from)
+        .map(|v| v.into())
         .collect();
 
     // ── 7. Read the currently-installed packages ─────────────────────────────

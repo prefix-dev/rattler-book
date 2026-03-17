@@ -1,0 +1,41 @@
+[workspace]
+name = "luapkg"
+version = "0.1.0"
+description = "A minimal Lua package manager built on rattler"
+channels = ["conda-forge"]
+platforms = ["osx-arm64", "osx-64", "linux-64"]
+preview = ['pixi-build']
+
+[package.build.backend]
+name = "pixi-build-rust"
+version = "0.4.*"
+
+[dev]
+luapkg = { path = "." }
+
+[dependencies]
+
+[feature.book.dependencies]
+mdbook = ">=0.4"
+
+[feature.book.tasks]
+book-build = { cmd = "mdbook build", cwd = "book" }
+book-serve = { cmd = "mdbook serve", cwd = "book" }
+
+[tasks]
+# Build
+build = "cargo build"
+build-release = "cargo build --release"
+
+# Run
+run = "cargo run --"
+
+# Development
+check = "cargo check"
+clippy = "cargo clippy"
+fmt = "cargo fmt"
+fmt-check = "cargo fmt --check"
+
+[environments]
+default = { solve-group = "default" }
+book = { features = ["book"], solve-group = "default" }

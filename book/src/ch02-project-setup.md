@@ -25,7 +25,7 @@ edition = "2021"
 # CLI argument parsing
 clap = { version = "4", features = ["derive"] }
 
-# Error handling — user-facing diagnostics
+# Error handling, user-facing diagnostics
 miette  = { version = "7", features = ["fancy"] }
 
 # Async runtime
@@ -68,14 +68,20 @@ tempfile  = "3"
 serde_json = "1"
 ```
 
+The rattler crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) implement the conda specification. The rest of the dependency list is general-purpose infrastructure: `clap` for CLI parsing, `tokio` for async I/O, `reqwest` for HTTP, and so on.
+
 > **Why so many rattler crates?**  rattler is split into fine-grained crates so
 > you can depend on only the parts you need.  A tool that only needs to solve
 > dependencies doesn't have to pull in the HTTP stack.  We use most of them, so
 > the list is long.
 
+Package managers surface errors from many sources (network, filesystem, solver conflicts, malformed metadata), so `miette` with `features = ["fancy"]` is worth pulling in early. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string.
+
+Notice that `reqwest` uses `default-features = false, features = ["rustls-tls"]`. This selects the pure-Rust TLS implementation instead of linking against the system's OpenSSL, so the binary builds and runs on any platform without requiring a system TLS library.
+
 ## The entry point: `src/main.rs`
 
-Let's look at how the project is structured from the top.
+Here is how the project is structured:
 
 ```
 src/
@@ -183,120 +189,9 @@ async fn async_main() -> miette::Result<()> {
 }
 ```
 
-There is a lot going on here.  Let's take it section by section.
+The runtime configuration splits available CPU cores between two pools. `worker_threads` handles async work (HTTP requests, futures polling), while `max_blocking_threads` handles synchronous operations that would stall the async scheduler (file I/O, archive extraction, solver runs). Giving the blocking pool more threads prevents slow disk operations from starving network requests.
 
-## Rust concept: derive macros
-
-The line `#[derive(Debug, Parser)]` is a **derive macro**.  It automatically
-generates an `impl Parser for Cli` block based on the struct's fields and
-attributes.  Clap reads the doc comments (`///`) as the help text.
-
-```rust
-/// A minimal Lua package manager powered by rattler.
-#[derive(Debug, Parser)]
-struct Cli { ... }
-```
-
-Running `luapkg --help` produces:
-
-```
-A minimal Lua package manager powered by rattler.
-
-Usage: luapkg [OPTIONS] <COMMAND>
-
-Commands:
-  init     Create a new luapkg.toml in the current directory
-  add      Add one or more packages to the manifest and install them
-  ...
-
-Options:
-  -v, --verbose  Enable verbose logging
-  -h, --help     Print help
-  -V, --version  Print version
-```
-
-All of that text came from the comments in our Rust code.  No hand-written help
-strings needed.
-
-## Rust concept: enums for subcommands
-
-```rust
-#[derive(Debug, clap::Subcommand)]
-enum Command {
-    Init(commands::init::Args),
-    Add(commands::add::Args),
-    ...
-}
-```
-
-Each variant holds the `Args` struct for that subcommand.  This is idiomatic
-Rust: the enum *contains* the data, so after parsing you pattern-match on it and
-get the relevant args out.
-
-```rust
-match cli.command {
-    Command::Init(args) => commands::init::execute(args).await,
-    ...
-}
-```
-
-The compiler ensures you've handled every variant.  If you add a new command and
-forget to add a match arm, it's a compile error.
-
-## Rust concept: async and Tokio
-
-Most of our commands do network I/O — fetching package metadata, downloading
-archives.  Rust's `async`/`await` syntax lets us write asynchronous code that
-*looks* synchronous.
-
-But `async fn main()` doesn't exist in stable Rust.  We need an **async
-runtime** to actually drive the futures.  We use **Tokio**:
-
-```rust
-fn main() -> miette::Result<()> {
-    let runtime = tokio::runtime::Builder::new_multi_thread()
-        .worker_threads(num_cpus / 2)
-        .max_blocking_threads(num_cpus)
-        .enable_all()
-        .build()
-        .into_diagnostic()?;
-
-    runtime.block_on(async_main())
-}
-```
-
-`block_on` runs an async future on the current thread until it completes.  The
-multi-thread builder spawns a pool of worker threads to handle concurrent tasks —
-important when we're downloading multiple packages in parallel.
-
-> **Why `worker_threads(num_cpus / 2)` and `max_blocking_threads(num_cpus)`?**
->
-> Tokio has two thread pools:
->
-> - **Worker threads** run async tasks (futures).  They should roughly match the
->   number of CPU cores, because futures cooperate — they yield when they would
->   block.
->
-> - **Blocking threads** run synchronous code via `spawn_blocking`.  These can
->   block indefinitely without harming the async scheduler.  Package extraction
->   is CPU-bound and synchronous, so it goes here.
->
-> Splitting the CPU budget between them avoids one pool starving the other.
-
-## Rust concept: the `?` operator and error handling
-
-```rust
-.build()
-.into_diagnostic()?
-```
-
-The `?` operator is Rust's primary error propagation mechanism.  If the
-expression evaluates to `Err(e)`, `?` returns early from the current function
-with that error.  If it's `Ok(v)`, `?` unwraps to `v`.
-
-`into_diagnostic()` converts any `Error` type that implements `std::error::Error`
-into `miette::Report`, which is our application-level error type.  We'll cover
-error handling in depth in Chapter 3.
+Let's take it section by section.
 
 ## Logging with tracing
 

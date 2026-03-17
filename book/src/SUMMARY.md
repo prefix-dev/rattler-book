@@ -25,8 +25,3 @@
 - [The Networking Stack](./deep-dive-networking.md)
 - [The resolvo SAT Solver](./deep-dive-resolvo.md)
 
----
-
-# Appendix
-
-- [Rust Concepts Reference](./appendix-rust-concepts.md)

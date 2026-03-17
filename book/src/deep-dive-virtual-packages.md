@@ -1,12 +1,12 @@
 # Deep Dive: Virtual Packages and Archspec
 
-Virtual packages are one of the more elegant ideas in the conda ecosystem.  They
-solve a real problem: how do you express that a package requires a minimum glibc
-version, or a CUDA GPU, without trying to install those things?
+Virtual packages solve a real problem in the conda ecosystem: how do you express
+that a package requires a minimum glibc version, or a CUDA GPU, without trying
+to install those things?
 
 ## The problem
 
-Conda environments are hermetic — they contain everything needed to run a piece
+Conda environments are hermetic.  They contain everything needed to run a piece
 of software.  But some things can't be installed:
 
 - The Linux kernel
@@ -22,7 +22,7 @@ version and a compatible GPU.
 ## Virtual packages to the rescue
 
 Virtual packages are synthetic packages that represent host capabilities.  They
-exist only in the solver's view of the world — they're never actually installed.
+exist only in the solver's view of the world; they're never installed.
 Instead, `rattler_virtual_packages` *detects* them from the system at solve time.
 
 A few examples:
@@ -77,7 +77,7 @@ Each variant is detected differently:
 - **Cuda**: read `/proc/driver/nvidia/version` or the CUDA driver API
 - **Archspec**: use CPU feature flags from `cpuid` (x86) or `/proc/cpuinfo`
 
-`VirtualPackageOverrides` lets you override the detected values — useful for
+`VirtualPackageOverrides` lets you override the detected values, useful for
 testing or cross-compilation scenarios:
 
 ```rust
@@ -110,7 +110,7 @@ platform-specific logic.
 ### Why does `=1` appear?
 
 Archspec uses a two-part version for virtual packages: `__archspec =<gen>
-<microarch>`.  The `=1` is the "generation" — currently always 1.  The second
+<microarch>`.  The `=1` is the "generation", currently always 1.  The second
 part is the microarchitecture name.  This slightly awkward encoding lets archspec
 fit into the standard MatchSpec version constraint system.
 
@@ -127,8 +127,8 @@ pub struct GenericVirtualPackage {
 ```
 
 This simpler form is used because the solver doesn't need to know *what kind* of
-virtual package it is — just its name and version, which is sufficient to match
-against dependency specs.
+virtual package it is.  The name and version are sufficient to match against
+dependency specs.
 
 The conversion is via `From`:
 

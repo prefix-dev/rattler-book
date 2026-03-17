@@ -84,8 +84,8 @@ Different channel types use different auth schemes:
 ## `OciMiddleware`
 
 OCI (Open Container Initiative) registries are Docker image registries, but they
-can also store arbitrary blobs — including conda packages.  Using an OCI registry
-as a conda channel is becoming more common as it leverages existing container
+can also store arbitrary blobs, including conda packages.  Using an OCI registry
+as a conda channel is becoming more common because it reuses existing container
 registry infrastructure.
 
 An OCI channel URL looks like `oci://ghcr.io/my-org/my-channel`.
@@ -124,7 +124,7 @@ rewrites request URLs:
 
 ```
 https://conda.anaconda.org/conda-forge/linux-64/lua-5.4.7.conda
-    → https://internal-mirror.corp.com/conda-forge/linux-64/lua-5.4.7.conda
+    -> https://internal-mirror.corp.com/conda-forge/linux-64/lua-5.4.7.conda
 ```
 
 The mirror is tried first; on failure, the middleware falls through to the original
@@ -149,7 +149,7 @@ We use `rustls` via reqwest's `rustls-tls` feature flag.
 ## Connection reuse and keep-alive
 
 `reqwest::Client` is designed to be cloned and shared.  Cloning doesn't duplicate
-the connection pool — it increments a reference count.  All clones share the same
+the connection pool; it increments a reference count.  All clones share the same
 pool.
 
 ```rust
@@ -182,7 +182,7 @@ while let Some(chunk) = stream.next().await {
 ```
 
 `bytes_stream()` returns an async stream of byte chunks.  The HTTP response body
-is never fully loaded into memory — we process each chunk as it arrives.  This
+is never fully loaded into memory; we process each chunk as it arrives.  This
 is how rattler downloads a 300 MB `repodata.json` without needing 300 MB of RAM.
 
 ## Retry middleware
@@ -211,7 +211,7 @@ The retry middleware automatically retries on:
 - HTTP 429 Too Many Requests (with `Retry-After` header support)
 - HTTP 5xx server errors
 
-It backs off exponentially: 100ms → 200ms → 400ms → give up.  This avoids
+It backs off exponentially: 100ms, 200ms, 400ms, then gives up.  This avoids
 hammering a struggling server.
 
 ## Summary

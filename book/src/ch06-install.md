@@ -6,21 +6,23 @@ it to rattler's `Installer` and let it do the heavy lifting.
 ## What installation means
 
 Installing a conda package into a prefix is not just "unzip the archive into
-`/usr/local`".  A few things make it more nuanced:
+`/usr/local`".  Several things make it more involved:
 
 **1. The package cache**
 
 Every package is first extracted into a *central cache* shared across all
 environments on the machine (at `~/.rattler/pkgs/`).  The cache key is the
 package's content hash, so `lua-5.4.7` is stored exactly once regardless of how
-many environments use it.
+many environments use it. Content-addressed keys (rather than name-plus-version) prevent collisions when the same version is rebuilt with a different build string. Two builds of `lua-5.4.7` with different compiler flags get different hashes and coexist safely in the cache.
 
 **2. Hard links**
 
+Packages in the cache are immutable after extraction. No tool or environment modifies them in place. This invariant is what makes hard-linking safe: multiple environments can share the same inodes because nobody writes to them.
+
 Files are *hard-linked* from the cache into the target prefix.  A hard link is a
-second directory entry pointing to the same inode — the data on disk is stored
-once, but it appears in two places simultaneously.  Removing the link from one
-location doesn't affect the other.
+second directory entry pointing to the same inode.  The data on disk is stored
+once, but it appears in two places.  Removing the link from one location doesn't
+affect the other.
 
 This means:
 - An environment takes almost no disk space for packages that are already cached.
@@ -31,8 +33,10 @@ cross-volume), rattler falls back to copying.
 
 **3. Transactions**
 
-The Installer computes a **transaction** — a diff between the currently-installed
-state and the desired state — and applies only the changes:
+A naive package manager that unpacks files one by one can leave an environment half-installed if the process is interrupted. Partial installs are one of the most common failure modes in package management and often require manual cleanup.
+
+The Installer computes a **transaction**, a diff between the currently-installed
+state and the desired state, and applies only the changes:
 - Install packages not currently present
 - Remove packages no longer needed
 - Update packages whose version changed
@@ -56,12 +60,12 @@ let result = Installer::new()
     .context("installing packages")?;
 ```
 
-This is the **builder pattern** — a common Rust idiom for constructing complex
-objects with many optional parameters.  Each `with_*` method returns `Self`,
-enabling the fluent chain.
+This is the **builder pattern**, a common Rust idiom for constructing objects
+with many optional parameters.  Each `with_*` method returns `Self`, enabling
+the fluent chain.
 
-The builder collects configuration and then `.install(&prefix, solution)` does
-the actual work asynchronously.
+The builder collects configuration; `.install(&prefix, solution)` does the
+actual work asynchronously.
 
 ### `with_reporter`
 
@@ -69,7 +73,7 @@ the actual work asynchronously.
 progress bars during download and extraction.  It integrates with `indicatif`'s
 `MultiProgress` to correctly render multiple bars without interleaving.
 
-You can implement your own reporter if you want custom progress display — it's a
+You can implement your own reporter if you want custom progress display.  It's a
 trait, not a concrete type.
 
 ### `with_execute_link_scripts`
@@ -84,7 +88,7 @@ example).
 The installer needs to know which packages were *directly* requested (as opposed
 to installed as transitive dependencies).  It records this in the
 `conda-meta/*.json` files so that future updates can correctly distinguish "user
-wants this" from "installed because something else needed it".
+wants this" from "installed because something else needed it". This distinction drives automatic cleanup: when a direct dependency is removed, the installer can garbage-collect its transitive dependencies that nothing else needs. Both npm and pip added this tracking late in their development, and the lack of it caused years of accumulated orphan packages in user environments.
 
 ## Reading the result
 
@@ -103,7 +107,7 @@ if result.transaction.operations.is_empty() {
 }
 ```
 
-`result.transaction.operations` is a list of what the installer actually did.
+`result.transaction.operations` is a list of what the installer did.
 If it's empty, nothing changed.
 
 ## The `luapkg add` command
@@ -134,27 +138,6 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 }
 ```
 
-### Rust concept: `entry` API
-
-```rust
-manifest
-    .dependencies
-    .entry(name.to_string())
-    .or_insert_with(|| version.to_string());
-```
-
-`HashMap::entry` returns an `Entry` — a placeholder for a key that may or may
-not exist.  `.or_insert_with(closure)` inserts a new value (computed by the
-closure) if the key is absent, and returns a mutable reference either way.
-
-This is more efficient than:
-```rust
-if !manifest.dependencies.contains_key(name) {
-    manifest.dependencies.insert(name.to_string(), version.to_string());
-}
-```
-because the `entry` API only hashes the key once.
-
 ### Parsing package specs
 
 ```rust
@@ -173,18 +156,8 @@ This splits `"lua >=5.4"` into `("lua", ">=5.4")` or `"luarocks"` into
 `("luarocks", "*")`.
 
 `spec.find(|c: char| c.is_whitespace() || c == '=')` uses a closure as a
-pattern.  `String::find` accepts anything that implements `Pattern` — a char, a
+pattern.  `String::find` accepts anything that implements `Pattern`: a char, a
 `&str`, or a closure `Fn(char) -> bool`.
-
-### Rust concept: string slices
-
-`spec[..pos]` is a string slice: a view into part of the original string.  It
-borrows from `spec` without allocating.  The return type `(&str, &str)` means
-both returned slices borrow from the input `spec` parameter — the compiler
-enforces that `spec` must live at least as long as the returned slices.
-
-This is Rust's borrow checker at work: no dangling pointers, no hidden copies,
-no garbage collector.
 
 ## The `install_from_manifest` helper
 
@@ -207,9 +180,9 @@ pub async fn install_from_manifest(
 }
 ```
 
-Extracting shared logic into a function is the right move when two commands
-share the same steps.  In Rust, functions are zero-cost: there's no overhead
-compared to inlining the code.
+Extracting shared logic into a function is the right call when two commands need
+the same steps.  In Rust, functions are zero-cost: there's no overhead compared
+to inlining the code.
 
 ## The prefix directory
 
@@ -222,7 +195,7 @@ pub fn prefix_dir(project_root: &Path) -> PathBuf {
 ```
 
 By convention, `luapkg` puts the environment at `.luapkg/env/` relative to the
-project root — alongside `luapkg.toml`.  This keeps the environment close to the
+project root, alongside `luapkg.toml`.  This keeps the environment close to the
 project and out of the user's global namespace.
 
 The user can override it with `--prefix /path/to/env`.
@@ -255,8 +228,6 @@ records the package name, version, build, all installed files, and their hashes.
 - The `Installer` computes a transaction (diff) and applies only the changes.
 - Files are hard-linked from the central cache into the prefix.
 - The builder pattern lets you configure complex objects step by step.
-- `HashMap::entry` inserts a value only if the key is absent, in one lookup.
-- String slices borrow from their source — no allocation needed for parsing.
 
 In the next chapter we see how to *use* the installed environment by generating
 a shell activation script.

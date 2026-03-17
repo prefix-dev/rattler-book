@@ -2,16 +2,20 @@
 
 After installing packages into `.luapkg/env/`, the user needs to be able to
 *use* them.  That means getting `lua`, `luarocks`, and any other installed
-binaries onto their `PATH` — and setting any environment variables that packages
+binaries onto their `PATH`, and setting any environment variables that packages
 declare.
 
 This is the **activation** problem, and it's trickier than it looks.
 
 ## Why activation is non-trivial
 
-A child process cannot modify the environment of its parent.  That's a
-fundamental Unix rule.  So when you run `luapkg shell`, it can't just set `PATH`
-for you — it has to print a script that you evaluate in your shell.
+Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. conda uses eval-based activation: the tool prints a shell script and the user evaluates it in their current shell. This gives packages full control over the environment (not just `PATH` but also `LD_LIBRARY_PATH`, `LUA_PATH`, and any other variable), at the cost of being shell-dependent.
+
+A child process cannot modify the environment of its parent.  That's a Unix
+rule with no exceptions.  So when you run `luapkg shell`, it can't just set
+`PATH` for you; it has to print a script that you evaluate in your shell.
+
+`luapkg shell` and `luapkg run` (Chapter 8) represent a design fork. `shell` generates a script the user evaluates, which means it must know the user's shell dialect. `run` spawns a child process with the right environment variables, which is shell-agnostic but only lasts for one command. Most package managers end up needing both.
 
 ```bash
 eval $(luapkg shell)         # bash / zsh
@@ -70,8 +74,8 @@ pub fn execute(args: Args) -> miette::Result<()> {
 ```
 
 Note that `execute` is *not* `async`.  Generating an activation script is
-entirely synchronous — no network, no disk I/O beyond reading a few small files
-in the prefix.
+synchronous: no network, no disk I/O beyond reading a few small files in the
+prefix.
 
 ## `ShellEnum`: a type-safe shell dialect
 
@@ -107,7 +111,7 @@ Bash, which has the widest compatibility.
 
 `Bash.into()` uses the `Into` trait to convert `Bash` (the unit struct) into
 `ShellEnum::Bash(Bash)`.  The `.into()` method is available whenever `From` is
-implemented — `From<Bash> for ShellEnum` is implemented by rattler.
+implemented; `From<Bash> for ShellEnum` is implemented by rattler.
 
 ## `Activator::from_path`
 
@@ -131,9 +135,9 @@ let vars = ActivationVariables::from_env()?;
 ```
 
 This reads the *current* shell state:
-- `CONDA_PREFIX` — the currently-activated prefix (if any)
-- `CONDA_SHLVL` — the nesting depth
-- `PATH` — the current PATH
+- `CONDA_PREFIX`, the currently-activated prefix (if any)
+- `CONDA_SHLVL`, the nesting depth
+- `PATH`, the current PATH
 
 The activator uses these to correctly compute the transition: deactivate the
 current environment (if any), then activate the new one.  The resulting script
@@ -155,52 +159,7 @@ export CONDA_DEFAULT_ENV="/home/user/my-app/.luapkg/env"
 The user evaluates this, and from that point `lua`, `luarocks`, etc. are on their
 PATH.
 
-## Rust concept: `if let`
-
-```rust
-let shell: ShellEnum = if let Some(ref name) = args.shell {
-    ShellEnum::from_str(name)
-        .map_err(|_| miette::miette!("Unknown shell `{name}`"))?
-} else {
-    ShellEnum::from_env().unwrap_or_else(|| Bash.into())
-};
-```
-
-`if let Some(ref name) = args.shell` is a pattern match in expression position.
-It matches `args.shell` against `Some(name)` (where `name` borrows the inner
-string), executes the `if` branch if it matches, and the `else` branch
-otherwise.
-
-The `ref` is needed because `args.shell` is `Option<String>` and we want to
-borrow the `String` rather than move it out of `args`.
-
-An equivalent way to write this is:
-
-```rust
-let shell = match args.shell {
-    Some(ref name) => ShellEnum::from_str(name)
-        .map_err(|_| miette::miette!("Unknown shell `{name}`"))?,
-    None => ShellEnum::from_env().unwrap_or_else(|| Bash.into()),
-};
-```
-
-`if let` is syntactic sugar for a `match` with one arm and a catch-all else.
-
-## Rust concept: `print!` vs `println!`
-
-```rust
-print!("{script}");
-```
-
-We use `print!` without a trailing newline, not `println!`.  The generated
-script already ends with a newline (from the last `set ...` or `export ...`
-statement), so adding another one would put a blank line at the end — harmless
-but unnecessary.
-
-More importantly: `print!` doesn't flush stdout.  In Rust, stdout is
-line-buffered when connected to a terminal, but block-buffered when piped (as it
-would be in `luapkg shell | source`).  Ending the program normally causes a
-flush.  If you needed to flush mid-program you'd call `std::io::Write::flush`.
+You might notice that a Lua package manager is setting `CONDA_PREFIX` and `CONDA_SHLVL`. This is because rattler implements conda's activation protocol, and these variables are part of that protocol. The benefit is compatibility: any tool that understands conda environments (editors, CI systems, other package managers) will recognize our environment. The cost is the naming confusion, since "CONDA" has nothing to do with Lua. A production tool could alias these variables, but you would lose the ecosystem compatibility.
 
 ## Summary
 
@@ -210,7 +169,6 @@ flush.  If you needed to flush mid-program you'd call `std::io::Write::flush`.
 - `Activator::from_path` reads activation metadata from the prefix.
 - `ActivationVariables` captures current state for correct nested-activation
   handling.
-- `if let` is a concise pattern match for `Option` and `Result`.
 
-In the next chapter we implement `luapkg run` — a way to run a command inside
-the activated environment without permanently modifying the shell.
+In the next chapter we implement `luapkg run`, a way to run a command inside the
+activated environment without permanently modifying the shell.
