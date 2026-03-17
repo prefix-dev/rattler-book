@@ -20,18 +20,43 @@ luarocks = "*"
 ```
 
 The `[project]` section contains metadata; `[dependencies]` maps package names
-to version constraints.
+to version constraints.  Version specs follow the conda MatchSpec mini-language:
+
+| Spec          | Meaning                           |
+|---------------|-----------------------------------|
+| `"*"`         | any version                       |
+| `">=5.4"`     | 5.4 or newer                      |
+| `"5.4.*"`     | any 5.4.x release                 |
+| `">=5.4,<6"`  | 5.4 series, exclusive upper bound |
 
 ## Modeling the manifest
 
-We model the manifest as nested Rust structs:
-
-```rust
-// src/manifest.rs
-
+``` {.rust #manifest-imports}
 use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
+use std::path::{Path, PathBuf};
 
+use miette::{Context, IntoDiagnostic};
+use serde::{Deserialize, Serialize};
+```
+
+Here is the full `src/manifest.rs` assembled from the pieces we'll walk through:
+
+``` {.rust file=src/manifest.rs}
+<<manifest-imports>>
+
+<<manifest-filename-const>>
+
+<<manifest-structs>>
+
+<<manifest-impl>>
+```
+
+We model the manifest as nested Rust structs. `Manifest` maps directly to the
+top-level TOML, and `ProjectMetadata` maps to the `[project]` section. The
+`name` field is used only for display -- it does not affect resolution or
+installation.
+
+``` {.rust #manifest-structs}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub project: ProjectMetadata,
@@ -52,6 +77,11 @@ fn default_channels() -> Vec<String> {
     vec!["conda-forge".to_string()]
 }
 ```
+
+The dependency values are kept as plain `String`s rather than parsed
+immediately. `rattler_conda_types` parses them into `MatchSpec` values at
+solve-time, so parse errors surface with full context instead of at
+manifest-read time.
 
 Channels are listed in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine does not silently pick up a different channel list.
 
@@ -75,44 +105,78 @@ name = "empty-project"
 
 ### `#[serde(default = "function")]`
 
-For fields where the Rust default isn't what you want, you can name a function:
-
-```rust
-#[serde(default = "default_channels")]
-pub channels: Vec<String>,
-
-fn default_channels() -> Vec<String> {
-    vec!["conda-forge".to_string()]
-}
-```
-
-If `channels` is missing from the TOML, serde calls `default_channels()` to get
-`["conda-forge"]`.
+For fields where the Rust default isn't what you want, you can name a function
+that returns the value you do want.  Look at the `channels` field in the
+`#manifest-structs` block above: it carries `#[serde(default = "default_channels")]`,
+and `default_channels()` returns `vec!["conda-forge".to_string()]`.  If
+`channels` is missing from the TOML, serde calls that function instead of using
+`Vec::default()` (which would give an empty list).
 
 ## Reading and writing TOML
 
 TOML works well for manifests because it is readable without documentation, preserves comments on round-trip (with the right library), and has strict typing that catches mistakes like quoting a number.
 
-```rust
-pub fn from_path(path: &Path) -> miette::Result<Self> {
-    let content = std::fs::read_to_string(path)
-        .into_diagnostic()
-        .with_context(|| format!("reading manifest at `{}`", path.display()))?;
+``` {.rust #manifest-from-path}
+    pub fn from_path(path: &Path) -> miette::Result<Self> {
+        let content = std::fs::read_to_string(path)
+            .into_diagnostic()
+            .with_context(|| format!("reading manifest at `{}`", path.display()))?;
 
-    toml::from_str(&content)
-        .into_diagnostic()
-        .with_context(|| format!("parsing manifest at `{}`", path.display()))
-}
+        toml::from_str(&content)
+            .into_diagnostic()
+            .with_context(|| format!("parsing manifest at `{}`", path.display()))
+    }
 ```
 
 `std::fs::read_to_string` returns `Result<String, std::io::Error>`.  We convert
 that to `miette::Result` with `into_diagnostic()`, then attach a context message
 with `with_context`.
 
+We also need a `write` method that serializes the manifest back to disk:
+
+``` {.rust #manifest-write}
+    pub fn write(&self, path: &Path) -> miette::Result<()> {
+        let content = toml::to_string_pretty(self)
+            .into_diagnostic()
+            .context("serializing manifest")?;
+
+        std::fs::write(path, content)
+            .into_diagnostic()
+            .with_context(|| format!("writing manifest to `{}`", path.display()))
+    }
+```
+
+The three methods live in a single `impl` block:
+
+``` {.rust #manifest-impl}
+impl Manifest {
+<<manifest-from-path>>
+
+<<manifest-write>>
+
+<<manifest-find-in-dir>>
+}
+```
+
 ## Implementing `luapkg init`
 
-```rust
-// src/commands/init.rs
+``` {.rust file=src/commands/init.rs}
+use std::collections::HashMap;
+
+use clap::Parser;
+use miette::IntoDiagnostic;
+
+use crate::manifest::{Manifest, ProjectMetadata, MANIFEST_FILENAME};
+
+#[derive(Debug, Parser)]
+pub struct Args {
+    /// Name of the project.  Defaults to the current directory name.
+    pub name: Option<String>,
+
+    /// Conda channels to search (can be repeated).
+    #[clap(short, long, default_value = "conda-forge")]
+    pub channel: Vec<String>,
+}
 
 pub async fn execute(args: Args) -> miette::Result<()> {
     let cwd = std::env::current_dir().into_diagnostic()?;
@@ -120,13 +184,22 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     if manifest_path.exists() {
         miette::bail!(
-            "`{MANIFEST_FILENAME}` already exists in `{}`. ...",
+            "`{MANIFEST_FILENAME}` already exists in `{}`. \
+             Delete it first if you want to re-initialise.",
             cwd.display()
         );
     }
 
-    let name = args.name.unwrap_or_else(|| { /* ... */ });
+    // Use the supplied name or fall back to the directory name.
+    let name = args.name.unwrap_or_else(|| {
+        cwd.file_name()
+            .and_then(|n| n.to_str())
+            .unwrap_or("my-lua-project")
+            .to_string()
+    });
 
+    // Build a starter manifest with Lua pre-filled so the user has something
+    // to work with immediately.
     let manifest = Manifest {
         project: ProjectMetadata {
             name: name.clone(),
@@ -166,19 +239,19 @@ file, CI, etc.).
 Commands other than `init` need to *find* the manifest, not create it.  We add a
 helper:
 
-```rust
-pub fn find_in_dir(dir: &Path) -> miette::Result<(PathBuf, Self)> {
-    let path = dir.join(MANIFEST_FILENAME);
-    if !path.exists() {
-        miette::bail!(
-            "No `{MANIFEST_FILENAME}` found in `{}`. \
-             Run `luapkg init` to create one.",
-            dir.display()
-        );
+``` {.rust #manifest-find-in-dir}
+    pub fn find_in_dir(dir: &Path) -> miette::Result<(PathBuf, Self)> {
+        let path = dir.join(MANIFEST_FILENAME);
+        if !path.exists() {
+            miette::bail!(
+                "No `{MANIFEST_FILENAME}` found in `{}`. \
+                 Run `luapkg init` to create one.",
+                dir.display()
+            );
+        }
+        let manifest = Self::from_path(&path)?;
+        Ok((path, manifest))
     }
-    let manifest = Self::from_path(&path)?;
-    Ok((path, manifest))
-}
 ```
 
 It returns a tuple `(PathBuf, Manifest)` because callers sometimes need to
@@ -189,7 +262,8 @@ installing).
 
 ## The `pub const` pattern
 
-```rust
+``` {.rust #manifest-filename-const}
+/// The file name we look for in the current directory.
 pub const MANIFEST_FILENAME: &str = "luapkg.toml";
 ```
 
@@ -202,7 +276,7 @@ stored in the binary's read-only data segment.
 
 At this point you can build and run the first command:
 
-```
+```console
 $ cargo build
 $ ./target/debug/luapkg init hello-lua
 ✔ Created `luapkg.toml` for project "hello-lua"

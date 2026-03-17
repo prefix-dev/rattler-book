@@ -1,4 +1,4 @@
--- ~/~ begin <<book/src/ch09-build.md#src/build_prelude.lua>>[init]
+-- ~/~ begin <<src/ch09-build.md#src/build_prelude.lua>>[init]
 -- luapkg build prelude
 -- Automatically sourced before every build.lua by `luapkg build`.
 --

@@ -15,11 +15,86 @@ environment of a child process.  The trick is:
 1. Compute what the environment *would* look like after activation.
 2. Spawn the user's command with that modified environment.
 
-The child inherits the modified environment; the parent is untouched.
+The child inherits the modified environment; the parent is untouched. This is the same pattern pixi uses for `pixi run`.
 
-This uses the same activation logic from Chapter 7, but instead of printing a script it captures the resulting environment as a map of variable names to values.
+This uses the same activation logic from Chapter 7, but instead of printing a script it captures the resulting environment as a map of variable names to values. Because `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
 
-rattler provides this via `Activator::run_activation`:
+Here is the complete `src/commands/run.rs`:
+
+``` {.rust file=src/commands/run.rs}
+use std::env;
+use std::process::Stdio;
+
+use clap::Parser;
+use miette::IntoDiagnostic;
+use rattler_conda_types::Platform;
+use rattler_shell::activation::{ActivationVariables, Activator};
+use rattler_shell::shell::{Bash, ShellEnum};
+use tokio::process::Command;
+
+#[derive(Debug, Parser)]
+pub struct Args {
+    /// The command to run (and its arguments).
+    ///
+    /// Everything after `run` is passed verbatim to the OS.
+    #[clap(required = true, trailing_var_arg = true)]
+    pub command: Vec<String>,
+
+    /// Override the prefix path.
+    #[clap(long)]
+    pub prefix: Option<std::path::PathBuf>,
+}
+
+pub async fn execute(args: Args) -> miette::Result<()> {
+    let cwd = env::current_dir().into_diagnostic()?;
+    let prefix = args
+        .prefix
+        .unwrap_or_else(|| super::prefix_dir(&cwd));
+    let prefix = std::path::absolute(prefix).into_diagnostic()?;
+
+    if !prefix.exists() {
+        miette::bail!(
+            "Environment not found at `{}`. Run `luapkg install` first.",
+            prefix.display()
+        );
+    }
+
+    let platform = Platform::current();
+    let shell: ShellEnum = ShellEnum::from_env().unwrap_or_else(|| Bash.into());
+
+    let activator =
+        Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
+    let current_vars = ActivationVariables::from_env().into_diagnostic()?;
+
+    let activation_env = tokio::task::spawn_blocking(move || {
+        activator.run_activation(current_vars, None)
+    })
+    .await
+    .into_diagnostic()?
+    .into_diagnostic()?;
+
+    let (program, rest_args) = args.command.split_first().expect("clap ensures non-empty");
+
+    let status = Command::new(program)
+        .args(rest_args)
+        .envs(&activation_env)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
+        .await
+        .into_diagnostic()?;
+
+    if !status.success() {
+        let code = status.code().unwrap_or(1);
+        std::process::exit(code);
+    }
+
+    Ok(())
+}
+```
+
+rattler provides the key function `Activator::run_activation`:
 
 ```rust
 let activation_env = tokio::task::spawn_blocking(move || {

@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch06-install.md#src/commands/add.rs>>[init]
+// ~/~ begin <<src/ch06-install.md#src/commands/add.rs>>[init]
 use std::env;
 
 use clap::Parser;
@@ -49,7 +49,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     super::install::install_from_manifest(&manifest, prefix).await
 }
 
-// ~/~ begin <<book/src/ch06-install.md#split-spec>>[init]
+// ~/~ begin <<src/ch06-install.md#split-spec>>[init]
 fn split_spec(spec: &str) -> (&str, &str) {
     // Respect quoted strings and handle the common "name version" pattern.
     if let Some(pos) = spec.find(|c: char| c.is_whitespace() || c == '=') {

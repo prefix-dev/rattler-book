@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch08-run.md#src/commands/run.rs>>[init]
+// ~/~ begin <<src/ch08-run.md#src/commands/run.rs>>[init]
 use std::env;
 use std::process::Stdio;
 

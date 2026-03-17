@@ -92,7 +92,7 @@ let overrides = VirtualPackageOverrides {
 Archspec is a microarchitecture specification system.  It maps CPU models to
 capability levels:
 
-```
+```text
 x86_64          (base 64-bit x86)
 x86_64_v2       (SSE4.2, POPCNT, ...)
 x86_64_v3       (AVX2, BMI2, ...)

@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch09-build.md#src/recipe.rs>>[init]
+// ~/~ begin <<src/ch09-build.md#src/recipe.rs>>[init]
 use std::path::{Path, PathBuf};
 
 use miette::{Context, IntoDiagnostic};

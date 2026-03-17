@@ -1,9 +1,0 @@
-[book]
-title = "The Rattler Book"
-authors = ["The Rattler Contributors"]
-language = "en"
-# multilingual = false
-src = "src"
-
-[output.html]
-git-repository-url = "https://github.com/mamba-org/rattler"

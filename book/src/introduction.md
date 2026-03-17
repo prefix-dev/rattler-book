@@ -27,7 +27,7 @@ self-contained, but the techniques generalize to any ecosystem.
 
 `luapkg`, a minimal Lua package manager.  It can:
 
-```
+```console
 $ luapkg init my-app          # scaffold a new project
 $ luapkg add lua ">=5.4"      # add dependencies
 $ luapkg install              # fetch, solve, and install
@@ -52,7 +52,7 @@ them in any order.
 The easiest way to get started is with [pixi], which manages the Rust toolchain
 and all dependencies for you:
 
-```
+```console
 pixi install
 pixi run build
 ```
@@ -63,7 +63,7 @@ No manual Rust installation required.
 
 You can also build a distributable conda package:
 
-```
+```console
 pixi build
 ```
 
@@ -74,13 +74,13 @@ pixi build
 If you prefer to manage Rust yourself, you need Rust 1.82 or later.  Install it
 with [rustup]:
 
-```
+```console
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
 
 Then clone the repository and build:
 
-```
+```console
 git clone https://github.com/mamba-org/rattler-book
 cd rattler-book
 cargo build

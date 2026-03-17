@@ -46,18 +46,21 @@ is a no-op.
 
 ## The `Installer` API
 
-```rust
-let result = Installer::new()
-    .with_download_client(client)
-    .with_target_platform(platform)
-    .with_installed_packages(installed_packages)
-    .with_execute_link_scripts(true)
-    .with_requested_specs(specs)
-    .with_reporter(IndicatifReporter::builder().finish())
-    .install(&prefix, solution)
-    .await
-    .into_diagnostic()
-    .context("installing packages")?;
+We configure the installer with a builder and then call `.install()` to apply the transaction.
+
+``` {.rust #install-installer}
+    let start_install = Instant::now();
+    let result = Installer::new()
+        .with_download_client(client)
+        .with_target_platform(platform)
+        .with_installed_packages(installed_packages)
+        .with_execute_link_scripts(true)
+        .with_requested_specs(specs)
+        .with_reporter(IndicatifReporter::builder().finish())
+        .install(&prefix, solution)
+        .await
+        .into_diagnostic()
+        .context("installing packages")?;
 ```
 
 This is the **builder pattern**, a common Rust idiom for constructing objects
@@ -92,30 +95,123 @@ wants this" from "installed because something else needed it". This distinction 
 
 ## Reading the result
 
-```rust
-if result.transaction.operations.is_empty() {
-    println!(
-        "{} Environment already up to date",
-        console::style("✔").green()
-    );
-} else {
-    println!(
-        "{} Environment updated in {:.1}s",
-        console::style("✔").green(),
-        start_install.elapsed().as_secs_f64()
-    );
-}
+Once installation finishes, we check the transaction to report whether anything changed.
+
+``` {.rust #install-result}
+    if result.transaction.operations.is_empty() {
+        println!(
+            "{} Environment already up to date",
+            console::style("✔").green()
+        );
+    } else {
+        println!(
+            "{} Environment updated in {:.1}s",
+            console::style("✔").green(),
+            start_install.elapsed().as_secs_f64()
+        );
+        println!(
+            "  Activate with:  eval $(luapkg shell)"
+        );
+    }
+
+    Ok(())
 ```
 
 `result.transaction.operations` is a list of what the installer did.
 If it's empty, nothing changed.
 
+All nine steps above live inside `install_from_manifest`:
+
+``` {.rust #install-from-manifest}
+/// Shared install logic used by both `install` and `add`.
+///
+/// Takes a fully-parsed `Manifest` and installs (or updates) the environment
+/// at `prefix`.  Pulling this out into its own function means `add` can call
+/// it after mutating the manifest without duplicating any networking or
+/// solving code.
+pub async fn install_from_manifest(
+    manifest: &Manifest,
+    prefix: std::path::PathBuf,
+) -> miette::Result<()> {
+<<install-parse-specs>>
+
+<<install-cache-dir>>
+
+<<install-http-client>>
+
+<<install-parse-channels>>
+
+<<install-gateway-builder>>
+
+<<install-gateway-query>>
+
+<<install-virtual-packages>>
+
+<<install-read-installed>>
+
+<<install-solver-task>>
+
+<<install-solve>>
+
+<<install-solve-progress>>
+
+<<install-installer>>
+
+<<install-result>>
+}
+```
+
+The `execute` function is a thin entry point that reads the manifest and calls
+`install_from_manifest`:
+
+``` {.rust #install-execute}
+pub async fn execute(args: Args) -> miette::Result<()> {
+    let cwd = env::current_dir().into_diagnostic()?;
+    let (_, manifest) = Manifest::find_in_dir(&cwd)?;
+
+    let prefix = args
+        .prefix
+        .unwrap_or_else(|| super::prefix_dir(&cwd));
+    std::fs::create_dir_all(&prefix)
+        .into_diagnostic()
+        .context("creating prefix directory")?;
+    let prefix = std::path::absolute(prefix).into_diagnostic()?;
+
+    install_from_manifest(&manifest, prefix).await
+}
+```
+
+``` {.rust #install-private-helpers}
+fn with_spinner_sync<T, F: FnOnce() -> T>(
+    msg: &'static str,
+    f: F,
+) -> T {
+    crate::progress::with_spinner_sync(msg, f)
+}
+```
+
 ## The `luapkg add` command
 
 `add` is a thin wrapper around `install_from_manifest`:
 
-```rust
-// src/commands/add.rs
+``` {.rust file=src/commands/add.rs}
+use std::env;
+
+use clap::Parser;
+use miette::IntoDiagnostic;
+
+use crate::manifest::{Manifest, MANIFEST_FILENAME};
+
+#[derive(Debug, Parser)]
+pub struct Args {
+    /// Packages to add, e.g. `luarocks` or `"lua >=5.4"`.
+    #[clap(required = true)]
+    pub packages: Vec<String>,
+
+    /// Override the target prefix.
+    #[clap(long)]
+    pub prefix: Option<std::path::PathBuf>,
+}
 
 pub async fn execute(args: Args) -> miette::Result<()> {
     let cwd = env::current_dir().into_diagnostic()?;
@@ -124,6 +220,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     let mut added = 0usize;
     for pkg in &args.packages {
+        // Split "name version" or just "name".
         let (name, version) = split_spec(pkg);
         manifest
             .dependencies
@@ -133,15 +230,29 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     }
 
     manifest.write(&manifest_path)?;
-    // ...
+    println!(
+        "{} Added {added} package(s) to `{MANIFEST_FILENAME}`",
+        console::style("✔").green()
+    );
+
+    // Install immediately.
+    let prefix = args
+        .prefix
+        .unwrap_or_else(|| super::prefix_dir(&cwd));
+    std::fs::create_dir_all(&prefix).into_diagnostic()?;
+    let prefix = std::path::absolute(prefix).into_diagnostic()?;
+
     super::install::install_from_manifest(&manifest, prefix).await
 }
+
+<<split-spec>>
 ```
 
 ### Parsing package specs
 
-```rust
+``` {.rust #split-spec}
 fn split_spec(spec: &str) -> (&str, &str) {
+    // Respect quoted strings and handle the common "name version" pattern.
     if let Some(pos) = spec.find(|c: char| c.is_whitespace() || c == '=') {
         let name = spec[..pos].trim();
         let version = spec[pos..].trim().trim_start_matches('=').trim();
@@ -159,36 +270,23 @@ This splits `"lua >=5.4"` into `("lua", ">=5.4")` or `"luarocks"` into
 pattern.  `String::find` accepts anything that implements `Pattern`: a char, a
 `&str`, or a closure `Fn(char) -> bool`.
 
-## The `install_from_manifest` helper
-
-Both `add` and `install` call the same underlying function:
-
-```rust
-pub async fn install_from_manifest(
-    manifest: &Manifest,
-    prefix: std::path::PathBuf,
-) -> miette::Result<()> {
-    // 1. Parse MatchSpecs
-    // 2. Locate cache dir
-    // 3. Build HTTP client
-    // 4. Parse channels
-    // 5. Query repodata via the Gateway
-    // 6. Detect virtual packages
-    // 7. Read currently-installed packages
-    // 8. Solve
-    // 9. Install
-}
-```
-
-Extracting shared logic into a function is the right call when two commands need
-the same steps.  In Rust, functions are zero-cost: there's no overhead compared
-to inlining the code.
-
 ## The prefix directory
 
-```rust
-// src/commands/mod.rs
+``` {.rust file=src/commands/mod.rs}
+pub mod add;
+pub mod build;
+pub mod init;
+pub mod install;
+pub mod run;
+pub mod shell;
 
+use std::path::{Path, PathBuf};
+
+/// Return the path to the conda prefix managed by `luapkg`.
+///
+/// By convention we store the environment at `.luapkg/env/` relative to the
+/// project root (the directory that contains `luapkg.toml`).  This is similar
+/// to how pixi stores its environments in `.pixi/envs/`.
 pub fn prefix_dir(project_root: &Path) -> PathBuf {
     project_root.join(".luapkg").join("env")
 }
@@ -204,7 +302,7 @@ The user can override it with `--prefix /path/to/env`.
 
 After `luapkg install`, the prefix looks like this:
 
-```
+```text
 .luapkg/env/
 ├── bin/
 │   ├── lua             ← the Lua interpreter

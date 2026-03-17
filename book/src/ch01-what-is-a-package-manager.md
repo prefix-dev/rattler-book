@@ -18,7 +18,7 @@ The answer is a **channel** (conda terminology) or **registry** (npm/cargo
 terminology) or **index** (pip terminology): a server that publishes a catalog of
 available packages.  The catalog is called **repodata** in conda.
 
-```
+```text
 Channel: https://conda.anaconda.org/conda-forge/
   └── linux-64/
   │     repodata.json     ← catalog for 64-bit Linux packages
@@ -109,7 +109,7 @@ is older.
 A conda package is an archive.  Historically it was a `.tar.bz2` file.  In the
 modern [`.conda` format][cep-35] (version 2) it is an uncompressed ZIP that contains:
 
-```
+```text
 moonshine-0.3.0-lua_0.conda
 ├── metadata.json          ← {"conda_pkg_format_version": 2}
 ├── pkg-moonshine-….tar.zst  ← payload files

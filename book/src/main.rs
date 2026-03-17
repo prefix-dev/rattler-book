@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch02-project-setup.md#src/main.rs>>[init]
+// ~/~ begin <<src/ch02-project-setup.md#src/main.rs>>[init]
 use clap::Parser;
 use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};

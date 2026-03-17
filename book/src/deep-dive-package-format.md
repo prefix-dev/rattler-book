@@ -10,7 +10,7 @@ problem or writing tooling that reads package archives, you'll want it.
 
 The original conda package format is a simple tar archive compressed with bzip2:
 
-```
+```text
 lua-5.4.7-h5eee18b_0.tar.bz2
 ├── bin/lua
 ├── lib/liblua.so.5.4
@@ -30,7 +30,7 @@ accessed.  For large packages this is slow.
 
 The modern `.conda` format is an **uncompressed ZIP** containing three members:
 
-```
+```text
 lua-5.4.7-h5eee18b_0.conda
 ├── metadata.json                          (uncompressed)
 ├── pkg-lua-5.4.7-h5eee18b_0.tar.zst      (zstd-compressed tar)

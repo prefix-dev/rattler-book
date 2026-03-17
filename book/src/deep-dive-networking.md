@@ -17,11 +17,15 @@ Key features we rely on:
   buffering the whole response
 
 ```toml
-reqwest = { version = "0.12", default-features = false, features = ["rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = ["stream"] }
 ```
 
-We explicitly disable the default features and request `rustls-tls` to avoid a
-dependency on OpenSSL, which complicates static builds and cross-compilation.
+The direct `reqwest` dependency only enables `"stream"` (for streaming response
+bodies).  TLS is activated through Cargo feature propagation at the crate level:
+the project's `[features]` section defines a `rustls-tls` feature that enables
+`reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots`, along with the
+matching feature on every rattler crate.  This avoids a dependency on OpenSSL,
+which complicates static builds and cross-compilation.
 
 ### The `no_gzip` flag
 
@@ -106,7 +110,7 @@ rattler also ships middlewares for AWS S3 and Google Cloud Storage.  These are
 useful for organizations that host private conda channels in cloud storage buckets.
 
 The S3 middleware uses SigV4 request signing:
-```
+```text
 Authorization: AWS4-HMAC-SHA256 Credential=AKID/20240301/us-east-1/s3/aws4_request,
                SignedHeaders=host;x-amz-content-sha256;x-amz-date,
                Signature=abc123...
@@ -122,7 +126,7 @@ Large organizations sometimes run a local mirror of conda-forge to avoid
 downloading packages from the internet on every CI run.  The mirror middleware
 rewrites request URLs:
 
-```
+```text
 https://conda.anaconda.org/conda-forge/linux-64/lua-5.4.7.conda
     -> https://internal-mirror.corp.com/conda-forge/linux-64/lua-5.4.7.conda
 ```

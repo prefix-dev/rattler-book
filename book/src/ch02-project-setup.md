@@ -6,7 +6,7 @@ though none of the commands do anything yet.
 
 ## Creating the project
 
-```
+```console
 cargo new luapkg
 cd luapkg
 ```
@@ -15,57 +15,84 @@ cd luapkg
 
 Open `Cargo.toml` and add the following.  We'll explain each crate as we use it.
 
-```toml
+``` {.toml file=Cargo.toml}
 [package]
-name    = "luapkg"
+name = "luapkg"
 version = "0.1.0"
 edition = "2021"
+description = "A minimal Lua package manager built on rattler"
+
+[[bin]]
+name = "luapkg"
+path = "src/main.rs"
+
+[features]
+default = ["rustls-tls"]
+rustls-tls = [
+    "reqwest/rustls-tls",
+    "reqwest/rustls-tls-native-roots",
+    "rattler/rustls-tls",
+    "rattler_cache/rustls-tls",
+    "rattler_networking/rustls-tls",
+    "rattler_repodata_gateway/rustls-tls",
+]
 
 [dependencies]
-# CLI argument parsing
-clap = { version = "4", features = ["derive"] }
-
-# Error handling, user-facing diagnostics
-miette  = { version = "7", features = ["fancy"] }
+# Core rattler crates
+rattler = { version = "0.40.0", default-features = false, features = ["indicatif"] }
+rattler_cache = { version = "0.6.15", default-features = false }
+rattler_conda_types = { version = "0.44.0", default-features = false }
+rattler_digest = { version = "1.2.2", default-features = false }
+rattler_networking = { version = "0.26.3", default-features = false, features = ["system-integration"] }
+rattler_package_streaming = { version = "0.24.3", default-features = false }
+rattler_repodata_gateway = { version = "0.27.0", default-features = false, features = ["gateway"] }
+rattler_shell = { version = "0.26.3", default-features = false }
+rattler_solve = { version = "5.0.0", default-features = false, features = ["resolvo"] }
+rattler_index = { version = "0.27.17", default-features = false }
+rattler_virtual_packages = { version = "2.3.12", default-features = false }
 
 # Async runtime
-tokio = { version = "1", features = ["full"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "process"] }
 
-# Config file format
-toml  = "0.8"
+# CLI argument parsing
+clap = { version = "4", features = ["derive", "color", "suggestions"] }
+
+# Error handling — miette gives beautiful terminal diagnostics
+miette = { version = "7", features = ["fancy"] }
+thiserror = "2"
+
+# Serialization — manifest I/O
 serde = { version = "1", features = ["derive"] }
+toml = "0.9"
 
-# Pretty terminal output
-console    = "0.15"
-indicatif  = "0.17"
+# HTTP client (versions must match what rattler expects)
+reqwest = { version = "0.12", default-features = false, features = ["stream"] }
+reqwest-middleware = "0.4"
 
-# Logging
-tracing            = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# Progress bars
+indicatif = "0.18"
 
-# HTTP
-reqwest            = { version = "0.12", default-features = false, features = ["rustls-tls"] }
-reqwest-middleware = "0.3"
+# Console formatting
+console = "0.16"
 
-# rattler crates
-rattler                    = { version = "0.28" }
-rattler_cache              = { version = "0.1" }
-rattler_conda_types        = { version = "0.28" }
-rattler_networking         = { version = "0.21" }
-rattler_repodata_gateway   = { version = "0.22" }
-rattler_shell              = { version = "0.22" }
-rattler_solve              = { version = "0.28" }
-rattler_virtual_packages   = { version = "0.21" }
-rattler_package_streaming  = { version = "0.22" }
-rattler_index              = { version = "0.2" }
-rattler_digest             = { version = "0.19" }
+# Timestamps for package metadata
+chrono = { version = "0.4", default-features = false, features = ["std", "clock"] }
 
-# Build command helpers
-sha2      = "0.10"
-chrono    = { version = "0.4", features = ["serde"] }
-walkdir   = "2"
-tempfile  = "3"
+# SHA-256 for paths.json integrity data
+sha2 = "0.10"
+
+# JSON serialization used directly in build command
 serde_json = "1"
+
+# Temporary directory for build workspace
+tempfile = "3"
+
+# Directory walking for collecting build outputs
+walkdir = "2"
+
+# Logging / tracing
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 ```
 
 The rattler crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) implement the conda specification. The rest of the dependency list is general-purpose infrastructure: `clap` for CLI parsing, `tokio` for async I/O, `reqwest` for HTTP, and so on.
@@ -77,13 +104,13 @@ The rattler crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) implement
 
 Package managers surface errors from many sources (network, filesystem, solver conflicts, malformed metadata), so `miette` with `features = ["fancy"]` is worth pulling in early. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string.
 
-Notice that `reqwest` uses `default-features = false, features = ["rustls-tls"]`. This selects the pure-Rust TLS implementation instead of linking against the system's OpenSSL, so the binary builds and runs on any platform without requiring a system TLS library.
+Notice that `reqwest` is declared with `features = ["stream"]` for streaming downloads. TLS is handled at the crate level through the `[features]` section, where the `rustls-tls` feature propagates `reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots` (along with matching features for the rattler crates). This selects the pure-Rust TLS implementation without linking against the system's OpenSSL.
 
 ## The entry point: `src/main.rs`
 
 Here is how the project is structured:
 
-```
+```text
 src/
 ├── main.rs          ← CLI wiring, Tokio runtime
 ├── manifest.rs      ← luapkg.toml parser
@@ -101,7 +128,7 @@ src/
 
 Here is the complete `main.rs`:
 
-```rust
+``` {.rust file=src/main.rs}
 use clap::Parser;
 use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};

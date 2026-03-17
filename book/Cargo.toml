@@ -1,4 +1,4 @@
-# ~/~ begin <<book/src/ch02-project-setup.md#Cargo.toml>>[init]
+# ~/~ begin <<src/ch02-project-setup.md#Cargo.toml>>[init]
 [package]
 name = "luapkg"
 version = "0.1.0"

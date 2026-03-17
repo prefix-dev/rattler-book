@@ -16,11 +16,19 @@ luapkg = { path = "." }
 [dependencies]
 
 [feature.book.dependencies]
-mdbook = ">=0.4"
+python = ">=3.11"
+mkdocs-material = ">=9.0"
+
+[feature.book.pypi-dependencies]
+entangled-cli = ">=2.0"
+mkdocs-entangled-plugin = ">=0.5"
+playwright = ">=1.40"
 
 [feature.book.tasks]
-book-build = { cmd = "mdbook build", cwd = "book" }
-book-serve = { cmd = "mdbook serve", cwd = "book" }
+book-build = { cmd = "mkdocs build", cwd = "book" }
+book-serve = { cmd = "mkdocs serve", cwd = "book" }
+tangle = "entangled tangle"
+stitch = "entangled stitch"
 
 [tasks]
 # Build
@@ -38,4 +46,4 @@ fmt-check = "cargo fmt --check"
 
 [environments]
 default = { solve-group = "default" }
-book = { features = ["book"], solve-group = "default" }
+book = { features = ["book"], solve-group = "book" }

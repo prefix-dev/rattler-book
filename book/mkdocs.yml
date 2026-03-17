@@ -1,0 +1,71 @@
+site_name: The Rattler Book
+site_description: Building a package manager with rattler
+docs_dir: src
+site_dir: book
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: amber
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.instant
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - content.code.copy
+    - search.suggest
+    - search.highlight
+    - toc.integrate
+
+nav:
+  - Introduction: introduction.md
+  - Part I — Building a Package Manager:
+    - 1. What Is a Package Manager?: ch01-what-is-a-package-manager.md
+    - 2. Setting Up the Project: ch02-project-setup.md
+    - 3. The Manifest: ch03-manifest.md
+    - 4. Fetching Repodata: ch04-repodata.md
+    - 5. Solving Dependencies: ch05-solver.md
+    - 6. Installing Packages: ch06-install.md
+    - 7. Shell Activation: ch07-shell.md
+    - 8. Running Commands: ch08-run.md
+    - 9. Building Packages: ch09-build.md
+  - Part II — Deep Dives:
+    - The conda Package Format: deep-dive-package-format.md
+    - Virtual Packages: deep-dive-virtual-packages.md
+    - The Networking Stack: deep-dive-networking.md
+    - The resolvo SAT Solver: deep-dive-resolvo.md
+
+plugins:
+  - search
+  - entangled
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - attr_list
+  - def_list
+  - admonition
+  - pymdownx.details
+  - toc:
+      permalink: true
+  - tables
+  - footnotes

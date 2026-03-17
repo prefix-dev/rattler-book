@@ -1,4 +1,5 @@
 references/
+book/target
 
 # Rust build artifacts
 /target/
@@ -41,3 +42,4 @@ examples/**/output/
 
 # mdBook output
 book/book/
+.entangled/

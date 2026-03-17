@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch09-build.md#src/commands/build.rs>>[init]
+// ~/~ begin <<src/ch09-build.md#src/commands/build.rs>>[init]
 use std::env;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};

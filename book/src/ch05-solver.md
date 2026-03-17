@@ -44,15 +44,16 @@ Virtual packages model the host system as if it were a package. Instead of speci
 
 Before calling the solver, we detect what the host system provides:
 
-```rust
-let virtual_packages: Vec<GenericVirtualPackage> =
-    rattler_virtual_packages::VirtualPackage::detect(
-        &rattler_virtual_packages::VirtualPackageOverrides::default(),
-    )
-    .into_diagnostic()?
-    .into_iter()
-    .map(GenericVirtualPackage::from)
-    .collect();
+``` {.rust #install-virtual-packages}
+    let virtual_packages: Vec<GenericVirtualPackage> =
+        rattler_virtual_packages::VirtualPackage::detect(
+            &rattler_virtual_packages::VirtualPackageOverrides::default(),
+        )
+        .into_diagnostic()
+        .context("detecting virtual packages")?
+        .into_iter()
+        .map(|v| v.into())
+        .collect();
 ```
 
 This probes the system for things like:
@@ -69,10 +70,11 @@ stores the name and version as strings, which is what the solver expects.
 
 ## Reading the existing installation
 
-```rust
-let installed_packages =
-    PrefixRecord::collect_from_prefix::<PrefixRecord>(&prefix)
-        .into_diagnostic()?;
+We scan the prefix's `conda-meta/` directory to find out what is already installed.
+
+``` {.rust #install-read-installed}
+    let installed_packages =
+        PrefixRecord::collect_from_prefix::<PrefixRecord>(&prefix).into_diagnostic()?;
 ```
 
 `PrefixRecord` is rattler's representation of a package that's already installed.
@@ -85,18 +87,20 @@ solver should prefer to keep if possible.  Without this, every `luapkg install` 
 
 ## Building the solver task
 
-```rust
-let locked = installed_packages
-    .iter()
-    .map(|r| r.repodata_record.clone())
-    .collect::<Vec<_>>();
+We assemble the installed packages, virtual packages, specs, and repodata into a single `SolverTask`.
 
-let solver_task = SolverTask {
-    locked_packages: locked,
-    virtual_packages,
-    specs: specs.clone(),
-    ..SolverTask::from_iter(&repo_data)
-};
+``` {.rust #install-solver-task}
+    let locked = installed_packages
+        .iter()
+        .map(|r| r.repodata_record.clone())
+        .collect::<Vec<_>>();
+
+    let solver_task = SolverTask {
+        locked_packages: locked,
+        virtual_packages,
+        specs: specs.clone(),
+        ..SolverTask::from_iter(&repo_data)
+    };
 ```
 
 `SolverTask::from_iter(&repo_data)` builds the task's `available_packages` field
@@ -118,24 +122,24 @@ The difference between locked and pinned is important: locked packages are a *pr
 
 ## Running the solver
 
-```rust
-let solution: Vec<RepoDataRecord> = with_spinner_sync("Solving", || {
-    resolvo::Solver.solve(solver_task)
-})
-.into_diagnostic()
-.context("solving dependencies")?
-.records;
+rattler ships two solver backends: `resolvo` (pure Rust, the default, used by pixi) and `libsolv_c` (a C binding to libsolv, used by older conda tooling).  We use resolvo throughout this book.
+
+``` {.rust #install-solve}
+    let start_solve = Instant::now();
+    let solution: Vec<RepoDataRecord> = with_spinner_sync("Solving", || {
+        resolvo::Solver.solve(solver_task)
+    })
+    .into_diagnostic()
+    .context("solving dependencies")?
+    .records;
 ```
 
 `resolvo::Solver.solve(solver_task)` is synchronous and CPU-bound.  We run it in
 `with_spinner_sync`, a version of our spinner helper that works with synchronous
 closures:
 
-```rust
-pub fn with_spinner_sync<T, F: FnOnce() -> T>(
-    msg: impl Into<Cow<'static, str>>,
-    f: F,
-) -> T {
+``` {.rust #with-spinner-sync}
+pub fn with_spinner_sync<T, F: FnOnce() -> T>(msg: impl Into<Cow<'static, str>>, f: F) -> T {
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(Duration::from_millis(80));
     pb.set_style(spinner_style());
@@ -179,12 +183,14 @@ through a scoring system, not a separate post-processing step. Without the "pref
 
 ## Printing progress
 
-```rust
-println!(
-    "  Solved {} packages in {:.1}s",
-    console::style(solution.len()).cyan(),
-    start_solve.elapsed().as_secs_f64()
-);
+After solving, we print a summary of how many packages were selected and how long it took.
+
+``` {.rust #install-solve-progress}
+    println!(
+        "  Solved {} packages in {:.1}s",
+        console::style(solution.len()).cyan(),
+        start_solve.elapsed().as_secs_f64()
+    );
 ```
 
 `{:.1}` formats a float to one decimal place.  `start_solve.elapsed()` returns

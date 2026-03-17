@@ -1,5 +1,5 @@
-// ~/~ begin <<book/src/ch03-manifest.md#src/manifest.rs>>[init]
-// ~/~ begin <<book/src/ch03-manifest.md#manifest-imports>>[init]
+// ~/~ begin <<src/ch03-manifest.md#src/manifest.rs>>[init]
+// ~/~ begin <<src/ch03-manifest.md#manifest-imports>>[init]
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
@@ -7,12 +7,12 @@ use miette::{Context, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 // ~/~ end
 
-// ~/~ begin <<book/src/ch03-manifest.md#manifest-filename-const>>[init]
+// ~/~ begin <<src/ch03-manifest.md#manifest-filename-const>>[init]
 /// The file name we look for in the current directory.
 pub const MANIFEST_FILENAME: &str = "luapkg.toml";
 // ~/~ end
 
-// ~/~ begin <<book/src/ch03-manifest.md#manifest-structs>>[init]
+// ~/~ begin <<src/ch03-manifest.md#manifest-structs>>[init]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub project: ProjectMetadata,
@@ -34,9 +34,9 @@ fn default_channels() -> Vec<String> {
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch03-manifest.md#manifest-impl>>[init]
+// ~/~ begin <<src/ch03-manifest.md#manifest-impl>>[init]
 impl Manifest {
-// ~/~ begin <<book/src/ch03-manifest.md#manifest-from-path>>[init]
+// ~/~ begin <<src/ch03-manifest.md#manifest-from-path>>[init]
     pub fn from_path(path: &Path) -> miette::Result<Self> {
         let content = std::fs::read_to_string(path)
             .into_diagnostic()
@@ -48,7 +48,7 @@ impl Manifest {
     }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch03-manifest.md#manifest-write>>[init]
+// ~/~ begin <<src/ch03-manifest.md#manifest-write>>[init]
     pub fn write(&self, path: &Path) -> miette::Result<()> {
         let content = toml::to_string_pretty(self)
             .into_diagnostic()
@@ -60,7 +60,7 @@ impl Manifest {
     }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch03-manifest.md#manifest-find-in-dir>>[init]
+// ~/~ begin <<src/ch03-manifest.md#manifest-find-in-dir>>[init]
     pub fn find_in_dir(dir: &Path) -> miette::Result<(PathBuf, Self)> {
         let path = dir.join(MANIFEST_FILENAME);
         if !path.exists() {

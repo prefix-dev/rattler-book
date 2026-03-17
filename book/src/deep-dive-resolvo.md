@@ -12,7 +12,7 @@ assignment of variables to true/false that makes it true?
 Dependency solving reduces to SAT by encoding each package version as a boolean
 variable:
 
-```
+```text
 lua_5_4_7 = true means "install lua 5.4.7"
 lua_5_4_6 = true means "install lua 5.4.6"
 ```
@@ -52,7 +52,7 @@ DPLL works by:
 CDCL improves DPLL by analyzing *why* a conflict occurred and adding a new clause
 that prevents reaching the same dead end via a different path.
 
-```
+```text
 Conflict: tried lua 5.4.7, failed because luarocks needs json-lib <2.0
          but lua 5.4.7 doesn't need json-lib.  The conflict comes from
          legacy-plugin requiring json-lib <2.0 AND json-lib 2.1 being
@@ -163,7 +163,7 @@ tries the next preference.
 When the solver can't find a solution, it generates a human-readable explanation.
 This is one of resolvo's distinctive features:
 
-```
+```text
 The following packages are incompatible:
   * luarocks 3.11 requires json-lib >=2.0
   * legacy-plugin 1.0 requires json-lib <2.0
@@ -183,7 +183,7 @@ preference model into resolvo's scoring system.
 
 The key insight is that conda uses a **multi-objective** ordering:
 
-```
+```text
 1. Maximize version of user-requested packages
 2. Minimize number of changes from locked packages
 3. Maximize version of unlocked packages
