@@ -10,8 +10,54 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
-    name: Build & smoke test (${{ matrix.os }})
+  tangle-check:
+    name: Tangle + format check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          environments: default book
+          frozen: true
+          cache: true
+
+      - name: Tangle and format source
+        run: pixi run tangle
+
+      - name: Check source is in sync with book
+        run: |
+          if [ -n "$(git diff --name-only)" ]; then
+            echo "::error::Tangled source files are out of sync with the book."
+            echo "Run 'pixi run tangle' and commit the changes."
+            git diff --stat
+            git diff
+            exit 1
+          fi
+          echo "Source files are in sync with the book."
+
+  lint:
+    name: Clippy lint
+    needs: tangle-check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          frozen: true
+          cache: true
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Clippy (strict)
+        run: pixi run lint
+
+  smoke-test:
+    name: Smoke test (${{ matrix.os }})
+    needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -29,20 +75,17 @@ jobs:
         with:
           cache-on-failure: true
 
-      - name: Format check
-        run: pixi run fmt-check
-
-      - name: Clippy
-        run: pixi run clippy
-
       - name: Build
         run: pixi run build
 
-      - name: Smoke test – version / help
+      - name: Smoke test – help
         run: pixi run run -- --help
 
-      - name: Smoke test – init & install
+      - name: Smoke test – init
         run: |
           cd "$(mktemp -d)"
-          pixi run --manifest-path ${{ github.workspace }}/pixi.toml run -- init --name smoke-test
+          pixi run --manifest-path ${{ github.workspace }}/pixi.toml run -- init --name ci-test
           cat luapkg.toml
+
+      - name: Smoke test – moonjson build
+        run: cd examples/moonjson && pixi run --manifest-path ${{ github.workspace }}/pixi.toml run -- build

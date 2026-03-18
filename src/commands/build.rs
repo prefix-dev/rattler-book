@@ -8,9 +8,9 @@ use std::str::FromStr;
 use clap::Parser;
 use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::compression_level::CompressionLevel;
-use rattler_index::{index_fs, IndexFsConfig};
 use rattler_conda_types::package::{IndexJson, PackageFile, PathType, PathsEntry, PathsJson};
 use rattler_conda_types::{NoArchType, PackageName, VersionWithSource};
+use rattler_index::{index_fs, IndexFsConfig};
 use rattler_package_streaming::write::write_conda_package;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
@@ -134,8 +134,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     )
     .await?;
 
-    write_package_metadata(&install_prefix, &recipe)
-        .context("writing package metadata")?;
+    write_package_metadata(&install_prefix, &recipe).context("writing package metadata")?;
 
     let output_dir = std::path::absolute(&args.output_dir)
         .into_diagnostic()
@@ -158,11 +157,11 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     );
     index_fs(IndexFsConfig {
         channel: output_dir.clone(),
-        target_platform: None,   // discover all subdirs automatically
+        target_platform: None, // discover all subdirs automatically
         repodata_patch: None,
         write_zst: true,
         write_shards: true,
-        force: false,            // incremental — only index new packages
+        force: false, // incremental — only index new packages
         max_parallel: 4,
         multi_progress: None,
     })
@@ -204,7 +203,7 @@ async fn run_build_script(
     let wrapper_src = format!(
         "dofile({prelude:?})\ndofile({script:?})\n",
         prelude = prelude_path.to_string_lossy(),
-        script  = script.to_string_lossy(),
+        script = script.to_string_lossy(),
     );
     let wrapper_path = wrapper_dir.path().join("wrapper.lua");
     std::fs::write(&wrapper_path, &wrapper_src)
@@ -219,13 +218,13 @@ async fn run_build_script(
 
     let status = tokio::process::Command::new(lua_bin)
         .arg(&wrapper_path)
-        .env("PREFIX",        install_prefix)
-        .env("SRC_DIR",       src_dir)
-        .env("BUILD_PREFIX",  build_prefix)
-        .env("PKG_NAME",      &recipe.package.name)
-        .env("PKG_VERSION",   &recipe.package.version)
+        .env("PREFIX", install_prefix)
+        .env("SRC_DIR", src_dir)
+        .env("BUILD_PREFIX", build_prefix)
+        .env("PKG_NAME", &recipe.package.name)
+        .env("PKG_VERSION", &recipe.package.version)
         .env("PKG_BUILD_NUM", recipe.package.build_number.to_string())
-        .env("PATH",          &new_path)
+        .env("PATH", &new_path)
         .status()
         .await
         .into_diagnostic()
@@ -281,7 +280,7 @@ fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Res
         python_site_packages_path: None,
         track_features: vec![],
         timestamp: Some(
-            rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now())
+            rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now()),
         ),
     };
 
@@ -293,8 +292,7 @@ fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Res
         .into_diagnostic()
         .context("writing info/index.json")?;
 
-    let paths = collect_paths_json(install_prefix)
-        .context("building paths.json")?;
+    let paths = collect_paths_json(install_prefix).context("building paths.json")?;
 
     let paths_path = install_prefix.join(PathsJson::package_path());
     let paths_json = serde_json::to_string_pretty(&paths)
@@ -362,11 +360,7 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
     Ok((hasher.finalize(), size))
 }
 
-fn pack_conda(
-    install_prefix: &Path,
-    output_path: &Path,
-    recipe: &Recipe,
-) -> miette::Result<()> {
+fn pack_conda(install_prefix: &Path, output_path: &Path, recipe: &Recipe) -> miette::Result<()> {
     // Collect all files relative to the install prefix.
     let files: Vec<PathBuf> = WalkDir::new(install_prefix)
         .into_iter()
@@ -408,10 +402,10 @@ fn pack_conda(
         install_prefix,
         &files,
         CompressionLevel::Default,
-        None,      // use all available CPU threads for zstd
+        None, // use all available CPU threads for zstd
         &out_name,
         Some(&now),
-        None,      // no progress bar (already shown by our spinner)
+        None, // no progress bar (already shown by our spinner)
     )
     .into_diagnostic()
     .context("writing .conda archive")?;

@@ -29,11 +29,14 @@ playwright = ">=1.40"
 [feature.book.tasks]
 book-build = { cmd = "mkdocs build", cwd = "book" }
 book-serve = { cmd = "mkdocs serve", cwd = "book" }
-tangle = { cmd = "entangled tangle", description = "Extract code blocks from the book into source files" }
+_tangle = { cmd = "entangled tangle", description = "Extract code blocks from the book into source files" }
 stitch = { cmd = "entangled stitch", description = "Update the book from source file edits" }
 watch = { cmd = "entangled watch", description = "Watch for changes and keep book and source files in sync" }
 
 [tasks]
+# Tangle source from book and format
+tangle = { cmd = "cargo fmt", depends-on = [{ task = "_tangle", environment = "book" }], description = "Tangle source from book and format" }
+
 # Build
 build = "cargo build"
 build-release = "cargo build --release"
@@ -46,6 +49,9 @@ check = "cargo check"
 clippy = "cargo clippy"
 fmt = "cargo fmt"
 fmt-check = "cargo fmt --check"
+
+# CI
+lint = { cmd = "cargo clippy -- -D warnings", description = "Strict clippy lint (CI)" }
 
 [environments]
 default = { solve-group = "default" }

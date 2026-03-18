@@ -23,9 +23,7 @@ pub struct Args {
 
 pub fn execute(args: Args) -> miette::Result<()> {
     let cwd = env::current_dir().into_diagnostic()?;
-    let prefix = args
-        .prefix
-        .unwrap_or_else(|| super::prefix_dir(&cwd));
+    let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
     let prefix = std::path::absolute(prefix).into_diagnostic()?;
 
     if !prefix.exists() {
