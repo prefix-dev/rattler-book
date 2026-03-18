@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch03-manifest.md#src/commands/init.rs>>[init]
+// ~/~ begin <<book/src/ch03-init.md#src/commands/init.rs>>[init]
 use std::collections::HashMap;
 
 use clap::Parser;

@@ -27,3 +27,13 @@ When writing or editing book chapters, avoid common LLM prose tells. The full re
 **Connector addiction**: Don't start consecutive paragraphs with "However", "Furthermore", "Moreover", "Additionally", "That said". Start with the subject instead.
 
 **"Production"**: Avoid using "production" (e.g. "production-ready", "production code"). It sounds out of place in a book about Lua packaging.
+
+
+# Literate programming
+
+We are using entangled for literate programming, this means all the source code needs to be available in the book and the source code can always be generated from the book.
+This is also useful, for working with LLM's to make sure to combat hallucinations.
+
+Most of the tasks pertaining to this workflow are available in the `pixi.toml`.
+
+Make sure to run:

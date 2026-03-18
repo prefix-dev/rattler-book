@@ -1,13 +1,20 @@
-# Chapter 8: Running Commands in the Environment
+# Chapter 8: The `run` Command
 
 `luapkg shell` requires the user to evaluate shell-specific output. That works for interactive use but creates two problems: it is awkward to use in scripts and CI pipelines, and it ties you to a specific shell dialect. `luapkg run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether the user runs Bash, Fish, PowerShell, or no shell at all.
+
+## Design
 
 ```bash
 luapkg run lua -e 'print("hello from conda")'
 luapkg run luarocks install inspect
 ```
 
-## The strategy: environment diffing
+Everything after `run` is passed verbatim to the OS. The command accepts an
+optional `--prefix` flag to override the environment location.
+
+## Concepts
+
+### Environment diffing
 
 We can't modify the parent shell's environment, but we *can* control the
 environment of a child process.  The trick is:
@@ -17,7 +24,9 @@ environment of a child process.  The trick is:
 
 The child inherits the modified environment; the parent is untouched. This is the same pattern pixi uses for `pixi run`.
 
-This uses the same activation logic from Chapter 7, but instead of printing a script it captures the resulting environment as a map of variable names to values. Because `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
+This uses the same activation logic from [Chapter 7](ch07-shell.md), but instead of printing a script it captures the resulting environment as a map of variable names to values. Because `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
+
+## Implementation
 
 Here is the complete `src/commands/run.rs`:
 
@@ -113,7 +122,7 @@ let activation_env = tokio::task::spawn_blocking(move || {
 It then runs that script and diffs the two snapshots, returning only the changed
 variables as a `HashMap<String, String>`.
 
-## Spawning the child process
+### Spawning the child process
 
 ```rust
 let (program, rest_args) = args.command.split_first().expect("clap ensures non-empty");
@@ -143,7 +152,7 @@ and write to it directly; `lua` works interactively.
 `.status()` runs the command and returns its exit status once it completes,
 without capturing stdout/stderr.
 
-## Propagating the exit code
+### Propagating the exit code
 
 !!! warning "Exit code propagation"
 

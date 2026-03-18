@@ -1,27 +1,11 @@
-# Chapter 7: Shell Activation
+# Chapter 7: The `shell` Command
 
 After installing packages into `.luapkg/env/`, the user needs to be able to
 *use* them.  That means getting `lua`, `luarocks`, and any other installed
 binaries onto their `PATH`, and setting any environment variables that packages
 declare.
 
-This is the **activation** problem, and it's trickier than it looks.
-
-## Why activation is non-trivial
-
-Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. conda uses eval-based activation: the tool prints a shell script and the user evaluates it in their current shell. This gives packages full control over the environment (not just `PATH` but also `LD_LIBRARY_PATH`, `LUA_PATH`, and any other variable), at the cost of being shell-dependent.
-
-A child process cannot modify the environment of its parent.  That's a Unix
-rule with no exceptions.  So when you run `luapkg shell`, it can't just set
-`PATH` for you; it has to print a script that you evaluate in your shell.
-
-!!! info "`shell` vs `run`"
-
-    `luapkg shell` and `luapkg run` (Chapter 8) represent a design fork.
-    `shell` generates a script the user evaluates, which means it must know the
-    user's shell dialect. `run` spawns a child process with the right
-    environment variables, which is shell-agnostic but only lasts for one
-    command. Most package managers end up needing both.
+## Design
 
 ```bash
 eval $(luapkg shell)         # bash / zsh
@@ -31,7 +15,30 @@ luapkg shell | source        # fish
 The `eval` trick runs the output of `luapkg shell` as shell code in the current
 process, which *can* modify `PATH`.
 
-But it gets more complicated:
+The command accepts an optional `--shell` flag to override the detected shell
+dialect and `--prefix` to override the environment location.
+
+!!! info "`shell` vs `run`"
+
+    `luapkg shell` and `luapkg run` ([Chapter 8](ch08-run.md)) represent a design fork.
+    `shell` generates a script the user evaluates, which means it must know the
+    user's shell dialect. `run` spawns a child process with the right
+    environment variables, which is shell-agnostic but only lasts for one
+    command. Most package managers end up needing both.
+
+## Concepts
+
+### Why activation is non-trivial
+
+Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. conda uses eval-based activation: the tool prints a shell script and the user evaluates it in their current shell. This gives packages full control over the environment (not just `PATH` but also `LD_LIBRARY_PATH`, `LUA_PATH`, and any other variable), at the cost of being shell-dependent.
+
+A child process cannot modify the environment of its parent.  That's a Unix
+rule with no exceptions.  So when you run `luapkg shell`, it can't just set
+`PATH` for you; it has to print a script that you evaluate in your shell.
+
+### Shell dialects and nesting
+
+Several complications arise:
 
 - **Different shells** have different syntax for setting variables, exporting
   them, and sourcing scripts.  Bash uses `export FOO=bar`; fish uses
@@ -46,7 +53,7 @@ But it gets more complicated:
 conda tracks nesting depth with `CONDA_SHLVL` and the current prefix with
 `CONDA_PREFIX`.  rattler implements the same protocol.
 
-## How `luapkg shell` works
+## Implementation
 
 ``` {.rust file=src/commands/shell.rs}
 use std::env;
@@ -197,8 +204,8 @@ PATH.
     protocol, and these variables are part of that protocol. The benefit is
     compatibility: any tool that understands conda environments (editors, CI
     systems, other package managers) will recognize our environment. The cost is
-    the naming confusion, since "CONDA" has nothing to do with Lua. A production
-    tool could alias these variables, but you would lose the ecosystem
+    the naming confusion, since "CONDA" has nothing to do with Lua. A more
+    polished tool could alias these variables, but you would lose the ecosystem
     compatibility.
 
 ## Summary

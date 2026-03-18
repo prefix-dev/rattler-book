@@ -1,19 +1,33 @@
-# Chapter 9: Building and Publishing Packages
+# Chapter 9: The `build` Command
 
 We've covered installing packages from existing channels.  Now let's close the
 loop: building a new package from source and publishing it so others can install
 it.
 
-"Closing the loop" means moving from consumer to producer. Up to now, luapkg only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like conda-build or rattler-build) to create new packages. By adding a build command, luapkg becomes self-sufficient for the Lua ecosystem: you can write a library, package it, host it on a local channel, and install it with the same tool.
+Moving from consumer to producer makes luapkg self-sufficient for the Lua ecosystem. Up to now, luapkg only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like conda-build or rattler-build) to create new packages. By adding a build command, you can write a library, package it, host it on a local channel, and install it with the same tool.
 
-This chapter covers:
-- Parsing a `recipe.toml`
-- Installing build-time dependencies
-- Running a Lua build script
-- Packing the result into a `.conda` archive
-- Indexing the output directory as a local channel
+## Design
 
-## The recipe file
+`luapkg build` reads a `recipe.toml`, installs build-time dependencies into a
+temporary prefix, runs a Lua build script, packs the result into a `.conda`
+archive, and indexes the output directory as a local channel.
+
+```console
+$ luapkg build
+Building moonshine 0.3.0 (build lua_0)
+  → Installing 2 build dependencies…
+  → Running build script `build.lua`
+  → Packing 4 files…
+  → Indexing channel at /home/user/moonshine/output
+✔ Built moonshine-0.3.0-lua_0.conda
+  package → /home/user/moonshine/output/noarch/moonshine-0.3.0-lua_0.conda
+  channel → /home/user/moonshine/output
+```
+
+The command accepts `--recipe` (path to recipe.toml, defaults to `./recipe.toml`)
+and `--output-dir` (defaults to `./output/`).
+
+## Configuration: `recipe.toml`
 
 ```toml
 # recipe.toml
@@ -224,7 +238,49 @@ A few points about the recipe schema:
 The `#[serde(default)]` annotations make the `[source]`, `[channels]`,
 `[requirements]`, and `[build]` sections optional.
 
-## The build script prelude
+## Concepts
+
+### Build isolation
+
+The two-prefix design is build isolation. Tools in `build_prefix`
+(compilers, interpreters, build utilities) are available during the build
+but never leak into the final package. Without this separation, a build tool
+could accidentally end up as a runtime dependency, making the package larger
+and less portable. This is the same principle behind Debian's Build-Depends
+vs Depends, and it is a key requirement for reproducible builds.
+
+### The `.conda` format
+
+The `.conda` format (version 2) is an uncompressed ZIP containing two inner
+`.tar.zst` archives: one for the info metadata and one for the payload files.
+`rattler_package_streaming::write::write_conda_package` handles creating this
+structure.
+
+!!! note "Deep dive"
+
+    For a detailed reference on what's inside a `.conda` archive, including
+    `info/index.json`, `info/paths.json`, and the outer ZIP structure, see
+    [Deep Dive: The conda Package Format](deep-dive-package-format.md).
+
+### noarch packages
+
+When `noarch` is true (as it is for pure-Lua packages), the package is built
+once and works on all platforms, stored under the `noarch/` subdirectory. When
+false, the package is platform-specific and must be built separately for each
+target. Choosing `noarch` where possible reduces build and hosting costs, but
+any package containing compiled code or platform-specific paths must be built
+per-platform.
+
+### Channel indexing
+
+After packing, the output directory is not yet a valid conda channel; it has
+packages but no `repodata.json`. `rattler_index::index_fs` scans the directory,
+reads every `.conda` file's `info/index.json`, and writes the repodata files.
+Once indexed, the output directory can be used as a channel directly.
+
+## Implementation
+
+### The build script prelude
 
 Writing a build script that manually uses `os.execute("cp ...")` works but is
 tedious.  We embed a Lua prelude that provides helper functions.
@@ -410,7 +466,7 @@ log(string.format("PREFIX    = %s", PREFIX))
 log(string.format("SRC_DIR   = %s", SRC_DIR))
 ```
 
-## The build command
+### The build command
 
 Here is the complete `src/commands/build.rs`. The sections below walk through
 each step in detail.
@@ -858,7 +914,7 @@ fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
 
 The following sections walk through the key parts of the build command.
 
-## Step 1: Create working directories
+### Step 1: Create working directories
 
 We set up two temporary directories: one for build tools, one for the package output.
 
@@ -881,16 +937,7 @@ We create two directories:
 The temporary directory is automatically cleaned up when `work_dir` goes out of
 scope.
 
-!!! info "Build isolation"
-
-    The two-prefix design is build isolation. Tools in `build_prefix`
-    (compilers, interpreters, build utilities) are available during the build
-    but never leak into the final package. Without this separation, a build tool
-    could accidentally end up as a runtime dependency, making the package larger
-    and less portable. This is the same principle behind Debian's Build-Depends
-    vs Depends, and it is a key requirement for reproducible builds.
-
-## Step 2: Install build dependencies
+### Step 2: Install build dependencies
 
 We construct a temporary manifest from the recipe's build requirements and install them into the build prefix.
 
@@ -917,7 +964,7 @@ We reuse `install_from_manifest`, the same function `luapkg install` uses.  We
 construct a temporary `Manifest` pointing at `build_prefix` instead of the
 project's environment.
 
-## Step 3: Run the build script
+### Step 3: Run the build script
 
 We locate the Lua interpreter in the build prefix and run the user's build script through a wrapper that loads the prelude first.
 
@@ -952,7 +999,7 @@ let status = tokio::process::Command::new(lua_bin)
 The build script can use any tool installed in `build_prefix/bin` because we
 prepend it to `PATH`.
 
-## Step 4: Write `info/` metadata
+### Step 4: Write `info/` metadata
 
 Every conda package contains an `info/` directory with metadata.  We need two
 files: `index.json` and `paths.json`.  The solver reads `IndexJson` from
@@ -975,8 +1022,6 @@ let index = IndexJson {
     // ...
 };
 ```
-
-The `noarch` field is a design axis worth understanding. When `noarch` is true (as it is for pure-Lua packages), the package is built once and works on all platforms, stored under the `noarch/` subdirectory. When false, the package is platform-specific and must be built separately for each target. Choosing `noarch` where possible reduces build and hosting costs, but any package containing compiled code or platform-specific paths must be built per-platform.
 
 ### `info/paths.json`
 
@@ -1037,7 +1082,7 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
 
 We read the file in 64 KiB chunks to avoid loading the entire file into memory.
 
-## Step 5: Pack into `.conda`
+### Step 5: Pack into `.conda`
 
 We pass the install prefix and its file list to `write_conda_package`, which produces the final archive.
 
@@ -1062,7 +1107,7 @@ write_conda_package(
 The `.conda` format is designed so that tools can `mmap` the outer ZIP directory
 and jump directly to the inner archive they need.
 
-## Step 6: Index the channel
+### Step 6: Index the channel
 
 We run `index_fs` to generate `repodata.json` so the output directory can serve as a conda channel.
 
@@ -1103,8 +1148,8 @@ moonshine = ">=0.3"
 
 !!! note "Beyond local indexing"
 
-    For a production package manager, local indexing is only the first step. You
-    would also need a way to push packages to a remote server, sign them so
+    For a fully-featured package manager, local indexing is only the first step.
+    You would also need a way to push packages to a remote server, sign them so
     consumers can verify authenticity, and define a trust model (who is allowed
     to publish, and how do you revoke a compromised key). These are substantial
     features that we skip in luapkg, but they are the difference between a local

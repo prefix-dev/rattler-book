@@ -25,6 +25,9 @@ enum Command {
     /// Create a new luapkg.toml in the current directory.
     Init(commands::init::Args),
 
+    /// Search for packages in a channel.
+    Search(commands::search::Args),
+
     /// Add one or more packages to the manifest and install them.
     Add(commands::add::Args),
 
@@ -77,6 +80,7 @@ async fn async_main() -> miette::Result<()> {
 
     match cli.command {
         Command::Init(args) => commands::init::execute(args).await,
+        Command::Search(args) => commands::search::execute(args).await,
         Command::Add(args) => commands::add::execute(args).await,
         Command::Install(args) => commands::install::execute(args).await,
         Command::Shell(args) => commands::shell::execute(args),

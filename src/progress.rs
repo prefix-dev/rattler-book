@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch04-repodata.md#src/progress.rs>>[init]
+// ~/~ begin <<book/src/ch04-search.md#src/progress.rs>>[init]
 use std::borrow::Cow;
 use std::future::IntoFuture;
 use std::time::Duration;
@@ -13,7 +13,7 @@ pub fn spinner_style() -> ProgressStyle {
         .tick_strings(&["⠋", "⠙", "⠸", "⠴", "⠦", "⠇", "⠋"])
 }
 
-// ~/~ begin <<book/src/ch04-repodata.md#with-spinner>>[init]
+// ~/~ begin <<book/src/ch04-search.md#with-spinner>>[init]
 pub async fn with_spinner<T, F>(msg: impl Into<Cow<'static, str>>, fut: F) -> T
 where
     F: IntoFuture<Output = T>,
@@ -28,7 +28,7 @@ where
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch05-solver.md#with-spinner-sync>>[init]
+// ~/~ begin <<book/src/ch05-install.md#with-spinner-sync>>[init]
 pub fn with_spinner_sync<T, F: FnOnce() -> T>(msg: impl Into<Cow<'static, str>>, f: F) -> T {
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(Duration::from_millis(80));

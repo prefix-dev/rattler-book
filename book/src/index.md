@@ -40,8 +40,9 @@ The final source is in the `src/` directory alongside this book.
 
 ## How this book is organized
 
-**Part I** builds `luapkg` from scratch, command by command.  Each chapter
-walks through one part of the implementation.
+**Part I** builds `luapkg` from scratch. Each chapter implements one command
+from start to finish: design how the command works, then configuration changes,
+then concepts, then implementation.
 
 **Part II** dives deeper into the rattler library itself: the package format,
 the SAT solver, the networking stack.  These chapters stand alone; you can read

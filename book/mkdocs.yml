@@ -40,13 +40,13 @@ nav:
   - Part I — Building a Package Manager:
     - 1. What Is a Package Manager?: ch01-what-is-a-package-manager.md
     - 2. Setting Up the Project: ch02-project-setup.md
-    - 3. The Manifest: ch03-manifest.md
-    - 4. Fetching Repodata: ch04-repodata.md
-    - 5. Solving Dependencies: ch05-solver.md
-    - 6. Installing Packages: ch06-install.md
-    - 7. Shell Activation: ch07-shell.md
-    - 8. Running Commands: ch08-run.md
-    - 9. Building Packages: ch09-build.md
+    - 3. The init Command: ch03-init.md
+    - 4. The search Command: ch04-search.md
+    - 5. The install Command: ch05-install.md
+    - 6. The add Command: ch06-add.md
+    - 7. The shell Command: ch07-shell.md
+    - 8. The run Command: ch08-run.md
+    - 9. The build Command: ch09-build.md
   - Part II — Deep Dives:
     - The conda Package Format: deep-dive-package-format.md
     - Virtual Packages: deep-dive-virtual-packages.md
