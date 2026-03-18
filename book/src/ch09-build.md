@@ -12,7 +12,7 @@ Moving from consumer to producer makes luapkg self-sufficient for the Lua ecosys
 temporary prefix, runs a Lua build script, packs the result into a `.conda`
 archive, and indexes the output directory as a local channel.
 
-```console
+```bash
 $ luapkg build
 Building moonshine 0.3.0 (build lua_0)
   → Installing 2 build dependencies…

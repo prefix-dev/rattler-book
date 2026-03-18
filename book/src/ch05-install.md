@@ -9,7 +9,7 @@ compatible set of package versions, and installs them into a local prefix.
 `luapkg install` runs the full pipeline: read manifest, discover packages,
 solve dependencies, install.
 
-```console
+```bash
 $ luapkg install
 ⠋ Fetching repodata
   1523 repodata records loaded
@@ -665,7 +665,7 @@ pub fn with_spinner_sync<T, F: FnOnce() -> T>(msg: impl Into<Cow<'static, str>>,
 
 ## Running `luapkg install`
 
-```console
+```bash
 $ luapkg install
 ⠋ Fetching repodata
   1523 repodata records loaded

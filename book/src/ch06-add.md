@@ -5,7 +5,7 @@ manifest and then installs in one step.
 
 ## Design
 
-```console
+```bash
 $ luapkg add luarocks
 ✔ Added 1 package(s) to `luapkg.toml`
 ⠋ Fetching repodata
@@ -15,7 +15,7 @@ $ luapkg add luarocks
 
 You can also pass a version constraint inline:
 
-```console
+```bash
 $ luapkg add "lua >=5.4"
 ```
 
@@ -118,7 +118,7 @@ from the version constraint.
 
 ## Running `luapkg add`
 
-```console
+```bash
 $ luapkg add luarocks
 ✔ Added 1 package(s) to `luapkg.toml`
 ⠋ Fetching repodata

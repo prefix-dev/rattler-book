@@ -8,7 +8,7 @@ from which channels to fetch them.
 
 `luapkg init` creates a new manifest in the current directory:
 
-```console
+```bash
 $ luapkg init hello-lua
 ✔ Created `luapkg.toml` for project "hello-lua"
   Add packages with:  luapkg add <package>
@@ -294,8 +294,8 @@ file, CI, etc.).
 
 At this point you can build and run the first command:
 
-```console
-$ pixi run luapkg init hello-lua
+```bash
+pixi run luapkg init hello-lua
 ✔ Created `luapkg.toml` for project "hello-lua"
   Add packages with:  luapkg add <package>
   Install them with:  luapkg install

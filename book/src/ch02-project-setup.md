@@ -6,7 +6,7 @@ though none of the commands do anything yet.
 
 ## Creating the project
 
-```console
+```bash
 cargo new luapkg
 cd luapkg
 ```

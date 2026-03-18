@@ -9,7 +9,7 @@ command that lets the user search for packages by name.
 `luapkg search <query>` searches for packages matching a name pattern and prints
 the results:
 
-```console
+```bash
 $ luapkg search lua
 lua          5.4.7   The Lua programming language
 luarocks     3.11.1  The Lua package manager
@@ -424,7 +424,7 @@ variant to the `Command` enum in `src/main.rs` (shown in [Chapter 2](ch02-projec
 
 ## Running `luapkg search`
 
-```console
+```bash
 $ luapkg search lua
 ⠋ Fetching repodata
 lua                            5.4.7
