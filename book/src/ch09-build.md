@@ -4,7 +4,7 @@ We've covered installing packages from existing channels.  Now let's close the
 loop: building a new package from source and publishing it so others can install
 it.
 
-Moving from consumer to producer makes luapkg self-sufficient for the Lua ecosystem. Up to now, luapkg only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like conda-build or rattler-build) to create new packages. By adding a build command, you can write a library, package it, host it on a local channel, and install it with the same tool.
+Moving from consumer to producer makes luapkg self-sufficient for the Lua ecosystem. Up to now, luapkg only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like [conda-build] or [rattler-build]) to create new packages. By adding a build command, you can write a library, package it, host it on a local channel, and install it with the same tool.
 
 ## Design
 
@@ -303,13 +303,6 @@ false, the package is platform-specific and must be built separately for each
 target. Choosing `noarch` where possible reduces build and hosting costs, but
 any package containing compiled code or platform-specific paths must be built
 per-platform.
-
-### Channel indexing
-
-After packing, the output directory is not yet a valid conda channel; it has
-packages but no `repodata.json`. `rattler_index::index_fs` scans the directory,
-reads every `.conda` file's `info/index.json`, and writes the repodata files.
-Once indexed, the output directory can be used as a channel directly.
 
 ## Implementation
 
@@ -1145,3 +1138,6 @@ moonshine = ">=0.3"
 
 With `luapkg build` working, our package manager is feature-complete.  In Part II
 we'll dive deeper into the underlying mechanisms.
+
+[conda-build]: https://docs.conda.io/projects/conda-build/
+[rattler-build]: https://github.com/prefix-dev/rattler-build

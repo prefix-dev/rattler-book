@@ -1,7 +1,7 @@
 # Chapter 2: Setting Up the Project
 
 In this chapter we create the Rust project, add our dependencies, and build the
-CLI skeleton with Clap.  By the end of the chapter `luapkg --help` works, even
+CLI skeleton with [Clap].  By the end of the chapter `luapkg --help` works, even
 though none of the commands do anything yet.
 
 ## Creating the project
@@ -103,7 +103,7 @@ The rattler crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) implement
     parts you need.  A tool that only needs to solve dependencies doesn't have
     to pull in the HTTP stack.  We use most of them, so the list is long.
 
-Package managers surface errors from many sources (network, filesystem, solver conflicts, malformed metadata), so `miette` with `features = ["fancy"]` is worth pulling in early. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string.
+Package managers surface errors from many sources (network, filesystem, solver conflicts, malformed metadata), so [miette] with `features = ["fancy"]` is worth pulling in early. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string.
 
 Notice that `reqwest` is declared with `features = ["stream"]` for streaming downloads. TLS is handled at the crate level through the `[features]` section, where the `rustls-tls` feature propagates `reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots` (along with matching features for the rattler crates). This selects the pure-Rust TLS implementation without linking against the system's OpenSSL.
 
@@ -204,7 +204,7 @@ enum Command {
 
 ### The synchronous entry point
 
-`fn main` builds a Tokio runtime and blocks on `async_main`. We configure two
+`fn main` builds a [Tokio] runtime and blocks on `async_main`. We configure two
 thread pools: `worker_threads` for async work (HTTP requests, futures polling)
 and `max_blocking_threads` for synchronous operations that would stall the async
 scheduler (file I/O, archive extraction, solver runs).
@@ -280,6 +280,10 @@ async fn async_main() -> miette::Result<()> {
 - We set up a Rust project with a clean module tree.
 - Clap's derive macros turn struct definitions into a full CLI parser.
 - Tokio provides the async runtime; we configure two thread pools.
+
+[Clap]: https://docs.rs/clap
+[miette]: https://docs.rs/miette
+[Tokio]: https://tokio.rs
 
 In the next chapter we implement the simplest command: `luapkg init`, which
 writes the project manifest.

@@ -5,17 +5,17 @@ and how the concepts map to the conda ecosystem we're building on.
 
 ## Universal concepts
 
-Regardless of ecosystem (npm, pip, cargo, conda), every package manager shares a
+Regardless of ecosystem ([npm], [pip], [cargo][cargo-book], conda), every package manager shares a
 handful of ideas:
 
-**Versions.** Every package has a version. Semantic versioning (major.minor.patch)
+**Versions.** Every package has a version. [Semantic versioning][semver] (major.minor.patch)
 is common but not universal. conda uses its own version ordering that is
 compatible with semver but also handles four-part versions, pre-release suffixes,
 and post-release tags.
 
 **Requirements.** A requirement (also called a constraint, dependency, or spec)
 expresses "I need library X, version >= 2.0". The format varies by ecosystem:
-npm uses semver ranges, pip uses PEP 440, and conda uses **MatchSpecs** like
+npm uses semver ranges, pip uses [PEP 440], and conda uses **MatchSpecs** like
 `lua >=5.4`.
 
 **Package artifacts.** A package is a distributable unit: a tarball, wheel, .conda
@@ -23,7 +23,7 @@ archive, crate, or .deb. It contains the code, metadata (name, version,
 dependencies), and sometimes pre-compiled binaries.
 
 **An index.** The package manager needs somewhere to look up what's available.
-npm has the npm registry, pip has PyPI, cargo has crates.io. conda has
+npm has the npm registry, pip has [PyPI], cargo has [crates.io]. conda has
 **channels**, each of which publishes a catalog called **repodata**.
 
 These four concepts appear in every ecosystem. The differences lie in how each
@@ -70,7 +70,7 @@ literals, and a root package depends on all clause packages.  If the root is
 installable, the formula is satisfiable.
 
 Not every package manager hits this complexity.  If you allow multiple versions
-of the same package to coexist (as Nix and Go modules do), you can install
+of the same package to coexist (as [Nix] and [Go modules] do), you can install
 everything the dependency graph asks for and the problem becomes much more tractable. In our case, the
 hardness comes from the "exactly one version" constraint.  conda enforces that
 constraint, so we need a more complex solver.
@@ -82,6 +82,16 @@ heuristics solve them quickly, in most cases.  We'll use rattler's solver implem
 [vsat]: https://research.swtch.com/version-sat
 [3-SAT]: https://en.wikipedia.org/wiki/Boolean_satisfiability_problem#3-satisfiability
 [resolvo]: https://github.com/mamba-org/resolvo
+[npm]: https://www.npmjs.com
+[pip]: https://pip.pypa.io
+[cargo-book]: https://doc.rust-lang.org/cargo/
+[semver]: https://semver.org
+[PEP 440]: https://peps.python.org/pep-0440/
+[PyPI]: https://pypi.org
+[crates.io]: https://crates.io
+[Nix]: https://nixos.org
+[Go modules]: https://go.dev/ref/mod
+[wheels]: https://packaging.python.org/en/latest/specifications/binary-distribution-format/
 [cep-35]: https://conda.org/learn/ceps/cep-0035/
 
 ### 3. Installation: getting bits onto disk
@@ -123,31 +133,6 @@ Each command in luapkg touches a different part of the pipeline:
 
 Each chapter in Part I implements one of these commands from start to finish.
 
-## Why build on conda?
-
-Reasons to choose conda as a foundation for a new package manager:
-
-- **Existing packages.** [conda-forge] has thousands of packages across Python,
-  R, C++, Fortran, etc.  Your language's packages can depend on native libraries
-  that are already packaged.
-- **Binary distribution.** Packages ship as prebuilt binaries per platform.  No
-  compilation on the user's machine.
-- **Consistent environments.** One version per package per environment.  All
-  binaries link against the same set of libraries.
-- **Mature tooling.** rattler provides a solver, installer, networking stack, and
-  shell activation in reusable Rust crates.
-
-Reasons you might not:
-
-- **One version per package** means dependency resolution is NP-complete and
-  requires a SAT solver.  If your ecosystem can tolerate duplicate versions (like
-  Go or Nix), you avoid that complexity.
-- **Large binary packages.** Conda packages include compiled artifacts.  If your
-  language is source-only or has a fast compiler, source distribution may be
-  simpler.
-
-[conda-forge]: https://conda-forge.org
-
 ## The conda file format
 
 A conda package is an archive.  Historically it was a `.tar.bz2` file.  In the
@@ -163,7 +148,7 @@ moonshine-0.3.0-lua_0.conda
 The payload and metadata live in separate inner archives, so tools can read the
 metadata without unpacking the (potentially large) payload.
 
-Using ZIP as the outer container is a common choice. ZIP stores a central directory at the end of the file, which means a reader can seek directly to any inner entry without scanning from the beginning. This is the same reason Python wheels (`.whl`) are ZIP files: a tool can extract just the metadata entry without downloading or reading the full archive.
+Using ZIP as the outer container is a common choice. ZIP stores a central directory at the end of the file, which means a reader can seek directly to any inner entry without scanning from the beginning. This is the same reason [Python wheels][wheels] (`.whl`) are ZIP files: a tool can extract just the metadata entry without downloading or reading the full archive.
 
 We'll see both of these inner archives in detail when we build the `luapkg build` command in [Chapter 9](ch09-build.md).
 

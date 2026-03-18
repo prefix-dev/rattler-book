@@ -513,7 +513,7 @@ The complete `SolverTask` contains:
 
 #### Running the solver
 
-rattler ships two solver backends: `resolvo` (pure Rust, the default, used by pixi) and `libsolv_c` (a C binding to libsolv, used by older conda tooling).  We use resolvo throughout this book.
+rattler ships two solver backends: `resolvo` (pure Rust, the default, used by pixi) and `libsolv_c` (a C binding to [libsolv], used by older conda tooling).  We use resolvo throughout this book.
 
 ``` {.rust #install-solve}
     let start_solve = Instant::now();
@@ -713,3 +713,5 @@ records the package name, version, build, all installed files, and their hashes.
 
 In the next chapter we implement `luapkg add`, a thin wrapper that updates the
 manifest and then installs.
+
+[libsolv]: https://github.com/openSUSE/libsolv

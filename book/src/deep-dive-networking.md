@@ -6,8 +6,8 @@ explains how the stack is assembled and how each piece works.
 
 ## reqwest: the HTTP client
 
-`reqwest` is the dominant async HTTP client in the Rust ecosystem.  It builds on
-`hyper` (a low-level HTTP library) and provides a friendly high-level API.
+[reqwest] is the dominant async HTTP client in the Rust ecosystem.  It builds on
+[hyper] (a low-level HTTP library) and provides a friendly high-level API.
 
 Key features we rely on:
 
@@ -42,7 +42,7 @@ second layer of compression would be wasteful.
 
 ## `reqwest_middleware`: the middleware chain
 
-`reqwest_middleware` wraps `reqwest::Client` with a chain of interceptors:
+[reqwest_middleware] wraps `reqwest::Client` with a chain of interceptors:
 
 ```rust
 let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
@@ -76,7 +76,7 @@ Different channel types use different auth schemes:
 
 ## `OciMiddleware`
 
-OCI (Open Container Initiative) registries are Docker image registries, but they
+[OCI] (Open Container Initiative) registries are Docker image registries, but they
 can also store arbitrary blobs, including conda packages.  Using an OCI registry
 as a conda channel is becoming more common because it reuses existing container
 registry infrastructure.
@@ -132,7 +132,7 @@ Rust has two main TLS implementations:
 compatible but introduces a C dependency, complicates static builds, and causes
 security alerts when OpenSSL has vulnerabilities.
 
-**rustls**: a pure-Rust TLS 1.2/1.3 implementation.  No C code, no system
+**[rustls]**: a pure-Rust TLS 1.2/1.3 implementation.  No C code, no system
 dependency, easy to statically link.  It doesn't support some legacy features
 (TLS 1.0/1.1, older cipher suites), but that's a feature: rattler doesn't need
 to talk to ancient servers.
@@ -204,4 +204,10 @@ hammering a struggling server.
 - `AuthenticationMiddleware` injects credentials for private channels.
 - `OciMiddleware` translates `oci://` URLs to registry API calls.
 - Streaming response bodies avoids loading large files into memory.
+[reqwest]: https://docs.rs/reqwest
+[hyper]: https://hyper.rs
+[reqwest_middleware]: https://docs.rs/reqwest-middleware
+[rustls]: https://github.com/rustls/rustls
+[OCI]: https://opencontainers.org
+
 - Retry middleware handles transient network failures gracefully.

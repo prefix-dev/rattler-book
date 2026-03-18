@@ -183,7 +183,7 @@ This is the **prefix record**, rattler's `PrefixRecord` type.  It's used by:
 
 ## Compression in the Rust ecosystem
 
-The `.conda` format uses **zstd** (Zstandard) compression.  zstd was designed by
+The `.conda` format uses **[zstd]** ([Zstandard]) compression.  zstd was designed by
 Yann Collet (now at Meta) with a focus on very fast decompression at competitive
 ratios.
 
@@ -238,4 +238,7 @@ memory.  This is how rattler can install a 500 MB package on a machine with only
 - `info/paths.json` lists every file with its SHA-256 hash.
 - `conda-meta/` records what was installed and where it came from.
 - zstd provides fast, parallel decompression.
+[zstd]: https://docs.rs/zstd
+[Zstandard]: https://facebook.github.io/zstd/
+
 - Streaming I/O avoids loading entire archives into memory.

@@ -3,7 +3,7 @@
 This book teaches you how to build a package manager.
 
 It installs, caches, solves version conflicts, and activates environments on
-Windows, macOS, and Linux.  We build it on top of **rattler**, a library that
+Windows, macOS, and Linux.  We build it on top of **[rattler]**, a library that
 implements the [conda] package specification in pure Rust.  By the end you will
 have a working CLI tool and a thorough understanding of every decision that went
 into it.
@@ -20,7 +20,7 @@ This book is aimed at programmers who:
   Conda's language-agnostic format makes it a surprisingly good foundation.
 
 You don't need to know anything about conda, packaging, or the Lua programming
-language.  We use Lua as the target language because it's small and
+language.  We use [Lua] as the target language because it's small and
 self-contained, but the techniques generalize to any ecosystem.
 
 ## What we build
@@ -174,6 +174,8 @@ Reasons you might not:
 - **Large binary packages.** Conda packages include compiled artifacts.  If your
   language is source-only or has a fast compiler, source distribution may be
   simpler.
+[rattler]: https://github.com/mamba-org/rattler
+[Lua]: https://www.lua.org
 [conda-forge]: https://conda-forge.org
 
 Let's get started.

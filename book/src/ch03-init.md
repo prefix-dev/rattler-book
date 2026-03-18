@@ -55,7 +55,7 @@ A manifest records human intent: which packages the user wants and from which ch
 ### serde for configuration files
 
 We model the manifest as nested Rust structs that derive `Serialize` and
-`Deserialize`. serde handles the conversion between TOML text and Rust values
+`Deserialize`. [serde] handles the conversion between [TOML] text and Rust values
 in both directions.
 
 TOML works well for manifests because it is readable without documentation, preserves comments on round-trip (with the right library), and has strict typing that catches mistakes like quoting a number.
@@ -295,8 +295,7 @@ file, CI, etc.).
 At this point you can build and run the first command:
 
 ```console
-$ cargo build
-$ ./target/debug/luapkg init hello-lua
+$ pixi run luapkg init hello-lua
 ✔ Created `luapkg.toml` for project "hello-lua"
   Add packages with:  luapkg add <package>
   Install them with:  luapkg install
@@ -314,6 +313,9 @@ lua = ">=5.4"
 - `Manifest` is a plain Rust struct derived from `Serialize`/`Deserialize`.
 - `serde` handles TOML reading and writing.
 - `miette` provides friendly error messages with context.
+
+[serde]: https://serde.rs
+[TOML]: https://toml.io
 
 In the next chapter we'll implement `luapkg search`, which queries a channel for
 available packages.

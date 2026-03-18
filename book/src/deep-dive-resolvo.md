@@ -33,8 +33,8 @@ none exists.
 
 ## DPLL and CDCL: the solver algorithms
 
-Modern SAT solvers use **CDCL** (Conflict-Driven Clause Learning), an evolution
-of the older DPLL algorithm.
+Modern SAT solvers use **[CDCL]** (Conflict-Driven Clause Learning), an evolution
+of the older [DPLL] algorithm.
 
 ### DPLL in brief
 
@@ -128,7 +128,7 @@ lifetime annotations.
 ### The watch list optimization
 
 A key unit propagation optimization is the **watch list** (also used in the
-famous MiniSat solver).
+famous [MiniSat] solver).
 
 For each clause `(A OR B OR C OR ...)`, we "watch" two of its literals.  When a
 watched literal becomes false, we try to find another literal to watch.  If we
@@ -207,8 +207,8 @@ majority of conda-forge packages that aren't relevant to your request.
 
 ## libsolv: the alternative backend
 
-rattler also ships a binding to `libsolv`, a C library used by older conda tools
-(conda, mamba).  You can select it via feature flags:
+rattler also ships a binding to [libsolv], a C library used by older conda tools
+(conda, [mamba]).  You can select it via feature flags:
 
 ```toml
 rattler_solve = { version = "0.28", features = ["resolvo", "libsolv_c"] }
@@ -228,4 +228,10 @@ one-line change.
   efficiency.
 - Conda-specific heuristics encode version preferences and minimize changes.
 - Conflict explanations trace the incompatibility graph for human-readable errors.
+[CDCL]: https://en.wikipedia.org/wiki/Conflict-driven_clause_learning
+[DPLL]: https://en.wikipedia.org/wiki/DPLL_algorithm
+[MiniSat]: http://minisat.se
+[libsolv]: https://github.com/openSUSE/libsolv
+[mamba]: https://github.com/mamba-org/mamba
+
 - resolvo is faster than libsolv and produces better diagnostics.

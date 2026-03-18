@@ -89,7 +89,7 @@ let overrides = VirtualPackageOverrides {
 
 ## Archspec in Rust
 
-Archspec is a microarchitecture specification system.  It maps CPU models to
+[Archspec] is a microarchitecture specification system.  It maps CPU models to
 capability levels:
 
 ```text
@@ -159,4 +159,6 @@ auto-detection".
 - Packages declare requirements on virtual packages just like regular deps.
 - Archspec maps CPUs to capability levels using CPUID/equivalent.
 - `GenericVirtualPackage` strips type information for the solver.
+[Archspec]: https://github.com/archspec/archspec
+
 - Overrides enable cross-compilation scenarios.
