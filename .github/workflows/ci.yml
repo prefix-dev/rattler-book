@@ -75,17 +75,5 @@ jobs:
         with:
           cache-on-failure: true
 
-      - name: Build
-        run: pixi run build
-
-      - name: Smoke test – help
-        run: pixi run run -- --help
-
-      - name: Smoke test – init
-        run: |
-          cd "$(mktemp -d)"
-          pixi run --manifest-path ${{ github.workspace }}/pixi.toml run -- init --name ci-test
-          cat luapkg.toml
-
-      - name: Smoke test – moonjson build
-        run: cd examples/moonjson && pixi run --manifest-path ${{ github.workspace }}/pixi.toml run -- build
+      - name: Smoke tests
+        run: pixi run smoke-test
