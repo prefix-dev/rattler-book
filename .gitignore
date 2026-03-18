@@ -40,6 +40,12 @@ examples/**/output/
 # Claude Code session data
 .claude/
 
-# mdBook output
+# mkdocs build output
 book/book/
 .entangled/
+
+# Tangled output inside book/ (entangled should only tangle from repo root into ./src/)
+book/src/**/*.rs
+book/src/**/*.lua
+book/Cargo.toml
+book/Cargo.lock
