@@ -1,0 +1,48 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build & smoke test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          frozen: true
+          cache: true
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Format check
+        run: pixi run fmt-check
+
+      - name: Clippy
+        run: pixi run clippy
+
+      - name: Build
+        run: pixi run build
+
+      - name: Smoke test – version / help
+        run: pixi run run -- --help
+
+      - name: Smoke test – init & install
+        run: |
+          cd "$(mktemp -d)"
+          pixi run --manifest-path ${{ github.workspace }}/pixi.toml run -- init --name smoke-test
+          cat luapkg.toml
