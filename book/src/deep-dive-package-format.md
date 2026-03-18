@@ -138,6 +138,7 @@ all other version-ordering criteria are equal.
 
 Every file in the package is listed here with its type and hash.  The installer
 uses this to:
+
 1. Verify downloaded archives haven't been corrupted.
 2. Know which paths to hard-link from the cache into the prefix.
 3. Know which paths to remove on uninstall.
@@ -175,6 +176,7 @@ When rattler installs a package, it writes a JSON file to
 ```
 
 This is the **prefix record**, rattler's `PrefixRecord` type.  It's used by:
+
 - The solver (to know what's installed)
 - The installer (to compute the transaction diff)
 - Uninstall tools (to know which files to remove)
@@ -195,6 +197,7 @@ rattler uses `zstd` through the `rattler_package_streaming` crate, which also
 handles tar creation/extraction and the ZIP wrapper.
 
 For comparison:
+
 - `.tar.bz2`: bzip2 compression, high ratio, very slow (single-threaded)
 - `.conda` inner tars: zstd, good ratio, very fast, parallel
 

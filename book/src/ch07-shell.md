@@ -173,6 +173,7 @@ let vars = ActivationVariables::from_env()?;
 ```
 
 This reads the *current* shell state:
+
 - `CONDA_PREFIX`, the currently-activated prefix (if any)
 - `CONDA_SHLVL`, the nesting depth
 - `PATH`, the current PATH

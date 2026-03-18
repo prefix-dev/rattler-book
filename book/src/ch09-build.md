@@ -53,17 +53,41 @@ noarch = true
 
 The recipe lives in your project directory alongside your source code.
 
-The Rust struct mirrors this structure. Here is the complete `src/recipe.rs`:
+The Rust struct mirrors this structure. Here is the full `src/recipe.rs`
+assembled from the pieces we walk through below:
 
 ``` {.rust file=src/recipe.rs}
+<<recipe-imports>>
+
+<<recipe-filename-const>>
+
+<<recipe-structs>>
+
+<<recipe-impl>>
+```
+
+#### Imports
+
+``` {.rust #recipe-imports}
 use std::path::{Path, PathBuf};
 
 use miette::{Context, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
+```
 
+#### The recipe filename
+
+``` {.rust #recipe-filename-const}
 /// File name we look for in the current directory.
 pub const RECIPE_FILENAME: &str = "recipe.toml";
+```
 
+A single constant for the filename keeps it consistent across all commands,
+the same approach used for `MANIFEST_FILENAME` in `manifest.rs`.
+
+#### Structs
+
+``` {.rust #recipe-structs}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Recipe {
     pub package: PackageMeta,
@@ -166,7 +190,28 @@ impl Default for BuildConfig {
         }
     }
 }
+```
 
+Each struct maps to a TOML section: `Recipe` is the top level, `PackageMeta`
+is `[package]`, `SourceSpec` is `[source]`, and so on. A few points about the
+schema:
+
+- Package names must be lowercase with hyphens allowed (no spaces, no uppercase).
+- `build_number` is a monotonically-increasing integer. Increment it when you
+  rebuild the same version with different settings (patched deps, different
+  compiler flags). The solver treats a higher build number as "more recent."
+- Source paths can be absolute or relative to the recipe file. The default
+  `"."` means the directory containing `recipe.toml`.
+
+The `#[serde(default)]` annotations make the `[source]`, `[channels]`,
+`[requirements]`, and `[build]` sections optional.
+
+#### Methods
+
+The methods on `Recipe` handle loading from disk and computing filenames for
+the output package:
+
+``` {.rust #recipe-impl}
 impl Recipe {
     /// Read a `recipe.toml` from a directory.
     #[allow(dead_code)]
@@ -226,18 +271,6 @@ impl Recipe {
 }
 ```
 
-A few points about the recipe schema:
-
-- Package names must be lowercase with hyphens allowed (no spaces, no uppercase).
-- `build_number` is a monotonically-increasing integer. Increment it when you
-  rebuild the same version with different settings (patched deps, different
-  compiler flags). The solver treats a higher build number as "more recent."
-- Source paths can be absolute or relative to the recipe file. The default
-  `"."` means the directory containing `recipe.toml`.
-
-The `#[serde(default)]` annotations make the `[source]`, `[channels]`,
-`[requirements]`, and `[build]` sections optional.
-
 ## Concepts
 
 ### Build isolation
@@ -295,9 +328,28 @@ install_lua("src/*.lua")
 install_bin("scripts/myapp")
 ```
 
-Here is the complete `src/build_prelude.lua`:
+Here is the complete `src/build_prelude.lua`, assembled from the named sections
+that follow:
 
 ``` {.lua file=src/build_prelude.lua}
+<<prelude-header>>
+
+<<prelude-globals>>
+
+<<prelude-internal-helpers>>
+
+<<prelude-public-api>>
+
+<<prelude-install-helpers>>
+
+<<prelude-done>>
+```
+
+The prelude opens with a documentation comment that lists every global and
+function available to build scripts. This block is the only documentation a
+recipe author needs to consult when writing a `build.lua`.
+
+``` {.lua #prelude-header}
 -- luapkg build prelude
 -- Automatically sourced before every build.lua by `luapkg build`.
 --
@@ -327,7 +379,13 @@ Here is the complete `src/build_prelude.lua`:
 --   exists(path)              returns true if path exists
 --   is_file(path)             returns true if path is a regular file
 --   log(msg)                  prints "[luapkg] msg" to stderr
+```
 
+The Rust side sets these environment variables before launching the Lua
+interpreter (`run_build_script` in `build.rs`). The prelude reads them once
+and fails fast if any are missing.
+
+``` {.lua #prelude-globals}
 -- ── Globals ───────────────────────────────────────────────────────────────────
 
 PREFIX        = os.getenv("PREFIX")        or error("PREFIX not set")
@@ -336,7 +394,13 @@ BUILD_PREFIX  = os.getenv("BUILD_PREFIX")  or error("BUILD_PREFIX not set")
 PKG_NAME      = os.getenv("PKG_NAME")      or error("PKG_NAME not set")
 PKG_VERSION   = os.getenv("PKG_VERSION")   or error("PKG_VERSION not set")
 PKG_BUILD_NUM = tonumber(os.getenv("PKG_BUILD_NUM") or "0")
+```
 
+Two small utilities that the rest of the prelude depends on. `shell` runs a
+command and raises an error on failure; `q` quotes a path so that spaces and
+special characters survive the shell.
+
+``` {.lua #prelude-internal-helpers}
 -- ── Internal helpers ──────────────────────────────────────────────────────────
 
 local function shell(cmd)
@@ -351,7 +415,13 @@ local function q(path)
     -- Wrap in single quotes; escape any embedded single quotes.
     return "'" .. path:gsub("'", "'\\''") .. "'"
 end
+```
 
+These functions are available to every build script. They cover the most common
+file-system operations: joining paths, creating directories, copying, moving,
+testing existence, and logging.
+
+``` {.lua #prelude-public-api}
 -- ── Public API ────────────────────────────────────────────────────────────────
 
 --- Join path segments with "/", collapsing duplicate slashes.
@@ -398,7 +468,13 @@ end
 function log(msg)
     io.stderr:write("[luapkg] " .. tostring(msg) .. "\n")
 end
+```
 
+The install helpers build on `shell`, `q`, and `path_join` to give build
+scripts a declarative vocabulary. Each function copies files into the right
+subdirectory of `PREFIX` so the package layout matches what conda expects.
+
+``` {.lua #prelude-install-helpers}
 -- ── Install helpers ───────────────────────────────────────────────────────────
 
 --- Install files matching `src` (a path or shell glob) into `PREFIX/subdir/`.
@@ -458,7 +534,12 @@ end
 function install_share(src, name)
     install(src, path_join("share", name))
 end
+```
 
+Finally, the prelude logs a short banner so the build output shows which
+package is being built and where files will land.
+
+``` {.lua #prelude-done}
 -- ── Done ──────────────────────────────────────────────────────────────────────
 
 log(string.format("Building %s %s (build %d)", PKG_NAME, PKG_VERSION, PKG_BUILD_NUM))
@@ -468,10 +549,34 @@ log(string.format("SRC_DIR   = %s", SRC_DIR))
 
 ### The build command
 
-Here is the complete `src/commands/build.rs`. The sections below walk through
-each step in detail.
+Here is the full file skeleton for `src/commands/build.rs`, with each section
+defined as we encounter it:
 
 ``` {.rust file=src/commands/build.rs}
+<<build-imports>>
+
+<<build-args>>
+
+<<build-execute>>
+
+<<build-prelude-const>>
+
+<<build-run-script>>
+
+<<build-write-metadata>>
+
+<<build-collect-paths>>
+
+<<build-sha256>>
+
+<<build-pack-conda>>
+
+<<build-find-lua>>
+```
+
+#### Imports
+
+``` {.rust #build-imports}
 use std::env;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
@@ -491,7 +596,11 @@ use walkdir::WalkDir;
 use crate::commands::install::install_from_manifest;
 use crate::manifest::{Manifest, ProjectMetadata};
 use crate::recipe::{Recipe, RECIPE_FILENAME};
+```
 
+#### CLI arguments
+
+``` {.rust #build-args}
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Path to `recipe.toml`.  Defaults to `./recipe.toml`.
@@ -504,7 +613,15 @@ pub struct Args {
     #[clap(long, default_value = "output")]
     pub output_dir: PathBuf,
 }
+```
 
+#### The `execute` function
+
+The `execute` function orchestrates the entire build: it parses the recipe,
+creates working directories, installs build dependencies, runs the build script,
+writes metadata, packs the archive, and indexes the channel.
+
+``` {.rust #build-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
     let cwd = env::current_dir().into_diagnostic()?;
 
@@ -653,9 +770,39 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     Ok(())
 }
+```
 
+The function sets up two temporary directories:
+
+- **`build_prefix`**: where build-time dependencies are installed.  The Lua
+  interpreter lives here.  These never appear in the final package.
+- **`install_prefix`**: the "fake root" where the build script installs files.
+  Everything in here ends up in the package.
+
+The temporary directory is automatically cleaned up when `work_dir` goes out of
+scope.
+
+It constructs a temporary manifest from the recipe's build requirements,
+reusing `install_from_manifest` (the same function `luapkg install` uses) to
+install them into the build prefix instead of the project's environment.
+
+#### Build prelude constant
+
+``` {.rust #build-prelude-const}
 const BUILD_PRELUDE: &str = include_str!("../build_prelude.lua");
+```
 
+#### Running the build script
+
+We locate the Lua interpreter in the build prefix and run the user's build
+script through a wrapper that loads the prelude first.  We use a wrapper file
+rather than `-e '...'` so that error messages show correct line numbers and the
+real filename instead of `<string>`.
+
+The build script can use any tool installed in `build_prefix/bin` because we
+prepend it to `PATH`.
+
+``` {.rust #build-run-script}
 async fn run_build_script(
     lua_bin: &Path,
     script: &Path,
@@ -712,7 +859,19 @@ async fn run_build_script(
     }
     Ok(())
 }
+```
 
+#### Writing package metadata
+
+Every conda package contains an `info/` directory with metadata.  We need two
+files: `index.json` and `paths.json`.  The solver reads `IndexJson` from
+`conda-meta/*.json` after installation to track what is present in the
+environment.
+
+We populate an `IndexJson` struct from the recipe metadata, then walk the
+install prefix to build `paths.json`.
+
+``` {.rust #build-write-metadata}
 fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Result<()> {
     let info_dir = install_prefix.join("info");
     std::fs::create_dir_all(&info_dir)
@@ -779,7 +938,14 @@ fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Res
 
     Ok(())
 }
+```
 
+#### Collecting paths
+
+We walk the install prefix, hash every file, and record each path in a
+`PathsJson` manifest.
+
+``` {.rust #build-collect-paths}
 fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
     let mut entries = Vec::new();
 
@@ -814,7 +980,14 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
         paths_version: 1,
     })
 }
+```
 
+#### SHA-256 hashing
+
+The SHA-256 hash is computed with the `sha2` crate.  We read the file in 64 KiB
+chunks to avoid loading the entire file into memory.
+
+``` {.rust #build-sha256}
 fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u64)> {
     use std::io::Read;
     let file = File::open(path)
@@ -834,7 +1007,23 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
     }
     Ok((hasher.finalize(), size))
 }
+```
 
+#### Packing into `.conda`
+
+We pass the install prefix and its file list to `write_conda_package`, which
+produces the final archive.
+
+`rattler_package_streaming::write::write_conda_package` does all the work:
+
+1. Separates `info/` files from payload files.
+2. Compresses each group into a `.tar.zst` archive.
+3. Wraps both archives and a `metadata.json` into an uncompressed ZIP.
+
+The `.conda` format is designed so that tools can `mmap` the outer ZIP directory
+and jump directly to the inner archive they need.
+
+``` {.rust #build-pack-conda}
 fn pack_conda(
     install_prefix: &Path,
     output_path: &Path,
@@ -891,7 +1080,11 @@ fn pack_conda(
 
     Ok(())
 }
+```
 
+#### Finding the Lua interpreter
+
+``` {.rust #build-find-lua}
 fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
     let bin = prefix.join("bin").join("lua");
     if bin.exists() {
@@ -912,224 +1105,11 @@ fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
 }
 ```
 
-The following sections walk through the key parts of the build command.
-
-### Step 1: Create working directories
-
-We set up two temporary directories: one for build tools, one for the package output.
-
-```rust
-let work_dir = tempfile::tempdir()
-    .into_diagnostic()
-    .context("creating temporary build directory")?;
-
-let build_prefix   = work_dir.path().join("build_prefix");
-let install_prefix = work_dir.path().join("install_prefix");
-```
-
-We create two directories:
-
-- **`build_prefix`**: where build-time dependencies are installed.  The Lua
-  interpreter lives here.  These never appear in the final package.
-- **`install_prefix`**: the "fake root" where the build script installs files.
-  Everything in here ends up in the package.
-
-The temporary directory is automatically cleaned up when `work_dir` goes out of
-scope.
-
-### Step 2: Install build dependencies
-
-We construct a temporary manifest from the recipe's build requirements and install them into the build prefix.
-
-```rust
-let build_manifest = Manifest {
-    project: ProjectMetadata {
-        name: format!("{}-build-env", recipe.package.name),
-        channels: recipe.channels.list.clone(),
-    },
-    dependencies: build_deps
-        .iter()
-        .map(|s| {
-            let mut parts = s.splitn(2, ' ');
-            let name = parts.next().unwrap_or(s).to_string();
-            let spec = parts.next().unwrap_or("*").to_string();
-            (name, spec)
-        })
-        .collect(),
-};
-install_from_manifest(&build_manifest, build_prefix.clone()).await?;
-```
-
-We reuse `install_from_manifest`, the same function `luapkg install` uses.  We
-construct a temporary `Manifest` pointing at `build_prefix` instead of the
-project's environment.
-
-### Step 3: Run the build script
-
-We locate the Lua interpreter in the build prefix and run the user's build script through a wrapper that loads the prelude first.
-
-```rust
-let lua_bin = find_lua(&build_prefix)?;
-
-let wrapper_src = format!(
-    "dofile({prelude:?})\ndofile({script:?})\n",
-    prelude = prelude_path.to_string_lossy(),
-    script  = script.to_string_lossy(),
-);
-```
-
-We write a tiny Lua wrapper that loads the prelude then runs the user's script.
-We use a wrapper file rather than `-e '...'` so that error messages show correct
-line numbers and the real filename instead of `<string>`.
-
-```rust
-let status = tokio::process::Command::new(lua_bin)
-    .arg(&wrapper_path)
-    .env("PREFIX",       install_prefix)
-    .env("SRC_DIR",      src_dir)
-    .env("BUILD_PREFIX", build_prefix)
-    .env("PKG_NAME",     &recipe.package.name)
-    .env("PKG_VERSION",  &recipe.package.version)
-    .env("PATH",         &new_path)   // includes build_prefix/bin
-    .status()
-    .await
-    .into_diagnostic()?;
-```
-
-The build script can use any tool installed in `build_prefix/bin` because we
-prepend it to `PATH`.
-
-### Step 4: Write `info/` metadata
-
-Every conda package contains an `info/` directory with metadata.  We need two
-files: `index.json` and `paths.json`.  The solver reads `IndexJson` from
-`conda-meta/*.json` after installation to track what is present in the
-environment.
-
-### `info/index.json`
-
-We populate an `IndexJson` struct from the recipe metadata and serialize it into the install prefix.
-
-```rust
-let index = IndexJson {
-    name:         PackageName::from_str(&recipe.package.name)?,
-    version:      VersionWithSource::from_str(&recipe.package.version)?,
-    build:        recipe.build_string(),
-    build_number: recipe.package.build_number,
-    noarch:       if recipe.build.noarch { NoArchType::generic() }
-                  else { NoArchType::default() },
-    depends:      recipe.requirements.run.clone(),
-    // ...
-};
-```
-
-### `info/paths.json`
-
-We walk the install prefix, hash every file, and record each path in a `PathsJson` manifest.
-
-```rust
-fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
-    let mut entries = Vec::new();
-
-    for entry in WalkDir::new(prefix).into_iter().filter_map(|e| e.ok()) {
-        let meta = entry.metadata().into_diagnostic()?;
-        if !meta.is_file() { continue; }
-
-        let abs_path = entry.path();
-        let rel_path = abs_path
-            .strip_prefix(prefix)
-            .into_diagnostic()
-            .context("stripping prefix from path")?
-            .to_path_buf();
-
-        let (sha256, size) = sha256_and_size(abs_path)?;
-
-        entries.push(PathsEntry {
-            relative_path: rel_path,
-            no_link: false,
-            path_type: PathType::HardLink,
-            prefix_placeholder: None,
-            sha256: Some(sha256),
-            size_in_bytes: Some(size),
-        });
-    }
-
-    Ok(PathsJson { paths: entries, paths_version: 1 })
-}
-```
-
-The SHA-256 hash is computed with the `sha2` crate:
-
-```rust
-fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u64)> {
-    use std::io::Read;
-    let file = File::open(path)
-        .into_diagnostic()
-        .with_context(|| format!("opening `{}`", path.display()))?;
-    let mut reader = BufReader::new(file);
-    let mut hasher = Sha256::new();
-    let mut buf = [0u8; 64 * 1024];  // 64 KiB buffer
-    let mut size = 0u64;
-    loop {
-        let n = reader.read(&mut buf).into_diagnostic()?;
-        if n == 0 { break; }
-        hasher.update(&buf[..n]);
-        size += n as u64;
-    }
-    Ok((hasher.finalize(), size))
-}
-```
-
-We read the file in 64 KiB chunks to avoid loading the entire file into memory.
-
-### Step 5: Pack into `.conda`
-
-We pass the install prefix and its file list to `write_conda_package`, which produces the final archive.
-
-```rust
-write_conda_package(
-    writer,
-    install_prefix,
-    &files,
-    CompressionLevel::Default,
-    None,       // use all CPU threads for zstd
-    &out_name,
-    Some(&now),
-    None,       // no extra progress bar
-)?;
-```
-
-`rattler_package_streaming::write::write_conda_package` does all the work:
-1. Separates `info/` files from payload files.
-2. Compresses each group into a `.tar.zst` archive.
-3. Wraps both archives and a `metadata.json` into an uncompressed ZIP.
-
-The `.conda` format is designed so that tools can `mmap` the outer ZIP directory
-and jump directly to the inner archive they need.
-
-### Step 6: Index the channel
-
-We run `index_fs` to generate `repodata.json` so the output directory can serve as a conda channel.
-
-```rust
-index_fs(IndexFsConfig {
-    channel:         output_dir.clone(),
-    target_platform: None,    // discover all subdirs
-    repodata_patch:  None,
-    write_zst:       true,
-    write_shards:    true,
-    force:           false,   // incremental
-    max_parallel:    4,
-    multi_progress:  None,
-})
-.await
-.map_err(|e| miette::miette!("{e:#}"))
-.context("indexing output channel")?;
-```
+#### Indexing the channel
 
 After packing, the output directory is not yet a valid conda channel; it has
-packages but no `repodata.json`.  `rattler_index::index_fs` scans the directory,
-reads every `.conda` file's `info/index.json`, and writes:
+packages but no `repodata.json`.  The `index_fs` call inside `execute` scans
+the directory, reads every `.conda` file's `info/index.json`, and writes:
 
 - `output/noarch/repodata.json`, the plain JSON catalog
 - `output/noarch/repodata.json.zst`, a compressed version

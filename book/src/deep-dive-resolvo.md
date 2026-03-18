@@ -39,6 +39,7 @@ of the older DPLL algorithm.
 ### DPLL in brief
 
 DPLL works by:
+
 1. **Unit propagation**: if a clause has only one unset variable, that variable
    must be set to make the clause true.  This is cheap and often resolves many
    variables immediately.
@@ -146,6 +147,7 @@ conda-specific scoring:
 ### Preferring higher versions
 
 When choosing which variable to set next, the solver prefers:
+
 1. The version directly requested by the user (highest version that satisfies the
    spec).
 2. Currently-installed versions (avoid unnecessary changes).

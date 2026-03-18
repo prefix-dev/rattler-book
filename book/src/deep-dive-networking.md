@@ -69,6 +69,7 @@ It reads credentials from, in priority order:
 3. **Environment variables**: `CONDA_TOKEN`, `CONDA_USER`, `CONDA_PASSWORD`
 
 Different channel types use different auth schemes:
+
 - `conda.anaconda.org`: Bearer token in the URL or `Authorization` header
 - Private channels: Basic auth (username + password)
 - OCI registries: OAuth2 token exchange
@@ -188,6 +189,7 @@ let client = ClientBuilder::new(raw_client)
 ```
 
 The retry middleware automatically retries on:
+
 - Network errors (connection reset, timeout)
 - HTTP 429 Too Many Requests (with `Retry-After` header support)
 - HTTP 5xx server errors

@@ -69,6 +69,7 @@ json-lib   = "*"
 ```
 
 And the catalog says:
+
 - `web-server 2.0` depends on `json-lib >=2.0`
 - `web-server 1.0` depends on `json-lib >=1.0,<2.0`
 - `json-lib 2.1` (latest)
@@ -101,6 +102,7 @@ ecosystems have structure that makes good heuristics very effective.
 Virtual packages model the host system as if it were a package. Instead of special-casing "requires glibc 2.17" as a platform check, the solver treats `__glibc` as a regular dependency that happens to be provided by the OS. This lets package authors express system requirements using the same constraint syntax they use for library dependencies.
 
 The system is probed for things like:
+
 - `__linux` (whether this is a Linux system)
 - `__glibc =2.38` (the installed glibc version)
 - `__cuda =12.3` (the CUDA toolkit version, if any)
@@ -174,6 +176,7 @@ once, but it appears in two places.  Removing the link from one location doesn't
 affect the other.
 
 This means:
+
 - An environment takes almost no disk space for packages that are already cached.
 - Creating a new environment is very fast (linking is cheap).
 
@@ -191,6 +194,7 @@ cross-volume), rattler falls back to copying.
 
 The Installer computes a **transaction**, a diff between the currently-installed
 state and the desired state, and applies only the changes:
+
 - Install packages not currently present
 - Remove packages no longer needed
 - Update packages whose version changed

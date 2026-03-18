@@ -132,6 +132,7 @@ available.
 rattler caches repodata on disk so it doesn't re-download on every run.
 
 `rattler::default_cache_dir()` returns the OS-appropriate location:
+
 - Linux/macOS: `~/.rattler/`
 - Windows: `%APPDATA%\rattler\`
 
@@ -219,6 +220,25 @@ authentication middleware, configure the Gateway, then query repodata.
 
 ``` {.rust #search-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
+<<search-parse-channels>>
+
+<<search-http-client>>
+
+<<search-gateway>>
+
+<<search-query>>
+
+<<search-results>>
+}
+```
+
+#### Channel and spec parsing
+
+We convert the `--channel` strings into rattler `Channel` objects and parse the
+user's query into a `MatchSpec`. The `ChannelConfig` provides the base URL for
+named channels (defaulting to `https://conda.anaconda.org/`).
+
+``` {.rust #search-parse-channels}
     let channel_config =
         ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
 
@@ -238,7 +258,16 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
     rattler_cache::ensure_cache_dir(&cache_dir)
         .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
+```
 
+#### HTTP client
+
+We build a `reqwest` client with `.no_gzip()` (repodata is already compressed,
+and rattler handles decompression itself), then wrap it in `reqwest_middleware`
+with `AuthenticationMiddleware` (for tokens and keyrings) and `OciMiddleware`
+(for `oci://` channel URLs).
+
+``` {.rust #search-http-client}
     let raw_client = reqwest::Client::builder()
         .no_gzip()
         .build()
@@ -252,7 +281,15 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         ))
         .with(rattler_networking::OciMiddleware::new(raw_client))
         .build();
+```
 
+#### Gateway
+
+The Gateway builder takes the cache directory, HTTP client, and channel
+configuration. Setting `sharded_enabled: true` tells it to prefer the fast
+sharded format when a channel supports it.
+
+``` {.rust #search-gateway}
     let platform = Platform::current();
 
     let gateway = Gateway::builder()
@@ -267,7 +304,16 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             per_channel: HashMap::new(),
         })
         .finish();
+```
 
+#### Query
+
+`gateway.query(...)` fetches repodata for the requested packages. We set
+`.recursive(false)` because search only needs to show what matches the query,
+not resolve transitive dependencies. This keeps the fetch fast. We query both
+the current platform and `NoArch` to cover pure-Lua packages.
+
+``` {.rust #search-query}
     let repo_data: Vec<RepoData> = with_spinner(
         "Fetching repodata",
         gateway
@@ -281,7 +327,15 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     .await
     .into_diagnostic()
     .context("fetching repodata")?;
+```
 
+#### Result formatting
+
+The query returns a `Vec<RepoData>`, one per channel/platform combination. We
+flatten the records, deduplicate by (name, version), sort alphabetically, and
+print only the latest version per package name.
+
+``` {.rust #search-results}
     // Collect and deduplicate results by (name, version), keeping the latest.
     let mut seen: HashMap<(String, String), String> = HashMap::new();
     for repo in &repo_data {
@@ -316,39 +370,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     println!("\n{} package(s) found.", count);
     Ok(())
-}
 ```
-
-The function is one long block because entangled assembles it into a single
-file. Here's what each section does:
-
-**Channel and spec parsing.** We convert the `--channel` strings into rattler
-`Channel` objects and parse the user's query into a `MatchSpec`. The
-`ChannelConfig` provides the base URL for named channels (defaulting to
-`https://conda.anaconda.org/`).
-
-**Cache setup.** `rattler::default_cache_dir()` returns `~/.rattler/` on
-Unix or `%APPDATA%\rattler\` on Windows. We ensure the directory exists before
-the Gateway tries to write to it.
-
-**HTTP client.** We build a `reqwest` client with `.no_gzip()` (repodata is
-already compressed, and rattler handles decompression itself), then wrap it in
-`reqwest_middleware` with `AuthenticationMiddleware` (for tokens and keyrings)
-and `OciMiddleware` (for `oci://` channel URLs).
-
-**Gateway.** The Gateway builder takes the cache directory, HTTP client, and
-channel configuration. Setting `sharded_enabled: true` tells it to prefer the
-fast sharded format when a channel supports it.
-
-**Query.** `gateway.query(...)` fetches repodata for the requested packages.
-We set `.recursive(false)` because search only needs to show what matches the
-query, not resolve transitive dependencies. This keeps the fetch fast. We query
-both the current platform and `NoArch` to cover pure-Lua packages.
-
-**Result formatting.** The query returns a `Vec<RepoData>`, one per
-channel/platform combination. We flatten the records, deduplicate by
-(name, version), sort alphabetically, and print only the latest version per
-package name.
 
 ### `src/progress.rs`
 

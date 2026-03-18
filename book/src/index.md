@@ -62,8 +62,42 @@ fn main() { }
 ```
 ~~~
 
-The `file=` attribute tells Entangled where to write the code.  You can tangle
-all files with:
+The `file=` attribute tells Entangled where to write the code.
+
+Files rarely appear as a single block.  Instead, you name smaller pieces with
+`#name` and pull them into a file block using `<<name>>`:
+
+~~~markdown
+``` {.rust file=src/main.rs}
+<<imports>>
+
+fn main() {
+    <<body>>
+}
+```
+~~~
+
+Each named piece is defined separately, so the surrounding prose can explain it
+in context:
+
+~~~markdown
+``` {.rust #imports}
+use std::io;
+```
+~~~
+
+~~~markdown
+``` {.rust #body}
+println!("hello");
+```
+~~~
+
+Entangled stitches these together: every `<<imports>>` reference is replaced by
+the contents of the `#imports` block.  This lets the book introduce code in the
+order that makes sense for reading, while the tangled output follows the order
+the compiler expects.
+
+You can tangle all files with:
 
 ```console
 pixi run tangle

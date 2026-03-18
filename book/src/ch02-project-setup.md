@@ -127,9 +127,27 @@ src/
     └── build.rs
 ```
 
-Here is the complete `main.rs`:
+The full `main.rs` is assembled from four named sections:
 
 ``` {.rust file=src/main.rs}
+<<main-imports>>
+
+<<main-cli-struct>>
+
+<<main-fn>>
+
+<<main-async>>
+```
+
+Let's take it section by section.
+
+### Imports and module declarations
+
+The imports pull in Clap for argument parsing, miette for error reporting, and
+the tracing filter types for log-level control. The `mod` declarations make the
+rest of our crate visible.
+
+``` {.rust #main-imports}
 use clap::Parser;
 use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
@@ -138,7 +156,15 @@ mod commands;
 mod manifest;
 mod progress;
 mod recipe;
+```
 
+### The CLI struct and subcommands
+
+Clap's derive macros turn these struct and enum definitions into a full CLI
+parser. Each variant of `Command` maps to a subcommand and carries its own
+argument struct (defined in the corresponding module).
+
+``` {.rust #main-cli-struct}
 /// A minimal Lua package manager powered by rattler.
 #[derive(Debug, Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -174,7 +200,16 @@ enum Command {
     /// Build a Lua package from a recipe.toml.
     Build(commands::build::Args),
 }
+```
 
+### The synchronous entry point
+
+`fn main` builds a Tokio runtime and blocks on `async_main`. We configure two
+thread pools: `worker_threads` for async work (HTTP requests, futures polling)
+and `max_blocking_threads` for synchronous operations that would stall the async
+scheduler (file I/O, archive extraction, solver runs).
+
+``` {.rust #main-fn}
 fn main() -> miette::Result<()> {
     let num_cpus = std::thread::available_parallelism()
         .map_or(2, std::num::NonZero::get)
@@ -189,7 +224,26 @@ fn main() -> miette::Result<()> {
 
     runtime.block_on(async_main())
 }
+```
 
+!!! info "Thread pool sizing"
+
+    The runtime configuration splits available CPU cores between two pools.
+    `worker_threads` handles async work (HTTP requests, futures polling), while
+    `max_blocking_threads` handles synchronous operations that would stall the
+    async scheduler (file I/O, archive extraction, solver runs). Giving the
+    blocking pool more threads prevents slow disk operations from starving
+    network requests.
+
+### The async entry point
+
+`async_main` parses the CLI arguments, sets up logging, and dispatches to the
+right subcommand handler. We route all log output to stderr, leaving stdout
+clean for machine-readable output (like `luapkg shell`, which prints a shell
+script). The `--verbose` flag raises the log level to `DEBUG`; users can also
+set `RUST_LOG=debug` for more control.
+
+``` {.rust #main-async}
 async fn async_main() -> miette::Result<()> {
     let cli = Cli::parse();
 
@@ -220,32 +274,6 @@ async fn async_main() -> miette::Result<()> {
     }
 }
 ```
-
-!!! info "Thread pool sizing"
-
-    The runtime configuration splits available CPU cores between two pools.
-    `worker_threads` handles async work (HTTP requests, futures polling), while
-    `max_blocking_threads` handles synchronous operations that would stall the
-    async scheduler (file I/O, archive extraction, solver runs). Giving the
-    blocking pool more threads prevents slow disk operations from starving
-    network requests.
-
-Let's take it section by section.
-
-## Logging with tracing
-
-```rust
-tracing_subscriber::fmt()
-    .with_env_filter(env_filter)
-    .without_time()
-    .with_writer(std::io::stderr)
-    .init();
-```
-
-We route all log output to stderr, leaving stdout clean for machine-readable
-output (like `luapkg shell`, which prints a shell script).  The `--verbose` flag
-raises the log level to `DEBUG`; users can also set `RUST_LOG=debug` for more
-control.
 
 ## Summary
 

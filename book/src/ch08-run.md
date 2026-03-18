@@ -28,9 +28,19 @@ This uses the same activation logic from [Chapter 7](ch07-shell.md), but instead
 
 ## Implementation
 
-Here is the complete `src/commands/run.rs`:
+The full `src/commands/run.rs` is assembled from three named sections:
 
 ``` {.rust file=src/commands/run.rs}
+<<run-imports>>
+
+<<run-args>>
+
+<<run-execute>>
+```
+
+### Imports
+
+``` {.rust #run-imports}
 use std::env;
 use std::process::Stdio;
 
@@ -40,7 +50,14 @@ use rattler_conda_types::Platform;
 use rattler_shell::activation::{ActivationVariables, Activator};
 use rattler_shell::shell::{Bash, ShellEnum};
 use tokio::process::Command;
+```
 
+### Command arguments
+
+The `Args` struct accepts a trailing variadic argument for the command to run,
+plus an optional `--prefix` override.
+
+``` {.rust #run-args}
 #[derive(Debug, Parser)]
 pub struct Args {
     /// The command to run (and its arguments).
@@ -53,68 +70,54 @@ pub struct Args {
     #[clap(long)]
     pub prefix: Option<std::path::PathBuf>,
 }
+```
 
+### The execute function
+
+The body of `execute` breaks into four steps: resolving the prefix and building
+the activator, computing the activation environment, spawning the child process,
+and propagating its exit code.
+
+``` {.rust #run-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
-    let cwd = env::current_dir().into_diagnostic()?;
-    let prefix = args
-        .prefix
-        .unwrap_or_else(|| super::prefix_dir(&cwd));
-    let prefix = std::path::absolute(prefix).into_diagnostic()?;
+    <<run-setup>>
 
-    if !prefix.exists() {
-        miette::bail!(
-            "Environment not found at `{}`. Run `luapkg install` first.",
-            prefix.display()
-        );
-    }
+    <<run-activation>>
 
-    let platform = Platform::current();
-    let shell: ShellEnum = ShellEnum::from_env().unwrap_or_else(|| Bash.into());
+    <<run-spawn>>
 
-    let activator =
-        Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
-    let current_vars = ActivationVariables::from_env().into_diagnostic()?;
-
-    let activation_env = tokio::task::spawn_blocking(move || {
-        activator.run_activation(current_vars, None)
-    })
-    .await
-    .into_diagnostic()?
-    .into_diagnostic()?;
-
-    let (program, rest_args) = args.command.split_first().expect("clap ensures non-empty");
-
-    let status = Command::new(program)
-        .args(rest_args)
-        .envs(&activation_env)
-        .stdin(Stdio::inherit())
-        .stdout(Stdio::inherit())
-        .stderr(Stdio::inherit())
-        .status()
-        .await
-        .into_diagnostic()?;
-
-    if !status.success() {
-        let code = status.code().unwrap_or(1);
-        std::process::exit(code);
-    }
-
-    Ok(())
+    <<run-exit-code>>
 }
 ```
 
-rattler provides the key function `Activator::run_activation`:
+First we resolve the prefix path and construct an `Activator`. If the prefix
+does not exist we bail early with a helpful message.
 
-```rust
-let activation_env = tokio::task::spawn_blocking(move || {
-    activator.run_activation(current_vars, None)
-})
-.await
-.into_diagnostic()? // JoinError
-.into_diagnostic()?; // ActivationError
+``` {.rust #run-setup}
+let cwd = env::current_dir().into_diagnostic()?;
+let prefix = args
+    .prefix
+    .unwrap_or_else(|| super::prefix_dir(&cwd));
+let prefix = std::path::absolute(prefix).into_diagnostic()?;
+
+if !prefix.exists() {
+    miette::bail!(
+        "Environment not found at `{}`. Run `luapkg install` first.",
+        prefix.display()
+    );
+}
+
+let platform = Platform::current();
+let shell: ShellEnum = ShellEnum::from_env().unwrap_or_else(|| Bash.into());
+
+let activator =
+    Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
+let current_vars = ActivationVariables::from_env().into_diagnostic()?;
 ```
 
+rattler provides the key function `Activator::run_activation`.
 `run_activation` works by writing a temporary shell script that:
+
 1. Emits the current environment (via `env` on Unix, `set` on Windows).
 2. Sources the activation logic.
 3. Emits the environment again.
@@ -122,9 +125,33 @@ let activation_env = tokio::task::spawn_blocking(move || {
 It then runs that script and diffs the two snapshots, returning only the changed
 variables as a `HashMap<String, String>`.
 
+``` {.rust #run-activation}
+let activation_env = tokio::task::spawn_blocking(move || {
+    activator.run_activation(current_vars, None)
+})
+.await
+.into_diagnostic()?
+.into_diagnostic()?;
+```
+
 ### Spawning the child process
 
-```rust
+We use `tokio::process::Command` (the async version of `std::process::Command`).
+
+`.envs(&activation_env)` overlays the activation variables on top of the
+*inherited* environment.  So the child gets:
+
+- All of the current process's environment variables (PATH, HOME, etc.)
+- Plus the activation changes (extended PATH, CONDA_PREFIX, etc.)
+
+`.stdin(Stdio::inherit())` / `.stdout(Stdio::inherit())` / `.stderr(Stdio::inherit())`
+connect the child's stdio to the parent's.  The child can read from the terminal
+and write to it directly; `lua` works interactively.
+
+`.status()` runs the command and returns its exit status once it completes,
+without capturing stdout/stderr.
+
+``` {.rust #run-spawn}
 let (program, rest_args) = args.command.split_first().expect("clap ensures non-empty");
 
 let status = Command::new(program)
@@ -138,20 +165,6 @@ let status = Command::new(program)
     .into_diagnostic()?;
 ```
 
-We use `tokio::process::Command` (the async version of `std::process::Command`).
-
-`.envs(&activation_env)` overlays the activation variables on top of the
-*inherited* environment.  So the child gets:
-- All of the current process's environment variables (PATH, HOME, etc.)
-- Plus the activation changes (extended PATH, CONDA_PREFIX, etc.)
-
-`.stdin(Stdio::inherit())` / `.stdout(Stdio::inherit())` / `.stderr(Stdio::inherit())`
-connect the child's stdio to the parent's.  The child can read from the terminal
-and write to it directly; `lua` works interactively.
-
-`.status()` runs the command and returns its exit status once it completes,
-without capturing stdout/stderr.
-
 ### Propagating the exit code
 
 !!! warning "Exit code propagation"
@@ -159,18 +172,20 @@ without capturing stdout/stderr.
     Without exit code propagation, `luapkg run` is unusable in CI: a failing
     test would appear as a successful pipeline step.
 
-```rust
-if !status.success() {
-    let code = status.code().unwrap_or(1);
-    std::process::exit(code);
-}
-```
-
 If the child fails, we exit with the same code.  This lets `luapkg run` compose
 correctly in shell scripts:
 
 ```bash
 luapkg run lua test.lua || echo "tests failed"
+```
+
+``` {.rust #run-exit-code}
+if !status.success() {
+    let code = status.code().unwrap_or(1);
+    std::process::exit(code);
+}
+
+Ok(())
 ```
 
 `std::process::exit(code)` terminates the process immediately with the given
