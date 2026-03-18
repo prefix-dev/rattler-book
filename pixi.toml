@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "A minimal Lua package manager built on rattler"
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "osx-64", "linux-64"]
-preview = ['pixi-build']
+preview = ["pixi-build"]
 
 [package.build.backend]
 name = "pixi-build-rust"
@@ -17,14 +17,13 @@ luapkg = { path = "." }
 
 [feature.book.dependencies]
 python = ">=3.11"
-mkdocs-material = ">=9.0"
-mkdocs-redirects = ">=1.2"
 
 [feature.book.pypi-dependencies]
+mkdocs-material = ">=9.0"
+mkdocs-redirects = ">=1.2"
 entangled-cli = ">=2.0"
-mkdocs-entangled-plugin = ">=0.5"
+mkdocs-entangled-plugin = { path = "../mkdocs-plugin", editable = true }
 mkdocs-print-site-plugin = ">=2.0"
-playwright = ">=1.40"
 
 [feature.book.tasks]
 book-build = { cmd = "mkdocs build", cwd = "book" }
@@ -35,7 +34,9 @@ watch = { cmd = "entangled watch", description = "Watch for changes and keep boo
 
 [tasks]
 # Tangle source from book and format
-tangle = { cmd = "cargo fmt", depends-on = [{ task = "_tangle", environment = "book" }], description = "Tangle source from book and format" }
+tangle = { cmd = "cargo fmt", depends-on = [
+  { task = "_tangle", environment = "book" }
+], description = "Tangle source from book and format" }
 
 # Build
 build = "cargo build"
