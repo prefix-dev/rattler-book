@@ -109,7 +109,7 @@ These are some of the things you need to think about:
 
 ## What we're building
 
-`luapkg` is a minimal Lua package manager built on rattler. Here is how conda and
+`moonshot` is a minimal Lua package manager built on rattler. Here is how conda and
 rattler map to the universal concepts:
 
 | Universal concept | conda / rattler term |
@@ -119,7 +119,7 @@ rattler map to the universal concepts:
 | Artifact | `.conda` archive |
 | Index | `repodata.json` per channel/subdir |
 
-Each command in luapkg touches a different part of the pipeline:
+Each command in moonshot touches a different part of the pipeline:
 
 | Command | What it does | Steps involved |
 |---|---|---|
@@ -150,11 +150,11 @@ metadata without unpacking the (potentially large) payload.
 
 Using ZIP as the outer container is a common choice. ZIP stores a central directory at the end of the file, which means a reader can seek directly to any inner entry without scanning from the beginning. This is the same reason [Python wheels][wheels] (`.whl`) are ZIP files: a tool can extract just the metadata entry without downloading or reading the full archive.
 
-We'll see both of these inner archives in detail when we build the `luapkg build` command in [Chapter 9](ch09-build.md).
+We'll see both of these inner archives in detail when we build the `shot build` command in [Chapter 9](ch09-build.md).
 
-## What luapkg does *not* do
+## What moonshot does *not* do
 
-`luapkg` is intentionally minimal.  It does not:
+`moonshot` is intentionally minimal.  It does not:
 
 - **Generate lock files.** A real package manager needs them for reproducible installs, but they add file-format design, merge-conflict handling, and a separate resolution step. We discuss the concept in [Chapter 5](ch05-install.md) but skip the implementation.
 - **Upload to a public channel.** Publishing requires authentication, signing, and a trust model. We build packages locally and index them as a local channel instead.
@@ -179,6 +179,6 @@ What it *does* do is wire together all the major rattler subsystems:
   format.
 - rattler implements the conda specification in pure Rust, providing library
   crates for each subsystem.
-- We'll use all of them to build `luapkg`.
+- We'll use all of them to build `moonshot`.
 
 In the next chapter we'll set up the Rust project and define the CLI structure.

@@ -6,7 +6,7 @@ license     = "MIT"
 description = "A tiny pure-Lua JSON encoder/decoder"
 
 [requirements]
-# No build-time deps beyond Lua itself (added automatically by luapkg build).
+# No build-time deps beyond Lua itself (added automatically by shot build).
 run = ["lua >=5.4"]
 
 [build]

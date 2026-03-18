@@ -1,35 +1,35 @@
 # Chapter 5: The `install` Command
 
-The install command is the core of luapkg. It reads the manifest, fetches
+The install command is the core of moonshot. It reads the manifest, fetches
 repodata (using the same Gateway we set up in [Chapter 4](ch04-search.md)), solves for a
 compatible set of package versions, and installs them into a local prefix.
 
 ## Design
 
-`luapkg install` runs the full pipeline: read manifest, discover packages,
+`shot install` runs the full pipeline: read manifest, discover packages,
 solve dependencies, install.
 
-```bash
-$ luapkg install
+```console
+$ shot install
 ⠋ Fetching repodata
   1523 repodata records loaded
 ⠋ Solving
   Solved 5 packages in 0.3s
   Downloading and extracting packages...
 ✔ Environment updated in 2.1s
-  Activate with:  eval $(luapkg shell)
+  Activate with:  eval $(shot shell)
 ```
 
 The command accepts an optional `--prefix` flag to override the install
-location. By default, packages are installed to `.luapkg/env/` relative to the
+location. By default, packages are installed to `.env/` relative to the
 project root.
 
 ## Configuration
 
 ### The prefix directory
 
-By convention, `luapkg` puts the environment at `.luapkg/env/` relative to the
-project root, alongside `luapkg.toml`.  This keeps the environment close to the
+By convention, `moonshot` puts the environment at `.env/` relative to the
+project root, alongside `moonshot.toml`.  This keeps the environment close to the
 project and out of the user's global namespace. The user can override it with
 `--prefix /path/to/env`.
 
@@ -44,13 +44,13 @@ pub mod shell;
 
 use std::path::{Path, PathBuf};
 
-/// Return the path to the conda prefix managed by `luapkg`.
+/// Return the path to the conda prefix managed by `moonshot`.
 ///
-/// By convention we store the environment at `.luapkg/env/` relative to the
-/// project root (the directory that contains `luapkg.toml`).  This is similar
+/// By convention we store the environment at `.env/` relative to the
+/// project root (the directory that contains `moonshot.toml`).  This is similar
 /// to how pixi stores its environments in `.pixi/envs/`.
 pub fn prefix_dir(project_root: &Path) -> PathBuf {
-    project_root.join(".luapkg").join("env")
+    project_root.join(".env")
 }
 ```
 
@@ -124,7 +124,7 @@ solver should prefer to keep if possible.
 
 !!! warning "Why locking matters"
 
-    Without locking, every `luapkg install` could silently upgrade transitive
+    Without locking, every `shot install` could silently upgrade transitive
     dependencies even when the manifest hasn't changed. That kind of drift is a
     common source of "it worked yesterday" bugs. Locking gives you environmental
     stability: the solver only changes what it must to satisfy new or modified
@@ -199,7 +199,7 @@ state and the desired state, and applies only the changes:
 - Remove packages no longer needed
 - Update packages whose version changed
 
-This makes `luapkg install` idempotent: running it twice with the same manifest
+This makes `shot install` idempotent: running it twice with the same manifest
 is a no-op.
 
 !!! note "Deep dive"
@@ -257,7 +257,7 @@ use crate::progress::with_spinner;
 pub struct Args {
     /// Override the target prefix (where packages are installed).
     ///
-    /// Defaults to `.luapkg/env/` relative to the project root.
+    /// Defaults to `.env/` relative to the project root.
     #[clap(long)]
     pub prefix: Option<std::path::PathBuf>,
 }
@@ -265,7 +265,7 @@ pub struct Args {
 
 #### The `install_from_manifest` function
 
-This function contains all the install logic and is reused by `luapkg add` ([Chapter 6](ch06-add.md)).
+This function contains all the install logic and is reused by `shot add` ([Chapter 6](ch06-add.md)).
 
 ``` {.rust #install-from-manifest}
 /// Shared install logic used by both `install` and `add`.
@@ -308,7 +308,7 @@ pub async fn install_from_manifest(
 
 #### Parsing specs from the manifest
 
-In `luapkg`, we parse MatchSpecs from the manifest's `[dependencies]` table:
+In `moonshot`, we parse MatchSpecs from the manifest's `[dependencies]` table:
 
 ``` {.rust #install-parse-specs}
     let channel_config =
@@ -600,7 +600,7 @@ If all operations are empty, the environment was already up to date.
             start_install.elapsed().as_secs_f64()
         );
         println!(
-            "  Activate with:  eval $(luapkg shell)"
+            "  Activate with:  eval $(shot shell)"
         );
     }
 
@@ -663,25 +663,25 @@ pub fn with_spinner_sync<T, F: FnOnce() -> T>(msg: impl Into<Cow<'static, str>>,
 }
 ```
 
-## Running `luapkg install`
+## Running `shot install`
 
-```bash
-$ luapkg install
+```console
+$ shot install
 ⠋ Fetching repodata
   1523 repodata records loaded
 ⠋ Solving
   Solved 5 packages in 0.3s
   Downloading and extracting packages...
 ✔ Environment updated in 2.1s
-  Activate with:  eval $(luapkg shell)
+  Activate with:  eval $(shot shell)
 ```
 
 ### What gets installed where
 
-After `luapkg install`, the prefix looks like this:
+After `shot install`, the prefix looks like this:
 
 ```text
-.luapkg/env/
+.env/
 ├── bin/
 │   ├── lua             ← the Lua interpreter
 │   └── luarocks        ← LuaRocks (if installed)
@@ -711,7 +711,7 @@ records the package name, version, build, all installed files, and their hashes.
 - Files are hard-linked from the central cache into the prefix.
 - `install_from_manifest` is shared with the `add` command (next chapter).
 
-In the next chapter we implement `luapkg add`, a thin wrapper that updates the
+In the next chapter we implement `shot add`, a thin wrapper that updates the
 manifest and then installs.
 
 [libsolv]: https://github.com/openSUSE/libsolv

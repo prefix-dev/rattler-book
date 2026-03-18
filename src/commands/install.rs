@@ -27,7 +27,7 @@ use crate::progress::with_spinner;
 pub struct Args {
     /// Override the target prefix (where packages are installed).
     ///
-    /// Defaults to `.luapkg/env/` relative to the project root.
+    /// Defaults to `.env/` relative to the project root.
     #[clap(long)]
     pub prefix: Option<std::path::PathBuf>,
 }
@@ -209,7 +209,7 @@ pub async fn install_from_manifest(
             console::style("✔").green(),
             start_install.elapsed().as_secs_f64()
         );
-        println!("  Activate with:  eval $(luapkg shell)");
+        println!("  Activate with:  eval $(shot shell)");
     }
 
     Ok(())

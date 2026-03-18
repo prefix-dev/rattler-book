@@ -1,12 +1,12 @@
 # Chapter 8: The `run` Command
 
-`luapkg shell` requires the user to evaluate shell-specific output. That works for interactive use but creates two problems: it is awkward to use in scripts and CI pipelines, and it ties you to a specific shell dialect. `luapkg run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether the user runs Bash, Fish, PowerShell, or no shell at all.
+`shot shell` requires the user to evaluate shell-specific output. That works for interactive use but creates two problems: it is awkward to use in scripts and CI pipelines, and it ties you to a specific shell dialect. `shot run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether the user runs Bash, Fish, PowerShell, or no shell at all.
 
 ## Design
 
 ```bash
-luapkg run lua -e 'print("hello from conda")'
-luapkg run luarocks install inspect
+shot run lua -e 'print("hello from conda")'
+shot run luarocks install inspect
 ```
 
 Everything after `run` is passed verbatim to the OS. The command accepts an
@@ -102,7 +102,7 @@ let prefix = std::path::absolute(prefix).into_diagnostic()?;
 
 if !prefix.exists() {
     miette::bail!(
-        "Environment not found at `{}`. Run `luapkg install` first.",
+        "Environment not found at `{}`. Run `shot install` first.",
         prefix.display()
     );
 }
@@ -169,14 +169,14 @@ let status = Command::new(program)
 
 !!! warning "Exit code propagation"
 
-    Without exit code propagation, `luapkg run` is unusable in CI: a failing
+    Without exit code propagation, `shot run` is unusable in CI: a failing
     test would appear as a successful pipeline step.
 
-If the child fails, we exit with the same code.  This lets `luapkg run` compose
+If the child fails, we exit with the same code.  This lets `shot run` compose
 correctly in shell scripts:
 
 ```bash
-luapkg run lua test.lua || echo "tests failed"
+shot run lua test.lua || echo "tests failed"
 ```
 
 ``` {.rust #run-exit-code}
@@ -198,13 +198,13 @@ error would cause `miette` to print an error message, cluttering the output.
 
 ## Summary
 
-- `luapkg run` computes a modified environment via `run_activation` and spawns
+- `shot run` computes a modified environment via `run_activation` and spawns
   a child process with it.
 - `spawn_blocking` offloads synchronous, potentially-blocking code to a
   dedicated thread pool.
 - `.envs()` overlays activation variables on the inherited environment.
 - `.stdin/stdout/stderr(Stdio::inherit())` gives the child full terminal access.
-- Exit codes are propagated so `luapkg run` composes in shell scripts.
+- Exit codes are propagated so `shot run` composes in shell scripts.
 
-In the next chapter, the most complex one, we implement `luapkg build`: turning
+In the next chapter, the most complex one, we implement `shot build`: turning
 source code into a distributable conda package.

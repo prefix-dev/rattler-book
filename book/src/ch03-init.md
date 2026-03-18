@@ -1,19 +1,19 @@
 # Chapter 3: The `init` Command
 
-Every `luapkg` project starts with `luapkg init`. This command creates
-`luapkg.toml`, the manifest that describes which packages the user wants and
+Every moonshot project starts with `shot init`. This command creates
+`moonshot.toml`, the manifest that describes which packages the user wants and
 from which channels to fetch them.
 
 ## Design
 
-`luapkg init` creates a new manifest in the current directory:
+`shot init` creates a new manifest in the current directory:
 
-```bash
-$ luapkg init hello-lua
-✔ Created `luapkg.toml` for project "hello-lua"
-  Add packages with:  luapkg add <package>
-  Install them with:  luapkg install
-$ cat luapkg.toml
+```console
+$ shot init hello-lua
+✔ Created `moonshot.toml` for project "hello-lua"
+  Add packages with:  shot add <package>
+  Install them with:  shot install
+$ cat moonshot.toml
 [project]
 name = "hello-lua"
 channels = ["conda-forge"]
@@ -23,10 +23,10 @@ lua = ">=5.4"
 ```
 
 The command accepts an optional project name (defaults to the current directory
-name) and one or more `--channel` flags. If `luapkg.toml` already exists, it
+name) and one or more `--channel` flags. If `moonshot.toml` already exists, it
 refuses to overwrite.
 
-## Configuration: `luapkg.toml`
+## Configuration: `moonshot.toml`
 
 ```toml
 [project]
@@ -48,7 +48,7 @@ to version constraints.  Version specs follow the conda MatchSpec mini-language:
 | `"5.4.*"`     | any 5.4.x release                 |
 | `">=5.4,<6"`  | 5.4 series, exclusive upper bound |
 
-A manifest records human intent: which packages the user wants and from which channels. It is distinct from a lock file, which records the exact versions the solver chose, including transitive dependencies. The manifest says "I want `lua >=5.4`"; a lock file says "install `lua 5.4.7 build h5eee18b_0` from conda-forge, plus these 12 transitive dependencies at these exact versions." We implement only the manifest in luapkg, but understanding the distinction matters for any package manager design.
+A manifest records human intent: which packages the user wants and from which channels. It is distinct from a lock file, which records the exact versions the solver chose, including transitive dependencies. The manifest says "I want `lua >=5.4`"; a lock file says "install `lua 5.4.7 build h5eee18b_0` from conda-forge, plus these 12 transitive dependencies at these exact versions." We implement only the manifest in moonshot, but understanding the distinction matters for any package manager design.
 
 ## Concepts
 
@@ -101,7 +101,7 @@ use serde::{Deserialize, Serialize};
 
 ``` {.rust #manifest-filename-const}
 /// The file name we look for in the current directory.
-pub const MANIFEST_FILENAME: &str = "luapkg.toml";
+pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 ```
 
 A single constant for the filename keeps it consistent across all commands.
@@ -146,7 +146,7 @@ Channels are listed in the manifest rather than in a global config file. This me
 
     conda-forge is the largest community channel and covers most packages, so
     it is the right default for getting started. A real package manager
-    might require an explicit channel list to avoid surprises, but for luapkg
+    might require an explicit channel list to avoid surprises, but for moonshot
     the convenience outweighs the risk.
 
 #### Methods
@@ -199,7 +199,7 @@ Commands other than `init` need to *find* the manifest, not create it:
         if !path.exists() {
             miette::bail!(
                 "No `{MANIFEST_FILENAME}` found in `{}`. \
-                 Run `luapkg init` to create one.",
+                 Run `shot init` to create one.",
                 dir.display()
             );
         }
@@ -209,7 +209,7 @@ Commands other than `init` need to *find* the manifest, not create it:
 ```
 
 It returns a tuple `(PathBuf, Manifest)` because callers sometimes need to
-*write back* to the same path (e.g., `luapkg add` modifies the manifest before
+*write back* to the same path (e.g., `shot add` modifies the manifest before
 installing).
 
 !!! info "Design choice: no walk-up"
@@ -217,7 +217,7 @@ installing).
     `find_in_dir` only looks in the directory you pass it. An alternative
     design, used by Cargo and npm, walks up the directory tree until it finds a
     manifest. Walk-up is convenient when you run commands from a subdirectory,
-    but it introduces ambiguity: which manifest did the tool find? For luapkg we
+    but it introduces ambiguity: which manifest did the tool find? For moonshot we
     chose current-directory-only because it is simpler to reason about and
     avoids accidentally operating on a parent project.
 
@@ -279,8 +279,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         "{} Created `{MANIFEST_FILENAME}` for project \"{name}\"",
         console::style("✔").green()
     );
-    println!("  Add packages with:  luapkg add <package>");
-    println!("  Install them with:  luapkg install");
+    println!("  Add packages with:  shot add <package>");
+    println!("  Install them with:  shot install");
 
     Ok(())
 }
@@ -290,16 +290,16 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 output.  It degrades gracefully when stdout isn't a terminal (redirected to a
 file, CI, etc.).
 
-## Running `luapkg init`
+## Running `shot init`
 
 At this point you can build and run the first command:
 
-```bash
-pixi run luapkg init hello-lua
-✔ Created `luapkg.toml` for project "hello-lua"
-  Add packages with:  luapkg add <package>
-  Install them with:  luapkg install
-$ cat luapkg.toml
+```console
+$ pixi run shot init hello-lua
+✔ Created `moonshot.toml` for project "hello-lua"
+  Add packages with:  shot add <package>
+  Install them with:  shot install
+$ cat moonshot.toml
 [project]
 name = "hello-lua"
 channels = ["conda-forge"]
@@ -317,5 +317,5 @@ lua = ">=5.4"
 [serde]: https://serde.rs
 [TOML]: https://toml.io
 
-In the next chapter we'll implement `luapkg search`, which queries a channel for
+In the next chapter we'll implement `shot search`, which queries a channel for
 available packages.

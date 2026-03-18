@@ -1,14 +1,14 @@
 # Chapter 2: Setting Up the Project
 
 In this chapter we create the Rust project, add our dependencies, and build the
-CLI skeleton with [Clap].  By the end of the chapter `luapkg --help` works, even
+CLI skeleton with [Clap].  By the end of the chapter `shot --help` works, even
 though none of the commands do anything yet.
 
 ## Creating the project
 
-```bash
-cargo new luapkg
-cd luapkg
+```console
+cargo new moonshot
+cd moonshot
 ```
 
 ## Dependencies
@@ -17,13 +17,13 @@ Open `Cargo.toml` and add the following.  We'll explain each crate as we use it.
 
 ``` {.toml file=Cargo.toml}
 [package]
-name = "luapkg"
+name = "moonshot"
 version = "0.1.0"
 edition = "2021"
 description = "A minimal Lua package manager built on rattler"
 
 [[bin]]
-name = "luapkg"
+name = "shot"
 path = "src/main.rs"
 
 [features]
@@ -114,7 +114,7 @@ Here is how the project is structured:
 ```text
 src/
 ├── main.rs          ← CLI wiring, Tokio runtime
-├── manifest.rs      ← luapkg.toml parser
+├── manifest.rs      ← moonshot.toml parser
 ├── recipe.rs        ← recipe.toml parser
 ├── progress.rs      ← spinner helpers
 └── commands/
@@ -179,7 +179,7 @@ struct Cli {
 
 #[derive(Debug, clap::Subcommand)]
 enum Command {
-    /// Create a new luapkg.toml in the current directory.
+    /// Create a new moonshot.toml in the current directory.
     Init(commands::init::Args),
 
     /// Search for packages in a channel.
@@ -188,7 +188,7 @@ enum Command {
     /// Add one or more packages to the manifest and install them.
     Add(commands::add::Args),
 
-    /// Install (or update) all packages listed in luapkg.toml.
+    /// Install (or update) all packages listed in moonshot.toml.
     Install(commands::install::Args),
 
     /// Print a shell activation script.
@@ -239,7 +239,7 @@ fn main() -> miette::Result<()> {
 
 `async_main` parses the CLI arguments, sets up logging, and dispatches to the
 right subcommand handler. We route all log output to stderr, leaving stdout
-clean for machine-readable output (like `luapkg shell`, which prints a shell
+clean for machine-readable output (like `shot shell`, which prints a shell
 script). The `--verbose` flag raises the log level to `DEBUG`; users can also
 set `RUST_LOG=debug` for more control.
 
@@ -285,5 +285,5 @@ async fn async_main() -> miette::Result<()> {
 [miette]: https://docs.rs/miette
 [Tokio]: https://tokio.rs
 
-In the next chapter we implement the simplest command: `luapkg init`, which
+In the next chapter we implement the simplest command: `shot init`, which
 writes the project manifest.

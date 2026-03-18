@@ -4,8 +4,8 @@ book/target
 # Rust build artifacts
 /target/
 
-# luapkg environment (installed packages)
-.luapkg/
+# moonshot environment (installed packages)
+.env/
 
 # Built conda packages (example build outputs)
 examples/output/

@@ -1,12 +1,12 @@
 # ~/~ begin <<book/src/ch02-project-setup.md#Cargo.toml>>[init]
 [package]
-name = "luapkg"
+name = "moonshot"
 version = "0.1.0"
 edition = "2021"
 description = "A minimal Lua package manager built on rattler"
 
 [[bin]]
-name = "luapkg"
+name = "shot"
 path = "src/main.rs"
 
 [features]

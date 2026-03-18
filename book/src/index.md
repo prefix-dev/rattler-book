@@ -25,22 +25,22 @@ self-contained, but the techniques generalize to any ecosystem.
 
 ## What we build
 
-`luapkg`, a minimal Lua package manager.  It can:
+`moonshot`, a minimal Lua package manager.  It can:
 
-```bash
-$ luapkg init my-app          # scaffold a new project
-$ luapkg add lua ">=5.4"      # add dependencies
-$ luapkg install              # fetch, solve, and install
-$ luapkg shell                # activate the environment
-$ luapkg run lua script.lua   # run inside the environment
-$ luapkg build                # build a distributable package
+```console
+$ shot init my-app          # scaffold a new project
+$ shot add lua ">=5.4"      # add dependencies
+$ shot install              # fetch, solve, and install
+$ shot shell                # activate the environment
+$ shot run lua script.lua   # run inside the environment
+$ shot build                # build a distributable package
 ```
 
 The final source is in the `src/` directory alongside this book.
 
 ## How this book is organized
 
-**Part I** builds `luapkg` from scratch. Each chapter implements one command
+**Part I** builds `moonshot` from scratch. Each chapter implements one command
 from start to finish: design how the command works, then configuration changes,
 then concepts, then implementation.
 

@@ -8,7 +8,7 @@ mod manifest;
 mod progress;
 mod recipe;
 
-/// A minimal Lua package manager powered by rattler.
+/// moonshot — a minimal Lua package manager powered by rattler.
 #[derive(Debug, Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
@@ -22,7 +22,7 @@ struct Cli {
 
 #[derive(Debug, clap::Subcommand)]
 enum Command {
-    /// Create a new luapkg.toml in the current directory.
+    /// Create a new moonshot.toml in the current directory.
     Init(commands::init::Args),
 
     /// Search for packages in a channel.
@@ -31,7 +31,7 @@ enum Command {
     /// Add one or more packages to the manifest and install them.
     Add(commands::add::Args),
 
-    /// Install (or update) all packages listed in luapkg.toml.
+    /// Install (or update) all packages listed in moonshot.toml.
     Install(commands::install::Args),
 
     /// Print a shell activation script.

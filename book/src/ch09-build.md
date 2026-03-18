@@ -4,16 +4,16 @@ We've covered installing packages from existing channels.  Now let's close the
 loop: building a new package from source and publishing it so others can install
 it.
 
-Moving from consumer to producer makes luapkg self-sufficient for the Lua ecosystem. Up to now, luapkg only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like [conda-build] or [rattler-build]) to create new packages. By adding a build command, you can write a library, package it, host it on a local channel, and install it with the same tool.
+Moving from consumer to producer makes moonshot self-sufficient for the Lua ecosystem. Up to now, moonshot only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like [conda-build] or [rattler-build]) to create new packages. By adding a build command, you can write a library, package it, host it on a local channel, and install it with the same tool.
 
 ## Design
 
-`luapkg build` reads a `recipe.toml`, installs build-time dependencies into a
+`shot build` reads a `recipe.toml`, installs build-time dependencies into a
 temporary prefix, runs a Lua build script, packs the result into a `.conda`
 archive, and indexes the output directory as a local channel.
 
-```bash
-$ luapkg build
+```console
+$ shot build
 Building moonshine 0.3.0 (build lua_0)
   → Installing 2 build dependencies…
   → Running build script `build.lua`
@@ -343,8 +343,8 @@ function available to build scripts. This block is the only documentation a
 recipe author needs to consult when writing a `build.lua`.
 
 ``` {.lua #prelude-header}
--- luapkg build prelude
--- Automatically sourced before every build.lua by `luapkg build`.
+-- moonshot build prelude
+-- Automatically sourced before every build.lua by `shot build`.
 --
 -- You do NOT need to require() this file; everything below is already
 -- in scope when your build script runs.
@@ -371,7 +371,7 @@ recipe author needs to consult when writing a `build.lua`.
 --   path_join(...)            joins path segments with "/"
 --   exists(path)              returns true if path exists
 --   is_file(path)             returns true if path is a regular file
---   log(msg)                  prints "[luapkg] msg" to stderr
+--   log(msg)                  prints "[moonshot] msg" to stderr
 ```
 
 The Rust side sets these environment variables before launching the Lua
@@ -457,9 +457,9 @@ function is_file(path)
     return false
 end
 
---- Print an informational message to stderr, prefixed with "[luapkg]".
+--- Print an informational message to stderr, prefixed with "[moonshot]".
 function log(msg)
-    io.stderr:write("[luapkg] " .. tostring(msg) .. "\n")
+    io.stderr:write("[moonshot] " .. tostring(msg) .. "\n")
 end
 ```
 
@@ -776,7 +776,7 @@ The temporary directory is automatically cleaned up when `work_dir` goes out of
 scope.
 
 It constructs a temporary manifest from the recipe's build requirements,
-reusing `install_from_manifest` (the same function `luapkg install` uses) to
+reusing `install_from_manifest` (the same function `shot install` uses) to
 install them into the build prefix instead of the project's environment.
 
 #### Build prelude constant
@@ -1111,7 +1111,7 @@ the directory, reads every `.conda` file's `info/index.json`, and writes:
 Once indexed, the output directory can be used as a channel directly:
 
 ```toml
-# Another project's luapkg.toml
+# Another project's moonshot.toml
 [project]
 channels = ["./output", "conda-forge"]
 
@@ -1125,7 +1125,7 @@ moonshine = ">=0.3"
     You would also need a way to push packages to a remote server, sign them so
     consumers can verify authenticity, and define a trust model (who is allowed
     to publish, and how do you revoke a compromised key). These are substantial
-    features that we skip in luapkg, but they are the difference between a local
+    features that we skip in moonshot, but they are the difference between a local
     build tool and a real distribution system.
 
 ## Summary
@@ -1136,7 +1136,7 @@ moonshine = ">=0.3"
 - `write_conda_package` produces the `.conda` archive format.
 - `rattler_index` turns the output directory into a valid conda channel.
 
-With `luapkg build` working, our package manager is feature-complete.  In Part II
+With `shot build` working, our package manager is feature-complete.  In Part II
 we'll dive deeper into the underlying mechanisms.
 
 [conda-build]: https://docs.conda.io/projects/conda-build/

@@ -2092,40 +2092,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "112b39cec0b298b6c1999fee3e31427f74f676e4cb9879ed1a121b43661a4154"
 
 [[package]]
-name = "luapkg"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "clap",
- "console",
- "indicatif",
- "miette",
- "rattler",
- "rattler_cache",
- "rattler_conda_types",
- "rattler_digest",
- "rattler_index",
- "rattler_networking",
- "rattler_package_streaming",
- "rattler_repodata_gateway",
- "rattler_shell",
- "rattler_solve",
- "rattler_virtual_packages",
- "reqwest",
- "reqwest-middleware",
- "serde",
- "serde_json",
- "sha2",
- "tempfile",
- "thiserror 2.0.18",
- "tokio",
- "toml",
- "tracing",
- "tracing-subscriber",
- "walkdir",
-]
-
-[[package]]
 name = "matchers"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2223,6 +2189,40 @@ dependencies = [
  "libc",
  "wasi",
  "windows-sys 0.61.2",
+]
+
+[[package]]
+name = "moonshot"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap",
+ "console",
+ "indicatif",
+ "miette",
+ "rattler",
+ "rattler_cache",
+ "rattler_conda_types",
+ "rattler_digest",
+ "rattler_index",
+ "rattler_networking",
+ "rattler_package_streaming",
+ "rattler_repodata_gateway",
+ "rattler_shell",
+ "rattler_solve",
+ "rattler_virtual_packages",
+ "reqwest",
+ "reqwest-middleware",
+ "serde",
+ "serde_json",
+ "sha2",
+ "tempfile",
+ "thiserror 2.0.18",
+ "tokio",
+ "toml",
+ "tracing",
+ "tracing-subscriber",
+ "walkdir",
 ]
 
 [[package]]

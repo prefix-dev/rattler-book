@@ -5,9 +5,9 @@ manifest and then installs in one step.
 
 ## Design
 
-```bash
-$ luapkg add luarocks
-✔ Added 1 package(s) to `luapkg.toml`
+```console
+$ shot add luarocks
+✔ Added 1 package(s) to `moonshot.toml`
 ⠋ Fetching repodata
   ...
 ✔ Environment updated in 1.8s
@@ -15,12 +15,12 @@ $ luapkg add luarocks
 
 You can also pass a version constraint inline:
 
-```bash
-$ luapkg add "lua >=5.4"
+```console
+$ shot add "lua >=5.4"
 ```
 
-The command parses the spec, updates `[dependencies]` in `luapkg.toml`, and
-calls `install_from_manifest` (the same function `luapkg install` uses).
+The command parses the spec, updates `[dependencies]` in `moonshot.toml`, and
+calls `install_from_manifest` (the same function `shot install` uses).
 
 ## Concepts
 
@@ -34,7 +34,7 @@ small commands compose by calling shared functions rather than duplicating code.
 ### Idempotent manifest updates
 
 If the package is already in `[dependencies]`, `add` skips it (uses
-`entry().or_insert_with()`). Running `luapkg add lua` twice does not create a
+`entry().or_insert_with()`). Running `shot add lua` twice does not create a
 duplicate entry or change the existing version constraint.
 
 ## Implementation
@@ -116,19 +116,19 @@ This splits `"lua >=5.4"` into `("lua", ">=5.4")` or `"luarocks"` into
 We split on the first whitespace or `=` character to separate the package name
 from the version constraint.
 
-## Running `luapkg add`
+## Running `shot add`
 
-```bash
-$ luapkg add luarocks
-✔ Added 1 package(s) to `luapkg.toml`
+```console
+$ shot add luarocks
+✔ Added 1 package(s) to `moonshot.toml`
 ⠋ Fetching repodata
   1842 repodata records loaded
 ⠋ Solving
   Solved 6 packages in 0.4s
 ✔ Environment updated in 1.8s
-  Activate with:  eval $(luapkg shell)
+  Activate with:  eval $(shot shell)
 
-$ cat luapkg.toml
+$ cat moonshot.toml
 [project]
 name = "hello-lua"
 channels = ["conda-forge"]
@@ -144,5 +144,5 @@ luarocks = "*"
 - `install_from_manifest` is shared between `install` and `add`.
 - Manifest updates are idempotent: adding an existing package is a no-op.
 
-In the next chapter we implement `luapkg shell`, which generates a shell
+In the next chapter we implement `shot shell`, which generates a shell
 activation script so you can use the installed packages.

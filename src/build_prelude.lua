@@ -1,6 +1,6 @@
 -- ~/~ begin <<book/src/ch09-build.md#src/build_prelude.lua>>[init]
--- luapkg build prelude
--- Automatically sourced before every build.lua by `luapkg build`.
+-- moonshot build prelude
+-- Automatically sourced before every build.lua by `shot build`.
 --
 -- You do NOT need to require() this file; everything below is already
 -- in scope when your build script runs.
@@ -27,7 +27,7 @@
 --   path_join(...)            joins path segments with "/"
 --   exists(path)              returns true if path exists
 --   is_file(path)             returns true if path is a regular file
---   log(msg)                  prints "[luapkg] msg" to stderr
+--   log(msg)                  prints "[moonshot] msg" to stderr
 
 -- ── Globals ───────────────────────────────────────────────────────────────────
 
@@ -95,9 +95,9 @@ function is_file(path)
     return false
 end
 
---- Print an informational message to stderr, prefixed with "[luapkg]".
+--- Print an informational message to stderr, prefixed with "[moonshot]".
 function log(msg)
-    io.stderr:write("[luapkg] " .. tostring(msg) .. "\n")
+    io.stderr:write("[moonshot] " .. tostring(msg) .. "\n")
 end
 
 -- ── Install helpers ───────────────────────────────────────────────────────────

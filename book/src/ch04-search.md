@@ -6,11 +6,11 @@ command that lets the user search for packages by name.
 
 ## Design
 
-`luapkg search <query>` searches for packages matching a name pattern and prints
+`shot search <query>` searches for packages matching a name pattern and prints
 the results:
 
-```bash
-$ luapkg search lua
+```console
+$ shot search lua
 lua          5.4.7   The Lua programming language
 luarocks     3.11.1  The Lua package manager
 lua-cjson    2.1.0   Fast JSON encoding/decoding for Lua
@@ -422,10 +422,10 @@ The `search` module needs to be registered. We add `pub mod search;` to
 `src/commands/mod.rs` (the full file is shown in [Chapter 5](ch05-install.md)) and a `Search`
 variant to the `Command` enum in `src/main.rs` (shown in [Chapter 2](ch02-project-setup.md)).
 
-## Running `luapkg search`
+## Running `shot search`
 
-```bash
-$ luapkg search lua
+```console
+$ shot search lua
 ⠋ Fetching repodata
 lua                            5.4.7
 luarocks                       3.11.1
@@ -443,5 +443,5 @@ luafilesystem                  1.8.0
 - The `search` command queries with `.recursive(false)` since it only needs
   direct matches.
 
-In the next chapter we build on this foundation to implement `luapkg install`,
+In the next chapter we build on this foundation to implement `shot install`,
 which adds solving and installation to the repodata pipeline.

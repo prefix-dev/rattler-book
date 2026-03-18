@@ -28,7 +28,7 @@ pub fn execute(args: Args) -> miette::Result<()> {
 
     if !prefix.exists() {
         miette::bail!(
-            "Environment not found at `{}`. Run `luapkg install` first.",
+            "Environment not found at `{}`. Run `shot install` first.",
             prefix.display()
         );
     }

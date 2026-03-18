@@ -52,8 +52,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         "{} Created `{MANIFEST_FILENAME}` for project \"{name}\"",
         console::style("✔").green()
     );
-    println!("  Add packages with:  luapkg add <package>");
-    println!("  Install them with:  luapkg install");
+    println!("  Add packages with:  shot add <package>");
+    println!("  Install them with:  shot install");
 
     Ok(())
 }

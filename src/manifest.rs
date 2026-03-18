@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 
 // ~/~ begin <<book/src/ch03-init.md#manifest-filename-const>>[init]
 /// The file name we look for in the current directory.
-pub const MANIFEST_FILENAME: &str = "luapkg.toml";
+pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 // ~/~ end
 
 // ~/~ begin <<book/src/ch03-init.md#manifest-structs>>[init]
@@ -66,7 +66,7 @@ impl Manifest {
         if !path.exists() {
             miette::bail!(
                 "No `{MANIFEST_FILENAME}` found in `{}`. \
-                 Run `luapkg init` to create one.",
+                 Run `shot init` to create one.",
                 dir.display()
             );
         }

@@ -1,6 +1,6 @@
 # Chapter 7: The `shell` Command
 
-After installing packages into `.luapkg/env/`, the user needs to be able to
+After installing packages into `.env/`, the user needs to be able to
 *use* them.  That means getting `lua`, `luarocks`, and any other installed
 binaries onto their `PATH`, and setting any environment variables that packages
 declare.
@@ -8,11 +8,11 @@ declare.
 ## Design
 
 ```bash
-eval $(luapkg shell)         # bash / zsh
-luapkg shell | source        # fish
+eval $(shot shell)         # bash / zsh
+shot shell | source        # fish
 ```
 
-The `eval` trick runs the output of `luapkg shell` as shell code in the current
+The `eval` trick runs the output of `shot shell` as shell code in the current
 process, which *can* modify `PATH`.
 
 The command accepts an optional `--shell` flag to override the detected shell
@@ -20,7 +20,7 @@ dialect and `--prefix` to override the environment location.
 
 !!! info "`shell` vs `run`"
 
-    `luapkg shell` and `luapkg run` ([Chapter 8](ch08-run.md)) represent a design fork.
+    `shot shell` and `shot run` ([Chapter 8](ch08-run.md)) represent a design fork.
     `shell` generates a script the user evaluates, which means it must know the
     user's shell dialect. `run` spawns a child process with the right
     environment variables, which is shell-agnostic but only lasts for one
@@ -33,7 +33,7 @@ dialect and `--prefix` to override the environment location.
 Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. conda uses eval-based activation: the tool prints a shell script and the user evaluates it in their current shell. This gives packages full control over the environment (not just `PATH` but also `LD_LIBRARY_PATH`, `LUA_PATH`, and any other variable), at the cost of being shell-dependent.
 
 A child process cannot modify the environment of its parent.  That's a Unix
-rule with no exceptions.  So when you run `luapkg shell`, it can't just set
+rule with no exceptions.  So when you run `shot shell`, it can't just set
 `PATH` for you; it has to print a script that you evaluate in your shell.
 
 ### Shell dialects and nesting
@@ -87,7 +87,7 @@ pub fn execute(args: Args) -> miette::Result<()> {
 
     if !prefix.exists() {
         miette::bail!(
-            "Environment not found at `{}`. Run `luapkg install` first.",
+            "Environment not found at `{}`. Run `shot install` first.",
             prefix.display()
         );
     }
@@ -184,15 +184,15 @@ handles both the "no active env" case and the "replacing an existing env" case.
 
 ## What the generated script looks like
 
-For Bash, `luapkg shell` might print something like:
+For Bash, `shot shell` might print something like:
 
 ```bash
-export PATH="/home/user/my-app/.luapkg/env/bin:$PATH"
-export CONDA_PREFIX="/home/user/my-app/.luapkg/env"
+export PATH="/home/user/my-app/.env/bin:$PATH"
+export CONDA_PREFIX="/home/user/my-app/.env"
 export CONDA_SHLVL="1"
-export CONDA_DEFAULT_ENV="/home/user/my-app/.luapkg/env"
+export CONDA_DEFAULT_ENV="/home/user/my-app/.env"
 # source activation scripts
-. "/home/user/my-app/.luapkg/env/etc/conda/activate.d/lua_path.sh"
+. "/home/user/my-app/.env/etc/conda/activate.d/lua_path.sh"
 ```
 
 The user evaluates this, and from that point `lua`, `luarocks`, etc. are on their
@@ -218,5 +218,5 @@ PATH.
 - `ActivationVariables` captures current state for correct nested-activation
   handling.
 
-In the next chapter we implement `luapkg run`, a way to run a command inside the
+In the next chapter we implement `shot run`, a way to run a command inside the
 activated environment without permanently modifying the shell.

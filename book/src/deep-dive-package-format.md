@@ -1,7 +1,7 @@
 # Deep Dive: The conda Package Format
 
 This chapter is a precise reference for what's inside a conda package.  You
-don't need to read it to build `luapkg`, but if you're debugging a packaging
+don't need to read it to build `moonshot`, but if you're debugging a packaging
 problem or writing tooling that reads package archives, you'll want it.
 
 ## The two formats
