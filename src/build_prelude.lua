@@ -45,6 +45,10 @@ PKG_BUILD_NUM = tonumber(os.getenv("PKG_BUILD_NUM") or "0")
 -- ~/~ begin <<book/src/ch09-build.md#prelude-internal-helpers>>[init]
 -- ── Internal helpers ──────────────────────────────────────────────────────────
 
+--- Detect the operating system once.  `package.config` always starts with the
+--- directory separator (`\` on Windows, `/` everywhere else).
+local IS_WINDOWS = package.config:sub(1, 1) == "\\"
+
 local function shell(cmd)
     local ok, kind, code = os.execute(cmd)
     if not ok then
@@ -54,8 +58,13 @@ end
 
 -- Quote a path for use in a shell command.
 local function q(path)
-    -- Wrap in single quotes; escape any embedded single quotes.
-    return "'" .. path:gsub("'", "'\\''") .. "'"
+    if IS_WINDOWS then
+        -- cmd.exe uses double-quote delimiters; normalise to backslashes.
+        return '"' .. path:gsub("/", "\\") .. '"'
+    else
+        -- POSIX: wrap in single quotes; escape any embedded single quotes.
+        return "'" .. path:gsub("'", "'\\''") .. "'"
+    end
 end
 -- ~/~ end
 
@@ -73,18 +82,32 @@ end
 
 --- Create `path` and all parent directories (like `mkdir -p`).
 function mkdir(path)
-    shell("mkdir -p " .. q(path))
+    if IS_WINDOWS then
+        -- Windows mkdir creates parent directories by default.
+        -- Suppress the "already exists" error with 2>nul.
+        os.execute("mkdir " .. q(path) .. " 2>nul")
+    else
+        shell("mkdir -p " .. q(path))
+    end
 end
 
 --- Copy `src` to `dst`.  `src` may contain shell globs.
 function cp(src, dst)
     mkdir(dst)
-    shell("cp -r " .. src .. " " .. q(dst))
+    if IS_WINDOWS then
+        shell("copy /Y " .. q(src) .. " " .. q(dst))
+    else
+        shell("cp -r " .. src .. " " .. q(dst))
+    end
 end
 
 --- Move `src` to `dst`.
 function mv(src, dst)
-    shell("mv " .. q(src) .. " " .. q(dst))
+    if IS_WINDOWS then
+        shell("move /Y " .. q(src) .. " " .. q(dst))
+    else
+        shell("mv " .. q(src) .. " " .. q(dst))
+    end
 end
 
 --- Return true if `path` exists.
@@ -111,6 +134,14 @@ end
 -- ~/~ begin <<book/src/ch09-build.md#prelude-install-helpers>>[init]
 -- ── Install helpers ───────────────────────────────────────────────────────────
 
+--- Return true when `src` is an absolute path on the current platform.
+local function is_absolute(src)
+    if src:sub(1, 1) == "/" then return true end
+    -- Windows drive letter, e.g. "C:\" or "C:/"
+    if IS_WINDOWS and src:match("^%a:[/\\]") then return true end
+    return false
+end
+
 --- Install files matching `src` (a path or shell glob) into `PREFIX/subdir/`.
 ---
 --- Example:
@@ -120,8 +151,12 @@ function install(src, subdir)
     local dst = path_join(PREFIX, subdir)
     mkdir(dst)
     -- Expand src relative to SRC_DIR if it is not absolute.
-    local expanded = src:sub(1,1) == "/" and src or path_join(SRC_DIR, src)
-    shell("cp -r " .. expanded .. " " .. q(dst) .. "/")
+    local expanded = is_absolute(src) and src or path_join(SRC_DIR, src)
+    if IS_WINDOWS then
+        shell("copy /Y " .. q(expanded) .. " " .. q(dst))
+    else
+        shell("cp -r " .. expanded .. " " .. q(dst) .. "/")
+    end
 end
 
 --- Install an executable into `PREFIX/bin/`.
@@ -131,11 +166,15 @@ end
 function install_bin(src)
     local dst = path_join(PREFIX, "bin")
     mkdir(dst)
-    local expanded = src:sub(1,1) == "/" and src or path_join(SRC_DIR, src)
-    shell("cp " .. expanded .. " " .. q(dst) .. "/")
-    -- Make the installed file executable.
-    local base = src:match("[^/]+$")
-    shell("chmod +x " .. q(path_join(dst, base)))
+    local expanded = is_absolute(src) and src or path_join(SRC_DIR, src)
+    if IS_WINDOWS then
+        shell("copy /Y " .. q(expanded) .. " " .. q(dst))
+    else
+        shell("cp " .. expanded .. " " .. q(dst) .. "/")
+        -- Make the installed file executable.
+        local base = src:match("[^/]+$")
+        shell("chmod +x " .. q(path_join(dst, base)))
+    end
 end
 
 --- Install Lua source files into the standard Lua package path.
