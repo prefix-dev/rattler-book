@@ -56,7 +56,7 @@ lint = { cmd = "cargo clippy -- -D warnings", description = "Strict clippy lint 
 
 # Smoke tests
 smoke-test-help = { cmd = "cargo run -- --help", depends-on = ["build"], description = "Smoke test: --help" }
-smoke-test-init = { cmd = "bash -c 'set -e; rm -rf .tmp-smoke-test; mkdir .tmp-smoke-test; cd .tmp-smoke-test; cargo run -- init ci-test; cat moonshot.toml; cd ..; rm -rf .tmp-smoke-test'", depends-on = ["build"], description = "Smoke test: init" }
+smoke-test-init = { cmd = "rm -rf .tmp-smoke-test && mkdir .tmp-smoke-test && cd .tmp-smoke-test && cargo run -- init ci-test && cat moonshot.toml && cd .. && rm -rf .tmp-smoke-test", depends-on = ["build"], description = "Smoke test: init" }
 smoke-test-build-moonjson = { cmd = "cargo run -- build", cwd = "examples/moonjson", depends-on = ["build"], description = "Smoke test: moonjson build" }
 smoke-test = { depends-on = ["smoke-test-help", "smoke-test-init", "smoke-test-build-moonjson"], description = "Run all smoke tests" }
 
