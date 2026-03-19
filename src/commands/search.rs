@@ -32,7 +32,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     // ~/~ begin <<book/src/ch04-search.md#search-parse-channels>>[init]
     let channel_config =
         ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
-
+    
     let channels: Vec<Channel> = args
         .channel
         .iter()
@@ -40,11 +40,11 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .collect::<Result<_, _>>()
         .into_diagnostic()
         .context("parsing channels")?;
-
+    
     let spec = MatchSpec::from_str(&args.query, ParseMatchSpecOptions::default())
         .into_diagnostic()
         .with_context(|| format!("parsing search query `{}`", args.query))?;
-
+    
     let cache_dir = rattler::default_cache_dir()
         .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
     rattler_cache::ensure_cache_dir(&cache_dir)
@@ -56,7 +56,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .no_gzip()
         .build()
         .expect("failed to build HTTP client");
-
+    
     let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
         .with_arc(Arc::new(
             AuthenticationMiddleware::from_env_and_defaults()
@@ -69,7 +69,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     // ~/~ begin <<book/src/ch04-search.md#search-gateway>>[init]
     let platform = Platform::current();
-
+    
     let gateway = Gateway::builder()
         .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
         .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
@@ -107,16 +107,16 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             seen.entry(key).or_insert_with(|| name);
         }
     }
-
+    
     if seen.is_empty() {
         println!("No packages found matching `{}`.", args.query);
         return Ok(());
     }
-
+    
     // Sort by name, then by version descending.
     let mut results: Vec<(String, String)> = seen.into_keys().collect();
     results.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
-
+    
     // Deduplicate by name (show only latest version per package).
     let mut last_name = String::new();
     let mut count = 0usize;
@@ -128,7 +128,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         println!("{:<30} {}", console::style(name).cyan(), version);
         count += 1;
     }
-
+    
     println!("\n{} package(s) found.", count);
     Ok(())
     // ~/~ end

@@ -41,7 +41,7 @@ impl Manifest {
         let content = std::fs::read_to_string(path)
             .into_diagnostic()
             .with_context(|| format!("reading manifest at `{}`", path.display()))?;
-
+    
         toml::from_str(&content)
             .into_diagnostic()
             .with_context(|| format!("parsing manifest at `{}`", path.display()))
@@ -53,7 +53,7 @@ impl Manifest {
         let content = toml::to_string_pretty(self)
             .into_diagnostic()
             .context("serializing manifest")?;
-
+    
         std::fs::write(path, content)
             .into_diagnostic()
             .with_context(|| format!("writing manifest to `{}`", path.display()))

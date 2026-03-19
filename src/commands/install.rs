@@ -47,7 +47,7 @@ pub async fn install_from_manifest(
     // ~/~ begin <<book/src/ch05-install.md#install-parse-specs>>[init]
     let channel_config =
         ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
-
+    
     let match_spec_opts = ParseMatchSpecOptions::default();
     let specs: Vec<MatchSpec> = manifest
         .dependencies
@@ -77,7 +77,7 @@ pub async fn install_from_manifest(
         .no_gzip() // repodata is already compressed; we handle it ourselves
         .build()
         .expect("failed to build HTTP client");
-
+    
     let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
         .with_arc(Arc::new(
             AuthenticationMiddleware::from_env_and_defaults()
@@ -101,7 +101,7 @@ pub async fn install_from_manifest(
 
     // ~/~ begin <<book/src/ch05-install.md#install-gateway-builder>>[init]
     let platform = Platform::current();
-
+    
     let gateway = Gateway::builder()
         .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
         .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
@@ -126,7 +126,7 @@ pub async fn install_from_manifest(
     .await
     .into_diagnostic()
     .context("fetching repodata")?;
-
+    
     let total_records: usize = repo_data.iter().map(RepoData::len).sum();
     println!(
         "  {} repodata records loaded",
@@ -156,7 +156,7 @@ pub async fn install_from_manifest(
         .iter()
         .map(|r| r.repodata_record.clone())
         .collect::<Vec<_>>();
-
+    
     let solver_task = SolverTask {
         locked_packages: locked,
         virtual_packages,
@@ -211,7 +211,7 @@ pub async fn install_from_manifest(
         );
         println!("  Activate with:  eval $(shot shell)");
     }
-
+    
     Ok(())
     // ~/~ end
 }
