@@ -20,20 +20,20 @@ theme:
         icon: material/brightness-4
         name: Switch to light mode
   font:
-    text: Roboto
-    code: Roboto Mono
+    text: Source Sans 3
+    code: JetBrains Mono
   features:
     - navigation.instant
     - navigation.sections
     - navigation.expand
     - navigation.top
     - navigation.footer
-    - navigation.tabs
     - content.code.copy
     - content.code.annotate
     - search.suggest
     - search.highlight
-    - toc.integrate
+    - search.share
+    - toc.follow
 
 nav:
   - Introduction: index.md
@@ -52,6 +52,9 @@ nav:
     - Virtual Packages: deep-dive-virtual-packages.md
     - The Networking Stack: deep-dive-networking.md
     - The resolvo SAT Solver: deep-dive-resolvo.md
+
+extra_css:
+  - stylesheets/extra.css
 
 plugins:
   - search
