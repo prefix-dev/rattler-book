@@ -61,7 +61,10 @@ smoke-test-build-moonjson = { cmd = "cargo run -- build", cwd = "examples/moonjs
 smoke-test = { depends-on = ["smoke-test-help", "smoke-test-init", "smoke-test-build-moonjson"], description = "Run all smoke tests" }
 
 # Release
-release = { cmd = "bash -c 'set -e; VERSION=${1:?Usage: pixi run release -- <version>}; python scripts/set_version.py $VERSION && jj commit -m \"release $VERSION\" && jj git push && gh release create v$VERSION --generate-notes' bash", description = "Bump version, commit, and create GitHub release" }
+bump = { cmd = "python scripts/set_version.py", description = "Bump version in pixi.toml and Cargo.toml (e.g. pixi run bump 0.2.0)" }
+_release-commit = { cmd = "jj commit -m \"release v$(pixi project version get)\"", depends-on = ["bump"], description = "Commit the version bump" }
+_release-push = { cmd = "jj git push", depends-on = ["_release-commit"], description = "Push to remote" }
+release = { cmd = "gh workflow run release.yml", depends-on = ["_release-push"], description = "Bump version, commit, push, and trigger release workflow" }
 
 [environments]
 default = { solve-group = "default" }

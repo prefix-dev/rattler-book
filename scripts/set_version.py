@@ -1,7 +1,7 @@
 """Bump the version in pixi.toml and Cargo.toml.
 
 Usage:
-    python scripts/set_version.py 0.2.0
+    pixi r python scripts/set_version.py 0.2.0
 """
 
 import re

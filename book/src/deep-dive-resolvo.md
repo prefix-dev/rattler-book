@@ -200,8 +200,8 @@ For typical conda environments (10-50 packages), resolvo solves in milliseconds.
 For large environments (hundreds of packages), it can take a few seconds, which
 is why we show a spinner.
 
-The bottleneck is usually not the SAT solving itself but repodata loading:
-fetching and parsing package metadata.  This is why the Gateway's sparse/sharded
+Repodata loading is usually the bottleneck, rather than the SAT solving itself:
+fetching and parsing package metadata. This is why the Gateway's sparse/sharded
 format is so important.  It avoids loading millions of records for the vast
 majority of conda-forge packages that aren't relevant to your request.
 

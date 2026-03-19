@@ -218,7 +218,7 @@ let mut archive = tar::Archive::new(decoder);
 
 for entry in archive.entries()? {
     let mut entry = entry?;
-    // entry is a streaming reader — read it in chunks
+    // entry is a streaming reader: read it in chunks
     let path = entry.path()?;
     let mut dest_file = File::create(dest.join(path))?;
     std::io::copy(&mut entry, &mut dest_file)?;

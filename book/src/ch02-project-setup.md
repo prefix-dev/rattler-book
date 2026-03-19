@@ -57,11 +57,11 @@ tokio = { version = "1", features = ["rt-multi-thread", "macros", "process"] }
 # CLI argument parsing
 clap = { version = "4", features = ["derive", "color", "suggestions"] }
 
-# Error handling — miette gives beautiful terminal diagnostics
+# Error handling: miette gives beautiful terminal diagnostics
 miette = { version = "7", features = ["fancy"] }
 thiserror = "2"
 
-# Serialization — manifest I/O
+# Serialization: manifest I/O
 serde = { version = "1", features = ["derive"] }
 toml = "0.9"
 

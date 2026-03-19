@@ -745,7 +745,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         repodata_patch: None,
         write_zst: true,
         write_shards: true,
-        force: false,            // incremental — only index new packages
+        force: false,            // incremental (only index new packages)
         max_parallel: 4,
         multi_progress: None,
     })

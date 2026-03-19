@@ -170,7 +170,7 @@ response is never fully loaded into memory.  This is how rattler downloads a
 ## Retry middleware
 
 Network requests fail.  Servers go down, DNS hiccups, TCP connections time out.
-A production-quality tool needs automatic retries with exponential backoff.
+Reliable tools need automatic retries with exponential backoff.
 
 ```toml
 reqwest-retry = "0.7"

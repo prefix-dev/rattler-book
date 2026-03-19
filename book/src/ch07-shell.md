@@ -30,7 +30,7 @@ dialect and `--prefix` to override the environment location.
 
 ### Why activation is non-trivial
 
-Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. conda uses eval-based activation: the tool prints a shell script and the user evaluates it in their current shell. This gives packages full control over the environment (not just `PATH` but also `LD_LIBRARY_PATH`, `LUA_PATH`, and any other variable), at the cost of being shell-dependent.
+Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. conda uses eval-based activation: the tool prints a shell script and the user evaluates it in their current shell. This gives packages full control over the environment (including `PATH`, `LD_LIBRARY_PATH`, `LUA_PATH`, and other variables), at the cost of being shell-dependent.
 
 A child process cannot modify the environment of its parent.  That's a Unix
 rule with no exceptions.  So when you run `shot shell`, it can't just set
