@@ -34,9 +34,7 @@ watch = { cmd = "entangled watch", description = "Watch for changes and keep boo
 
 [tasks]
 # Tangle source from book (do NOT fmt after tangle — the book is the source of truth)
-tangle = { depends-on = [
-  { task = "_tangle", environment = "book" }
-], description = "Tangle source from book" }
+tangle = { depends-on = [{ task = "_tangle", environment = "book" }], description = "Tangle source from book" }
 
 # Build
 build = "cargo build"
@@ -56,15 +54,21 @@ lint = { cmd = "cargo clippy -- -D warnings", description = "Strict clippy lint 
 
 # Smoke tests
 smoke-test-help = { cmd = "cargo run -- --help", depends-on = ["build"], description = "Smoke test: --help" }
-smoke-test-init = { cmd = "rm -rf .tmp-smoke-test && mkdir .tmp-smoke-test && cd .tmp-smoke-test && cargo run -- init ci-test && cat moonshot.toml && cd .. && rm -rf .tmp-smoke-test", depends-on = ["build"], description = "Smoke test: init" }
-smoke-test-build-moonjson = { cmd = "cargo run -- build", cwd = "examples/moonjson", depends-on = ["build"], description = "Smoke test: moonjson build" }
-smoke-test = { depends-on = ["smoke-test-help", "smoke-test-init", "smoke-test-build-moonjson"], description = "Run all smoke tests" }
+smoke-test-init = { cmd = "rm -rf .tmp-smoke-test && mkdir .tmp-smoke-test && cd .tmp-smoke-test && cargo run -- init ci-test && cat moonshot.toml && cd .. && rm -rf .tmp-smoke-test", depends-on = [
+  "build"
+], description = "Smoke test: init" }
+smoke-test-build-moonjson = { cmd = "cargo run -- build", cwd = "examples/moonjson", depends-on = [
+  "build"
+], description = "Smoke test: moonjson build" }
+smoke-test = { depends-on = [
+  "smoke-test-help",
+  "smoke-test-init",
+  "smoke-test-build-moonjson"
+], description = "Run all smoke tests" }
 
 # Release
 bump = { cmd = "python scripts/set_version.py", description = "Bump version in pixi.toml and Cargo.toml (e.g. pixi run bump 0.2.0)" }
-_release-commit = { cmd = "jj commit -m \"release v$(pixi project version get)\"", depends-on = ["bump"], description = "Commit the version bump" }
-_release-push = { cmd = "jj git push", depends-on = ["_release-commit"], description = "Push to remote" }
-release = { cmd = "gh workflow run release.yml", depends-on = ["_release-push"], description = "Bump version, commit, push, and trigger release workflow" }
+release = { cmd = "gh workflow run release.yml", description = "Bump version, commit, push, and trigger release workflow" }
 
 [environments]
 default = { solve-group = "default" }
