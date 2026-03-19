@@ -1,143 +1,286 @@
 /* ==========================================================================
-   The Rattler Book — Typographic Stylesheet
-   Principles: Butterick's Practical Typography, readable long-form prose
+   The Rattler Book — Tufte-Inspired Stylesheet
+   ET Book serif, margin admonitions, minimal chrome
    ========================================================================== */
 
+/* ---------------------------------------------------------------------------
+   @font-face: self-hosted ET Book
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: "ET Book";
+  src: url("../fonts/et-book/et-book-roman-line-figures.woff") format("woff");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ET Book";
+  src: url("../fonts/et-book/et-book-display-italic-old-style-figures.woff") format("woff");
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "ET Book";
+  src: url("../fonts/et-book/et-book-bold-line-figures.woff") format("woff");
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
+   Design tokens
+   --------------------------------------------------------------------------- */
 :root {
-  --md-text-font: "Source Sans 3", "Source Sans Pro", -apple-system, sans-serif;
-  --md-code-font: "JetBrains Mono", monospace;
+  /* Fonts */
+  --rb-font-body: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  --rb-font-code: "JetBrains Mono", monospace;
+
+  /* Header chrome */
+  --rb-header-text: #555;
+  --rb-header-weight: 500;
+
+  /* Typography */
+  --rb-body-size: 0.875rem;
+  --rb-body-line-height: 1.25rem;
+  --rb-code-size: 0.8em;
+  --rb-nav-size: 0.8rem;
+
+  /* Heading sizes */
+  --rb-h1-size: 2.4em;
+  --rb-h2-size: 1.7em;
+  --rb-h3-size: 1.4em;
+  --rb-h4-size: 1em;
+
+  /* Layout */
+  --rb-grid-max-width: 1220px;
+  --rb-header-max-width: 90rem;
+  --rb-header-radius: 8px;
+  --rb-content-gap: 2rem;
+  --rb-footer-spacing: 4rem;
+
+  /* Shadows */
+  --rb-code-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+  /* Material overrides */
+  --md-text-font: var(--rb-font-body);
+  --md-code-font: var(--rb-font-code);
 }
 
 /* ---------------------------------------------------------------------------
-   Layout: constrain the content column for ~66 characters per line
+   Light mode tokens
    --------------------------------------------------------------------------- */
-.md-grid {
-  max-width: 80rem;
-}
+[data-md-color-scheme="default"] {
+  --rb-bg: #fffff8;
+  --rb-text: #111;
+  --rb-text-lighter: #333;
+  --rb-heading: #111;
+  --rb-link: #2a6496;
+  --rb-link-hover: #1a4a73;
+  --rb-blockquote-border: #d0cbc2;
+  --rb-blockquote-text: #555;
+  --rb-code-bg: #f7f5ef;
+  --rb-code-text: #3d3333;
+  --rb-code-border: #e8e3db;
+  --rb-table-border: #ccc;
+  --rb-nav-text: #555;
+  --rb-nav-active: #111;
+  --rb-accent: #d4903e;
+  --rb-accent-transparent: #d4903e1a;
 
-.md-content {
-  max-width: 80rem;
+  /* Material mappings */
+  --md-default-bg-color: var(--rb-bg);
+  --md-default-bg-color--light: var(--rb-bg);
+  --md-code-bg-color: var(--rb-code-bg);
+  --md-typeset-a-color: var(--rb-link);
+  --md-accent-fg-color: var(--rb-accent);
+  --md-accent-fg-color--transparent: var(--rb-accent-transparent);
+  --md-admonition-bg-color: var(--rb-bg);
 }
 
 /* ---------------------------------------------------------------------------
-   Body text: proper size, line-height, color, and font features
+   Dark mode tokens
    --------------------------------------------------------------------------- */
+[data-md-color-scheme="slate"] {
+  --rb-bg: #202020;
+  --rb-bg-light: #262626;
+  --rb-text: #ddd;
+  --rb-text-lighter: #bbb;
+  --rb-heading: #eee;
+  --rb-link: #6cb4e0;
+  --rb-link-hover: #8fcbef;
+  --rb-blockquote-border: #444;
+  --rb-blockquote-text: #aaa;
+  --rb-code-bg: #2a2a2a;
+  --rb-code-text: #ccc;
+  --rb-code-border: #3a3a3a;
+  --rb-table-border: #555;
+  --rb-nav-text: #999;
+  --rb-nav-active: #eee;
+  --rb-header-text: #ddd;
+  --rb-accent: #f0c07a;
+  --rb-accent-transparent: #f0c07a1a;
+  --rb-code-shadow: 0 1px 3px rgba(255, 255, 255, 0.05);
+
+  /* Material mappings */
+  --md-primary-fg-color: #c4a87a;
+  --md-primary-fg-color--light: #d4bc96;
+  --md-primary-fg-color--dark: #b09468;
+  --md-default-bg-color: var(--rb-bg);
+  --md-default-bg-color--light: var(--rb-bg-light);
+  --md-code-bg-color: var(--rb-code-bg);
+  --md-typeset-a-color: var(--rb-link);
+  --md-accent-fg-color: var(--rb-accent);
+  --md-accent-fg-color--transparent: var(--rb-accent-transparent);
+  --md-admonition-bg-color: var(--rb-bg);
+}
+
+/* ---------------------------------------------------------------------------
+   Primary color (shared, light mode default)
+   --------------------------------------------------------------------------- */
+[data-md-color-primary="custom"] {
+  --md-primary-fg-color: #e8a854;
+  --md-primary-fg-color--light: #f0c07a;
+  --md-primary-fg-color--dark: #d4903e;
+  --md-primary-bg-color: #fff;
+  --md-primary-bg-color--light: #ffffffb3;
+}
+
+/* ===========================================================================
+   Header
+   =========================================================================== */
+.md-header,
+.md-tabs {
+  font-family: var(--rb-font-body);
+  font-weight: var(--rb-header-weight);
+  color: var(--rb-header-text);
+}
+
+.md-search__input,
+.md-search__input::placeholder,
+.md-search__icon {
+  color: var(--rb-header-text) !important;
+}
+
+[data-md-color-scheme="slate"] .md-header,
+[data-md-color-scheme="slate"] .md-tabs {
+  color: var(--rb-header-text);
+}
+
+[data-md-color-scheme="slate"] .md-search__input,
+[data-md-color-scheme="slate"] .md-search__input::placeholder,
+[data-md-color-scheme="slate"] .md-search__icon {
+  color: var(--rb-header-text) !important;
+}
+
+.md-header {
+  width: 100%;
+  max-width: var(--rb-header-max-width);
+  margin: 0 auto;
+  border-radius: 0 0 var(--rb-header-radius) var(--rb-header-radius);
+}
+
+/* ===========================================================================
+   Body text
+   =========================================================================== */
 .md-typeset {
-  font-size: 0.85rem;
-  line-height: 1.55;
-  color: #2e2e2e;
-  font-feature-settings: "kern" 1, "liga" 1;
-  font-kerning: normal;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  font-size: var(--rb-body-size);
+  line-height: var(--rb-body-line-height);
 }
 
-/* Paragraph spacing: equal to one blank line (= line-height) */
 .md-typeset p {
-  margin-bottom: 1em;
+  margin-bottom: 1.1em;
 }
 
-/* ---------------------------------------------------------------------------
-   Headings: clear hierarchy without shouting
-   --------------------------------------------------------------------------- */
+/* ===========================================================================
+   Headings
+   =========================================================================== */
 .md-typeset h1 {
   font-weight: 400;
-  font-size: 1.8em;
+  font-size: var(--rb-h1-size);
+  line-height: 1;
   letter-spacing: -0.02em;
   margin-top: 0;
   margin-bottom: 0.5em;
-  color: #1a1a1a;
 }
 
 .md-typeset h2 {
-  font-weight: 600;
-  font-size: 1.25em;
+  font-weight: 400;
+  font-style: italic;
+  font-size: var(--rb-h2-size);
   letter-spacing: -0.01em;
   margin-top: 2em;
   margin-bottom: 0.6em;
-  padding-bottom: 0.25em;
-  border-bottom: 1px solid #e0dcd6;
-  color: #1a1a1a;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .md-typeset h3 {
   font-weight: 400;
   font-style: italic;
-  font-size: 1.15em;
+  font-size: var(--rb-h3-size);
   margin-top: 1.6em;
   margin-bottom: 0.5em;
-  color: #1a1a1a;
 }
 
 .md-typeset h4 {
   font-weight: 600;
-  font-size: 1em;
+  font-size: var(--rb-h4-size);
   text-transform: uppercase;
   letter-spacing: 0.05em;
   margin-top: 1.4em;
   margin-bottom: 0.4em;
-  color: #444;
 }
 
-/* ---------------------------------------------------------------------------
-   Links: understated, no underline until hover
-   --------------------------------------------------------------------------- */
+/* ===========================================================================
+   Links
+   =========================================================================== */
 .md-typeset a {
-  color: #4a3575;
   text-decoration: none;
-  border-bottom: 1px solid transparent;
-  transition: border-color 0.15s ease;
+  transition: color 0.15s ease, border-color 0.15s ease;
 }
 
-.md-typeset a:hover {
-  border-bottom-color: #4a3575;
-}
-
-/* ---------------------------------------------------------------------------
-   Lists: breathing room between items
-   --------------------------------------------------------------------------- */
+/* ===========================================================================
+   Lists
+   =========================================================================== */
 .md-typeset ul li,
 .md-typeset ol li {
   margin-bottom: 0.35em;
 }
 
-/* ---------------------------------------------------------------------------
-   Blockquotes: indented, lighter, no heavy left border
-   --------------------------------------------------------------------------- */
+/* ===========================================================================
+   Blockquotes
+   =========================================================================== */
 .md-typeset blockquote {
-  border-left: 2px solid #d0cbc2;
-  margin-left: 0;
+  margin-left: 1.5em;
   padding: 0.1em 1.5em;
-  color: #555;
   font-style: italic;
+  font-size: 0.95em;
 }
 
 .md-typeset blockquote p {
   margin-bottom: 0.6em;
 }
 
-/* ---------------------------------------------------------------------------
-   Code: clear separation, slightly warm background
-   --------------------------------------------------------------------------- */
+/* ===========================================================================
+   Code
+   =========================================================================== */
 .md-typeset code {
-  font-size: 0.85em;
+  font-size: var(--rb-code-size);
   padding: 0.15em 0.35em;
   border-radius: 3px;
-  background: #f3efe9;
-  color: #3d3333;
 }
 
-/* Code block container: rounded corners, header and body connect */
 .highlight {
-  border-radius: 8px;
+  border-radius: 4px;
   overflow: hidden;
-  border: 1px solid #e8e3db;
+  box-shadow: var(--rb-code-shadow);
 }
 
-/* Code block header (filename/language label) */
 .highlight .filename {
   border-radius: 0;
-  border-bottom: 1px solid #e8e3db;
 }
 
 .md-typeset pre {
@@ -149,52 +292,237 @@
 }
 
 .md-typeset pre code {
-  font-size: 0.82em;
+  font-size: var(--rb-code-size);
   background: none;
   padding: 0;
 }
 
-/* ---------------------------------------------------------------------------
-   Tables: lighter rules, no heavy borders
-   --------------------------------------------------------------------------- */
+/* ===========================================================================
+   Tables
+   =========================================================================== */
 .md-typeset table:not([class]) {
   font-size: 0.9em;
   border-collapse: collapse;
 }
 
-.md-typeset table:not([class]) th {
-  font-weight: 600;
-  border-bottom: 2px solid #ccc;
-}
-
+.md-typeset table:not([class]) th,
 .md-typeset table:not([class]) td {
-  border-bottom: 1px solid #e5e5e5;
+  border: none;
+  padding: 0.5em 1em;
 }
 
-/* ---------------------------------------------------------------------------
-   Warm background in light mode
-   --------------------------------------------------------------------------- */
-[data-md-color-scheme="default"] {
-  --md-default-bg-color: #faf8f5;
-  --md-default-bg-color--light: #f5f2ed;
+.md-typeset table:not([class]) th {
+  border-bottom: 2px solid var(--rb-table-border);
 }
 
-/* ---------------------------------------------------------------------------
-   Sidebar: quiet, stays out of the way
-   --------------------------------------------------------------------------- */
+/* ===========================================================================
+   Sidebar navigation
+   =========================================================================== */
 .md-nav__link {
-  font-size: 0.8rem;
-  color: #555;
+  font-size: var(--rb-nav-size);
 }
 
 .md-nav__item--active > .md-nav__link {
   font-weight: 600;
-  color: #1a1a1a;
 }
 
-/* ---------------------------------------------------------------------------
-   Footer navigation: book-like prev/next
-   --------------------------------------------------------------------------- */
+.md-main__inner {
+  padding-bottom: var(--rb-footer-spacing);
+}
+
+/* ===========================================================================
+   Footer
+   =========================================================================== */
 .md-footer-nav__title {
   font-style: italic;
+}
+
+/* ===========================================================================
+   Layout
+   =========================================================================== */
+.md-grid {
+  max-width: var(--rb-grid-max-width);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.md-content {
+  margin-left: var(--rb-content-gap);
+}
+
+/* ===========================================================================
+   Wide screen: margin admonitions
+   =========================================================================== */
+@media (min-width: 1400px) {
+  .md-typeset .admonition,
+  .md-typeset details {
+    float: right;
+    clear: right;
+    margin-right: -18rem;
+    width: 15rem;
+    font-size: 0.8rem;
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .md-typeset .admonition .admonition-title,
+  .md-typeset details summary {
+    background: transparent;
+    border-bottom: 2px dashed;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.3em;
+    padding: 0 0 0.2em 0;
+    font-size: 0.8rem;
+    font-weight: 600;
+    margin: 0 0 0.4em 0;
+  }
+
+  /* Icon: reset Material's absolute positioning, sit inline */
+  .md-typeset .admonition .admonition-title::before,
+  .md-typeset details summary::before {
+    position: static !important;
+    display: inline-block;
+    margin: 0;
+    color: var(--md-admonition-fg-color);
+  }
+
+  .md-typeset .admonition p,
+  .md-typeset details p {
+    margin: 0.3em 0;
+  }
+
+  /* Per-type title underline colors (matching Material's type colors) */
+  .md-typeset .note > .admonition-title,
+  .md-typeset .note > summary { border-bottom-color: #448aff; }
+  .md-typeset .info > .admonition-title,
+  .md-typeset .info > summary { border-bottom-color: #00b8d4; }
+  .md-typeset .tip > .admonition-title,
+  .md-typeset .tip > summary { border-bottom-color: #00bfa5; }
+  .md-typeset .question > .admonition-title,
+  .md-typeset .question > summary { border-bottom-color: #64dd17; }
+  .md-typeset .warning > .admonition-title,
+  .md-typeset .warning > summary { border-bottom-color: #ff9100; }
+  .md-typeset .danger > .admonition-title,
+  .md-typeset .danger > summary { border-bottom-color: #ff1744; }
+  .md-typeset .bug > .admonition-title,
+  .md-typeset .bug > summary { border-bottom-color: #f50057; }
+  .md-typeset .example > .admonition-title,
+  .md-typeset .example > summary { border-bottom-color: #7c4dff; }
+  .md-typeset .quote > .admonition-title,
+  .md-typeset .quote > summary { border-bottom-color: #9e9e9e; }
+}
+
+/* ===========================================================================
+   Light mode: scheme-specific styles
+   =========================================================================== */
+[data-md-color-scheme="default"] .md-typeset {
+  color: var(--rb-text);
+}
+
+[data-md-color-scheme="default"] .md-typeset h1,
+[data-md-color-scheme="default"] .md-typeset h2,
+[data-md-color-scheme="default"] .md-typeset h3 {
+  color: var(--rb-heading);
+}
+
+[data-md-color-scheme="default"] .md-typeset h2 {
+  border-bottom: none;
+}
+
+[data-md-color-scheme="default"] .md-typeset h4 {
+  color: var(--rb-text-lighter);
+}
+
+[data-md-color-scheme="default"] .md-typeset a {
+  color: var(--rb-link);
+}
+
+[data-md-color-scheme="default"] .md-typeset a:hover {
+  color: var(--rb-link-hover);
+}
+
+[data-md-color-scheme="default"] .md-typeset blockquote {
+  border-left: 2px solid var(--rb-blockquote-border);
+  color: var(--rb-blockquote-text);
+}
+
+[data-md-color-scheme="default"] .md-typeset code {
+  background: var(--rb-code-bg);
+  color: var(--rb-code-text);
+}
+
+[data-md-color-scheme="default"] .highlight {
+  border: 1px solid var(--rb-code-border);
+  background: var(--rb-code-bg);
+}
+
+[data-md-color-scheme="default"] .highlight .filename {
+  border-bottom: 1px solid var(--rb-code-border);
+}
+
+
+[data-md-color-scheme="default"] .md-nav__link {
+  color: var(--rb-nav-text);
+}
+
+[data-md-color-scheme="default"] .md-nav__item--active > .md-nav__link {
+  color: var(--rb-nav-active);
+}
+
+/* ===========================================================================
+   Dark mode: scheme-specific styles
+   =========================================================================== */
+[data-md-color-scheme="slate"] .md-typeset {
+  color: var(--rb-text);
+}
+
+[data-md-color-scheme="slate"] .md-typeset h1,
+[data-md-color-scheme="slate"] .md-typeset h2,
+[data-md-color-scheme="slate"] .md-typeset h3 {
+  color: var(--rb-heading);
+}
+
+[data-md-color-scheme="slate"] .md-typeset h4 {
+  color: var(--rb-text-lighter);
+}
+
+[data-md-color-scheme="slate"] .md-typeset a {
+  color: var(--rb-link);
+}
+
+[data-md-color-scheme="slate"] .md-typeset a:hover {
+  color: var(--rb-link-hover);
+}
+
+[data-md-color-scheme="slate"] .md-typeset blockquote {
+  border-left: 2px solid var(--rb-blockquote-border);
+  color: var(--rb-blockquote-text);
+}
+
+[data-md-color-scheme="slate"] .md-typeset code {
+  background: var(--rb-code-bg);
+  color: var(--rb-code-text);
+}
+
+[data-md-color-scheme="slate"] .highlight {
+  border: 1px solid var(--rb-code-border);
+  background: var(--rb-code-bg);
+  box-shadow: var(--rb-code-shadow);
+}
+
+[data-md-color-scheme="slate"] .highlight .filename {
+  border-bottom: 1px solid var(--rb-code-border);
+}
+
+
+[data-md-color-scheme="slate"] .md-nav__link {
+  color: var(--rb-nav-text);
+}
+
+[data-md-color-scheme="slate"] .md-nav__item--active > .md-nav__link {
+  color: var(--rb-nav-active);
 }

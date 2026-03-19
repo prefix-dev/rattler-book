@@ -6,22 +6,22 @@ site_dir: book
 
 theme:
   name: material
+  logo: assets/pixi-logo.svg
+  favicon: assets/pixi-logo.svg
   palette:
     - scheme: default
-      primary: deep purple
+      primary: custom
       accent: amber
       toggle:
         icon: material/brightness-7
         name: Switch to dark mode
     - scheme: slate
-      primary: deep purple
+      primary: custom
       accent: amber
       toggle:
         icon: material/brightness-4
         name: Switch to light mode
-  font:
-    text: Source Sans 3
-    code: JetBrains Mono
+  font: false
   features:
     - navigation.instant
     - navigation.sections
@@ -33,7 +33,7 @@ theme:
     - search.suggest
     - search.highlight
     - search.share
-    - toc.follow
+    - toc.integrate
 
 nav:
   - Introduction: index.md

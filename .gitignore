@@ -49,3 +49,8 @@ book/src/**/*.rs
 book/src/**/*.lua
 book/Cargo.toml
 book/Cargo.lock
+
+
+# playwright
+
+.playwright-cli/
