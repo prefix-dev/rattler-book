@@ -3,7 +3,7 @@ name = "moonshot"
 version = "0.1.0"
 description = "A minimal Lua package manager built on rattler"
 channels = ["conda-forge"]
-platforms = ["osx-arm64", "osx-64", "linux-64"]
+platforms = ["osx-arm64", "osx-64", "linux-64", "win-64"]
 preview = ["pixi-build"]
 
 [package.build.backend]
@@ -59,6 +59,9 @@ smoke-test-help = { cmd = "cargo run -- --help", depends-on = ["build"], descrip
 smoke-test-init = { cmd = "bash -c 'set -e; rm -rf .tmp-smoke-test; mkdir .tmp-smoke-test; cd .tmp-smoke-test; cargo run -- init ci-test; cat moonshot.toml; cd ..; rm -rf .tmp-smoke-test'", depends-on = ["build"], description = "Smoke test: init" }
 smoke-test-build-moonjson = { cmd = "cargo run -- build", cwd = "examples/moonjson", depends-on = ["build"], description = "Smoke test: moonjson build" }
 smoke-test = { depends-on = ["smoke-test-help", "smoke-test-init", "smoke-test-build-moonjson"], description = "Run all smoke tests" }
+
+# Release
+release = { cmd = "bash -c 'set -e; VERSION=${1:?Usage: pixi run release -- <version>}; python scripts/set_version.py $VERSION && jj commit -m \"release $VERSION\" && jj git push && gh release create v$VERSION --generate-notes' bash", description = "Bump version, commit, and create GitHub release" }
 
 [environments]
 default = { solve-group = "default" }

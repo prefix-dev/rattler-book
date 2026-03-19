@@ -1,0 +1,76 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: linux-64
+            os: ubuntu-latest
+          - platform: osx-arm64
+            os: macos-latest
+          - platform: osx-64
+            os: macos-13
+          - platform: win-64
+            os: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          frozen: true
+          cache: true
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          cache-on-failure: true
+
+      - name: Build conda package
+        run: pixi build --output-dir output/
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: conda-${{ matrix.platform }}
+          path: output/**/*.conda
+
+  upload:
+    name: Upload to prefix.dev
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: prefix-dev/setup-pixi@v0.8.1
+        with:
+          frozen: true
+          cache: true
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: packages/
+          pattern: conda-*
+          merge-multiple: true
+
+      - name: List packages
+        run: find packages/ -name '*.conda' -type f
+
+      - name: Upload to prefix.dev
+        run: pixi upload prefix --channel moonshot packages/**/*.conda
