@@ -11,7 +11,7 @@ mod recipe;
 // ~/~ end
 
 // ~/~ begin <<book/src/ch02-project-setup.md#main-cli-struct>>[init]
-/// moonshot — a minimal Lua package manager powered by rattler.
+/// A minimal Lua package manager powered by rattler.
 #[derive(Debug, Parser)]
 #[clap(author, version, about, long_about = None)]
 struct Cli {
@@ -86,13 +86,13 @@ async fn async_main() -> miette::Result<()> {
         .init();
 
     match cli.command {
-        Command::Init(args) => commands::init::execute(args).await,
-        Command::Search(args) => commands::search::execute(args).await,
-        Command::Add(args) => commands::add::execute(args).await,
+        Command::Init(args)    => commands::init::execute(args).await,
+        Command::Search(args)  => commands::search::execute(args).await,
+        Command::Add(args)     => commands::add::execute(args).await,
         Command::Install(args) => commands::install::execute(args).await,
-        Command::Shell(args) => commands::shell::execute(args),
-        Command::Run(args) => commands::run::execute(args).await,
-        Command::Build(args) => commands::build::execute(args).await,
+        Command::Shell(args)   => commands::shell::execute(args),
+        Command::Run(args)     => commands::run::execute(args).await,
+        Command::Build(args)   => commands::build::execute(args).await,
     }
 }
 // ~/~ end

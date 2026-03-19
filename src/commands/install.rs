@@ -44,7 +44,7 @@ pub async fn install_from_manifest(
     manifest: &Manifest,
     prefix: std::path::PathBuf,
 ) -> miette::Result<()> {
-    // ~/~ begin <<book/src/ch05-install.md#install-parse-specs>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-parse-specs>>[init]
     let channel_config =
         ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
 
@@ -63,16 +63,16 @@ pub async fn install_from_manifest(
                 .with_context(|| format!("parsing spec `{spec_str}`"))
         })
         .collect::<miette::Result<_>>()?;
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-cache-dir>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-cache-dir>>[init]
     let cache_dir = rattler::default_cache_dir()
         .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
     rattler_cache::ensure_cache_dir(&cache_dir)
         .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-http-client>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-http-client>>[init]
     let raw_client = reqwest::Client::builder()
         .no_gzip() // repodata is already compressed; we handle it ourselves
         .build()
@@ -86,9 +86,9 @@ pub async fn install_from_manifest(
         ))
         .with(rattler_networking::OciMiddleware::new(raw_client))
         .build();
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-parse-channels>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-parse-channels>>[init]
     let channels: Vec<Channel> = manifest
         .project
         .channels
@@ -97,9 +97,9 @@ pub async fn install_from_manifest(
         .collect::<Result<_, _>>()
         .into_diagnostic()
         .context("parsing channels")?;
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-gateway-builder>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-gateway-builder>>[init]
     let platform = Platform::current();
 
     let gateway = Gateway::builder()
@@ -114,13 +114,17 @@ pub async fn install_from_manifest(
             per_channel: HashMap::new(),
         })
         .finish();
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-gateway-query>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-gateway-query>>[init]
     let repo_data: Vec<RepoData> = with_spinner(
         "Fetching repodata",
         gateway
-            .query(channels, [platform, Platform::NoArch], specs.clone())
+            .query(
+                channels,
+                [platform, Platform::NoArch],
+                specs.clone(),
+            )
             .recursive(true),
     )
     .await
@@ -132,9 +136,9 @@ pub async fn install_from_manifest(
         "  {} repodata records loaded",
         console::style(total_records).cyan()
     );
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-virtual-packages>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-virtual-packages>>[init]
     let virtual_packages: Vec<GenericVirtualPackage> =
         rattler_virtual_packages::VirtualPackage::detect(
             &rattler_virtual_packages::VirtualPackageOverrides::default(),
@@ -144,14 +148,14 @@ pub async fn install_from_manifest(
         .into_iter()
         .map(|v| v.into())
         .collect();
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-read-installed>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-read-installed>>[init]
     let installed_packages =
         PrefixRecord::collect_from_prefix::<PrefixRecord>(&prefix).into_diagnostic()?;
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-solver-task>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-solver-task>>[init]
     let locked = installed_packages
         .iter()
         .map(|r| r.repodata_record.clone())
@@ -163,26 +167,27 @@ pub async fn install_from_manifest(
         specs: specs.clone(),
         ..SolverTask::from_iter(&repo_data)
     };
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-solve>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-solve>>[init]
     let start_solve = Instant::now();
-    let solution: Vec<RepoDataRecord> =
-        with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
-            .into_diagnostic()
-            .context("solving dependencies")?
-            .records;
-    // ~/~ end
+    let solution: Vec<RepoDataRecord> = with_spinner_sync("Solving", || {
+        resolvo::Solver.solve(solver_task)
+    })
+    .into_diagnostic()
+    .context("solving dependencies")?
+    .records;
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-solve-progress>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-solve-progress>>[init]
     println!(
         "  Solved {} packages in {:.1}s",
         console::style(solution.len()).cyan(),
         start_solve.elapsed().as_secs_f64()
     );
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-installer>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-installer>>[init]
     let start_install = Instant::now();
     let result = Installer::new()
         .with_download_client(client)
@@ -195,9 +200,9 @@ pub async fn install_from_manifest(
         .await
         .into_diagnostic()
         .context("installing packages")?;
-    // ~/~ end
+// ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-result>>[init]
+// ~/~ begin <<book/src/ch05-install.md#install-result>>[init]
     if result.transaction.operations.is_empty() {
         println!(
             "{} Environment already up to date",
@@ -209,11 +214,13 @@ pub async fn install_from_manifest(
             console::style("✔").green(),
             start_install.elapsed().as_secs_f64()
         );
-        println!("  Activate with:  eval $(shot shell)");
+        println!(
+            "  Activate with:  eval $(shot shell)"
+        );
     }
 
     Ok(())
-    // ~/~ end
+// ~/~ end
 }
 // ~/~ end
 
@@ -222,7 +229,9 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let cwd = env::current_dir().into_diagnostic()?;
     let (_, manifest) = Manifest::find_in_dir(&cwd)?;
 
-    let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
+    let prefix = args
+        .prefix
+        .unwrap_or_else(|| super::prefix_dir(&cwd));
     std::fs::create_dir_all(&prefix)
         .into_diagnostic()
         .context("creating prefix directory")?;
@@ -233,7 +242,10 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 // ~/~ end
 
 // ~/~ begin <<book/src/ch05-install.md#install-private-helpers>>[init]
-fn with_spinner_sync<T, F: FnOnce() -> T>(msg: &'static str, f: F) -> T {
+fn with_spinner_sync<T, F: FnOnce() -> T>(
+    msg: &'static str,
+    f: F,
+) -> T {
     crate::progress::with_spinner_sync(msg, f)
 }
 // ~/~ end

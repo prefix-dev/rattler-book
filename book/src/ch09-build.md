@@ -579,9 +579,9 @@ use std::str::FromStr;
 use clap::Parser;
 use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::compression_level::CompressionLevel;
-use rattler_index::{index_fs, IndexFsConfig};
 use rattler_conda_types::package::{IndexJson, PackageFile, PathType, PathsEntry, PathsJson};
 use rattler_conda_types::{NoArchType, PackageName, VersionWithSource};
+use rattler_index::{index_fs, IndexFsConfig};
 use rattler_package_streaming::write::write_conda_package;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
@@ -717,8 +717,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     )
     .await?;
 
-    write_package_metadata(&install_prefix, &recipe)
-        .context("writing package metadata")?;
+    write_package_metadata(&install_prefix, &recipe).context("writing package metadata")?;
 
     let output_dir = std::path::absolute(&args.output_dir)
         .into_diagnostic()
@@ -741,11 +740,11 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     );
     index_fs(IndexFsConfig {
         channel: output_dir.clone(),
-        target_platform: None,   // discover all subdirs automatically
+        target_platform: None, // discover all subdirs automatically
         repodata_patch: None,
         write_zst: true,
         write_shards: true,
-        force: false,            // incremental (only index new packages)
+        force: false, // incremental (only index new packages)
         max_parallel: 4,
         multi_progress: None,
     })
@@ -817,28 +816,40 @@ async fn run_build_script(
     let wrapper_src = format!(
         "dofile({prelude:?})\ndofile({script:?})\n",
         prelude = prelude_path.to_string_lossy(),
-        script  = script.to_string_lossy(),
+        script = script.to_string_lossy(),
     );
     let wrapper_path = wrapper_dir.path().join("wrapper.lua");
     std::fs::write(&wrapper_path, &wrapper_src)
         .into_diagnostic()
         .context("writing build wrapper")?;
 
-    // Prepend build_prefix/bin to PATH so the script can call any installed
-    // build tools (luarocks, make, etc.).
-    let build_bin = build_prefix.join("bin");
+    // Prepend build_prefix bin directories to PATH so the script can call
+    // any installed build tools (luarocks, make, etc.).
+    // On Windows, conda puts binaries in Library/bin as well as bin.
     let original_path = env::var("PATH").unwrap_or_default();
-    let new_path = format!("{}:{original_path}", build_bin.display());
+    let path_sep = if cfg!(windows) { ";" } else { ":" };
+    let new_path = if cfg!(windows) {
+        format!(
+            "{}{path_sep}{}{path_sep}{original_path}",
+            build_prefix.join("Library").join("bin").display(),
+            build_prefix.join("bin").display(),
+        )
+    } else {
+        format!(
+            "{}{path_sep}{original_path}",
+            build_prefix.join("bin").display(),
+        )
+    };
 
     let status = tokio::process::Command::new(lua_bin)
         .arg(&wrapper_path)
-        .env("PREFIX",        install_prefix)
-        .env("SRC_DIR",       src_dir)
-        .env("BUILD_PREFIX",  build_prefix)
-        .env("PKG_NAME",      &recipe.package.name)
-        .env("PKG_VERSION",   &recipe.package.version)
+        .env("PREFIX", install_prefix)
+        .env("SRC_DIR", src_dir)
+        .env("BUILD_PREFIX", build_prefix)
+        .env("PKG_NAME", &recipe.package.name)
+        .env("PKG_VERSION", &recipe.package.version)
         .env("PKG_BUILD_NUM", recipe.package.build_number.to_string())
-        .env("PATH",          &new_path)
+        .env("PATH", &new_path)
         .status()
         .await
         .into_diagnostic()
@@ -906,7 +917,7 @@ fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Res
         python_site_packages_path: None,
         track_features: vec![],
         timestamp: Some(
-            rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now())
+            rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now()),
         ),
     };
 
@@ -918,8 +929,7 @@ fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Res
         .into_diagnostic()
         .context("writing info/index.json")?;
 
-    let paths = collect_paths_json(install_prefix)
-        .context("building paths.json")?;
+    let paths = collect_paths_json(install_prefix).context("building paths.json")?;
 
     let paths_path = install_prefix.join(PathsJson::package_path());
     let paths_json = serde_json::to_string_pretty(&paths)
@@ -1017,11 +1027,7 @@ The `.conda` format is designed so that tools can `mmap` the outer ZIP directory
 and jump directly to the inner archive they need.
 
 ``` {.rust #build-pack-conda}
-fn pack_conda(
-    install_prefix: &Path,
-    output_path: &Path,
-    recipe: &Recipe,
-) -> miette::Result<()> {
+fn pack_conda(install_prefix: &Path, output_path: &Path, recipe: &Recipe) -> miette::Result<()> {
     // Collect all files relative to the install prefix.
     let files: Vec<PathBuf> = WalkDir::new(install_prefix)
         .into_iter()
@@ -1063,10 +1069,10 @@ fn pack_conda(
         install_prefix,
         &files,
         CompressionLevel::Default,
-        None,      // use all available CPU threads for zstd
+        None, // use all available CPU threads for zstd
         &out_name,
         Some(&now),
-        None,      // no progress bar (already shown by our spinner)
+        None, // no progress bar (already shown by our spinner)
     )
     .into_diagnostic()
     .context("writing .conda archive")?;
@@ -1079,21 +1085,37 @@ fn pack_conda(
 
 ``` {.rust #build-find-lua}
 fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
-    let bin = prefix.join("bin").join("lua");
-    if bin.exists() {
-        return Ok(bin);
-    }
-    // Try lua5.4, lua5.3, … as fallbacks
-    for minor in (1u8..=4u8).rev() {
-        let versioned = prefix.join("bin").join(format!("lua5.{minor}"));
-        if versioned.exists() {
-            return Ok(versioned);
+    // On Windows, conda installs binaries in Library/bin/ with .exe extension;
+    // on Unix they go in bin/ without an extension.
+    let bin_dirs: &[&str] = if cfg!(windows) {
+        &["Library/bin", "bin"]
+    } else {
+        &["bin"]
+    };
+    let exe_ext = if cfg!(windows) { ".exe" } else { "" };
+
+    for bin_dir in bin_dirs {
+        let lua = prefix.join(bin_dir).join(format!("lua{exe_ext}"));
+        if lua.exists() {
+            return Ok(lua);
+        }
+        // Try lua5.4, lua5.3, … as fallbacks
+        for minor in (1u8..=4u8).rev() {
+            let versioned = prefix.join(bin_dir).join(format!("lua5.{minor}{exe_ext}"));
+            if versioned.exists() {
+                return Ok(versioned);
+            }
         }
     }
+
+    let searched: Vec<_> = bin_dirs
+        .iter()
+        .map(|d| prefix.join(d).display().to_string())
+        .collect();
     miette::bail!(
         "No Lua interpreter found in `{}`. \
          Add `lua` to `[requirements] build` in your recipe.",
-        prefix.join("bin").display()
+        searched.join("`, `")
     )
 }
 ```

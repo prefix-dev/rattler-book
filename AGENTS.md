@@ -36,41 +36,21 @@ This is also useful, for working with LLM's to make sure to combat hallucination
 
 Most of the tasks pertaining to this workflow are available in the `pixi.toml`.
 
-## Entangled stitch markers
+## Entangled stitch roundtrip
 
-When editing source files directly (not via the book), you **must** ensure that
-every `<<block-name>>` reference used in a file-level code block in the markdown
-has a corresponding `// ~/~ begin <<chapter.md#block-name>>[init]` /
-`// ~/~ end` marker pair in the tangled source file. Without these markers,
-`entangled stitch` cannot reconstruct the noweb references and will replace
-them with the literal expanded code, destroying the book's literate structure.
+The book is the source of truth. Source files are generated from it via
+`pixi run tangle`. If you edit source files directly, run `pixi run stitch`
+to push changes back into the book, then `pixi run tangle` again to verify the
+roundtrip is stable.
 
-For example, if the markdown has:
+Entangled uses `// ~/~ begin/end` markers in tangled source files to track which
+code belongs to which named block. These markers are generated automatically by
+tangle. If a file-level code block in the markdown uses `<<block-name>>`
+references, tangle emits matching sub-block markers in the source file so that
+stitch can reconstruct the references. Without these markers, stitch replaces
+the `<<references>>` with literal expanded code, destroying the book structure.
 
-    ``` {.rust file=src/foo.rs}
-    <<foo-imports>>
-
-    <<foo-execute>>
-    ```
-
-Then `src/foo.rs` must contain:
-
-    // ~/~ begin <<book/src/chXX.md#src/foo.rs>>[init]
-    // ~/~ begin <<book/src/chXX.md#foo-imports>>[init]
-    use ...;
-    // ~/~ end
-
-    // ~/~ begin <<book/src/chXX.md#foo-execute>>[init]
-    pub fn execute() { ... }
-    // ~/~ end
-    // ~/~ end
-
-Use `src/commands/install.rs` as a reference for correct marker placement.
-Files like `src/commands/search.rs` and `src/manifest.rs` also have correct
-markers. If you add a new named block in the book, add the matching marker in
-the source file.
-
-**Quick check**: run `grep '~/~' src/path/to/file.rs` and verify every
-`<<name>>` from the markdown file-level block has a begin/end pair.
+CI runs a stitch roundtrip check after tangle. If it fails, the usual fix is to
+ensure you edited the **book** (not just the source) and ran tangle.
 
 Make sure to run:

@@ -43,7 +43,9 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             name: name.clone(),
             channels: args.channel,
         },
-        dependencies: HashMap::from([("lua".to_string(), ">=5.4".to_string())]),
+        dependencies: HashMap::from([
+            ("lua".to_string(), ">=5.4".to_string()),
+        ]),
     };
 
     manifest.write(&manifest_path)?;

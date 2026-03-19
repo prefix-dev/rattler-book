@@ -36,6 +36,19 @@ jobs:
           fi
           echo "Source files are in sync with the book."
 
+      - name: Stitch roundtrip check
+        run: |
+          pixi run stitch
+          if [ -n "$(git diff --name-only -- book/src/)" ]; then
+            echo "::error::Stitch roundtrip corrupted book markdown."
+            echo "This usually means source files are missing entangled ~/~ markers."
+            echo "See AGENTS.md for details on how to fix this."
+            git diff --stat -- book/src/
+            git diff -- book/src/
+            exit 1
+          fi
+          echo "Stitch roundtrip OK — book markdown is stable."
+
   lint:
     name: Clippy lint
     needs: tangle-check

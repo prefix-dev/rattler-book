@@ -166,7 +166,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         repodata_patch: None,
         write_zst: true,
         write_shards: true,
-        force: false, // incremental — only index new packages
+        force: false, // incremental (only index new packages)
         max_parallel: 4,
         multi_progress: None,
     })
@@ -219,11 +219,23 @@ async fn run_build_script(
         .into_diagnostic()
         .context("writing build wrapper")?;
 
-    // Prepend build_prefix/bin to PATH so the script can call any installed
-    // build tools (luarocks, make, etc.).
-    let build_bin = build_prefix.join("bin");
+    // Prepend build_prefix bin directories to PATH so the script can call
+    // any installed build tools (luarocks, make, etc.).
+    // On Windows, conda puts binaries in Library/bin as well as bin.
     let original_path = env::var("PATH").unwrap_or_default();
-    let new_path = format!("{}:{original_path}", build_bin.display());
+    let path_sep = if cfg!(windows) { ";" } else { ":" };
+    let new_path = if cfg!(windows) {
+        format!(
+            "{}{path_sep}{}{path_sep}{original_path}",
+            build_prefix.join("Library").join("bin").display(),
+            build_prefix.join("bin").display(),
+        )
+    } else {
+        format!(
+            "{}{path_sep}{original_path}",
+            build_prefix.join("bin").display(),
+        )
+    };
 
     let status = tokio::process::Command::new(lua_bin)
         .arg(&wrapper_path)
@@ -433,21 +445,37 @@ fn pack_conda(install_prefix: &Path, output_path: &Path, recipe: &Recipe) -> mie
 
 // ~/~ begin <<book/src/ch09-build.md#build-find-lua>>[init]
 fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
-    let bin = prefix.join("bin").join("lua");
-    if bin.exists() {
-        return Ok(bin);
-    }
-    // Try lua5.4, lua5.3, … as fallbacks
-    for minor in (1u8..=4u8).rev() {
-        let versioned = prefix.join("bin").join(format!("lua5.{minor}"));
-        if versioned.exists() {
-            return Ok(versioned);
+    // On Windows, conda installs binaries in Library/bin/ with .exe extension;
+    // on Unix they go in bin/ without an extension.
+    let bin_dirs: &[&str] = if cfg!(windows) {
+        &["Library/bin", "bin"]
+    } else {
+        &["bin"]
+    };
+    let exe_ext = if cfg!(windows) { ".exe" } else { "" };
+
+    for bin_dir in bin_dirs {
+        let lua = prefix.join(bin_dir).join(format!("lua{exe_ext}"));
+        if lua.exists() {
+            return Ok(lua);
+        }
+        // Try lua5.4, lua5.3, … as fallbacks
+        for minor in (1u8..=4u8).rev() {
+            let versioned = prefix.join(bin_dir).join(format!("lua5.{minor}{exe_ext}"));
+            if versioned.exists() {
+                return Ok(versioned);
+            }
         }
     }
+
+    let searched: Vec<_> = bin_dirs
+        .iter()
+        .map(|d| prefix.join(d).display().to_string())
+        .collect();
     miette::bail!(
         "No Lua interpreter found in `{}`. \
          Add `lua` to `[requirements] build` in your recipe.",
-        prefix.join("bin").display()
+        searched.join("`, `")
     )
 }
 // ~/~ end

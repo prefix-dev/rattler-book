@@ -29,6 +29,7 @@ pub struct Args {
 
 // ~/~ begin <<book/src/ch04-search.md#search-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
+// ~/~ begin <<book/src/ch04-search.md#search-parse-channels>>[init]
     let channel_config =
         ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
 
@@ -48,7 +49,9 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
     rattler_cache::ensure_cache_dir(&cache_dir)
         .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
+// ~/~ end
 
+// ~/~ begin <<book/src/ch04-search.md#search-http-client>>[init]
     let raw_client = reqwest::Client::builder()
         .no_gzip()
         .build()
@@ -62,7 +65,9 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         ))
         .with(rattler_networking::OciMiddleware::new(raw_client))
         .build();
+// ~/~ end
 
+// ~/~ begin <<book/src/ch04-search.md#search-gateway>>[init]
     let platform = Platform::current();
 
     let gateway = Gateway::builder()
@@ -77,17 +82,25 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             per_channel: HashMap::new(),
         })
         .finish();
+// ~/~ end
 
+// ~/~ begin <<book/src/ch04-search.md#search-query>>[init]
     let repo_data: Vec<RepoData> = with_spinner(
         "Fetching repodata",
         gateway
-            .query(channels, [platform, Platform::NoArch], vec![spec])
+            .query(
+                channels,
+                [platform, Platform::NoArch],
+                vec![spec],
+            )
             .recursive(false),
     )
     .await
     .into_diagnostic()
     .context("fetching repodata")?;
+// ~/~ end
 
+// ~/~ begin <<book/src/ch04-search.md#search-results>>[init]
     // Collect and deduplicate results by (name, version), keeping the latest.
     let mut seen: HashMap<(String, String), String> = HashMap::new();
     for repo in &repo_data {
@@ -122,6 +135,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     println!("\n{} package(s) found.", count);
     Ok(())
+// ~/~ end
 }
 // ~/~ end
 // ~/~ end

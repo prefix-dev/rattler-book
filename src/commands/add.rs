@@ -40,7 +40,9 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     );
 
     // Install immediately.
-    let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
+    let prefix = args
+        .prefix
+        .unwrap_or_else(|| super::prefix_dir(&cwd));
     std::fs::create_dir_all(&prefix).into_diagnostic()?;
     let prefix = std::path::absolute(prefix).into_diagnostic()?;
 

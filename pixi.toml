@@ -28,15 +28,15 @@ mkdocs-print-site-plugin = ">=2.0"
 [feature.book.tasks]
 book-build = { cmd = "mkdocs build", cwd = "book" }
 book-serve = { cmd = "mkdocs serve", cwd = "book" }
-_tangle = { cmd = "entangled tangle", description = "Extract code blocks from the book into source files" }
+_tangle = { cmd = "entangled tangle --force", description = "Extract code blocks from the book into source files" }
 stitch = { cmd = "entangled stitch", description = "Update the book from source file edits" }
 watch = { cmd = "entangled watch", description = "Watch for changes and keep book and source files in sync" }
 
 [tasks]
-# Tangle source from book and format
-tangle = { cmd = "cargo fmt", depends-on = [
+# Tangle source from book (do NOT fmt after tangle — the book is the source of truth)
+tangle = { depends-on = [
   { task = "_tangle", environment = "book" }
-], description = "Tangle source from book and format" }
+], description = "Tangle source from book" }
 
 # Build
 build = "cargo build"
