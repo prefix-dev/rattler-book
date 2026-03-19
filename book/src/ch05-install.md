@@ -278,31 +278,31 @@ pub async fn install_from_manifest(
     manifest: &Manifest,
     prefix: std::path::PathBuf,
 ) -> miette::Result<()> {
-<<install-parse-specs>>
+    <<install-parse-specs>>
 
-<<install-cache-dir>>
+    <<install-cache-dir>>
 
-<<install-http-client>>
+    <<install-http-client>>
 
-<<install-parse-channels>>
+    <<install-parse-channels>>
 
-<<install-gateway-builder>>
+    <<install-gateway-builder>>
 
-<<install-gateway-query>>
+    <<install-gateway-query>>
 
-<<install-virtual-packages>>
+    <<install-virtual-packages>>
 
-<<install-read-installed>>
+    <<install-read-installed>>
 
-<<install-solver-task>>
+    <<install-solver-task>>
 
-<<install-solve>>
+    <<install-solve>>
 
-<<install-solve-progress>>
+    <<install-solve-progress>>
 
-<<install-installer>>
+    <<install-installer>>
 
-<<install-result>>
+    <<install-result>>
 }
 ```
 
@@ -311,24 +311,24 @@ pub async fn install_from_manifest(
 In `moonshot`, we parse MatchSpecs from the manifest's `[dependencies]` table:
 
 ``` {.rust #install-parse-specs}
-    let channel_config =
-        ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
+let channel_config =
+    ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
 
-    let match_spec_opts = ParseMatchSpecOptions::default();
-    let specs: Vec<MatchSpec> = manifest
-        .dependencies
-        .iter()
-        .map(|(name, version)| {
-            let spec_str = if version == "*" {
-                name.clone()
-            } else {
-                format!("{name} {version}")
-            };
-            MatchSpec::from_str(&spec_str, match_spec_opts)
-                .into_diagnostic()
-                .with_context(|| format!("parsing spec `{spec_str}`"))
-        })
-        .collect::<miette::Result<_>>()?;
+let match_spec_opts = ParseMatchSpecOptions::default();
+let specs: Vec<MatchSpec> = manifest
+    .dependencies
+    .iter()
+    .map(|(name, version)| {
+        let spec_str = if version == "*" {
+            name.clone()
+        } else {
+            format!("{name} {version}")
+        };
+        MatchSpec::from_str(&spec_str, match_spec_opts)
+            .into_diagnostic()
+            .with_context(|| format!("parsing spec `{spec_str}`"))
+    })
+    .collect::<miette::Result<_>>()?;
 ```
 
 #### Cache directory
@@ -337,10 +337,10 @@ We locate the shared rattler cache (see [Chapter 4](ch04-search.md) for backgrou
 content-addressed caching) and ensure it exists on disk:
 
 ``` {.rust #install-cache-dir}
-    let cache_dir = rattler::default_cache_dir()
-        .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
-    rattler_cache::ensure_cache_dir(&cache_dir)
-        .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
+let cache_dir = rattler::default_cache_dir()
+    .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
+rattler_cache::ensure_cache_dir(&cache_dir)
+    .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
 ```
 
 #### HTTP client
@@ -350,19 +350,19 @@ decompression itself) and wrap it with authentication and OCI middleware. See
 [Chapter 4](ch04-search.md) for why each middleware layer exists.
 
 ``` {.rust #install-http-client}
-    let raw_client = reqwest::Client::builder()
-        .no_gzip() // repodata is already compressed; we handle it ourselves
-        .build()
-        .expect("failed to build HTTP client");
+let raw_client = reqwest::Client::builder()
+    .no_gzip() // repodata is already compressed; we handle it ourselves
+    .build()
+    .expect("failed to build HTTP client");
 
-    let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
-        .with_arc(Arc::new(
-            AuthenticationMiddleware::from_env_and_defaults()
-                .into_diagnostic()
-                .context("setting up auth middleware")?,
-        ))
-        .with(rattler_networking::OciMiddleware::new(raw_client))
-        .build();
+let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
+    .with_arc(Arc::new(
+        AuthenticationMiddleware::from_env_and_defaults()
+            .into_diagnostic()
+            .context("setting up auth middleware")?,
+    ))
+    .with(rattler_networking::OciMiddleware::new(raw_client))
+    .build();
 ```
 
 #### Parsing channels
@@ -371,14 +371,14 @@ We convert the manifest's channel strings into rattler `Channel` objects. A
 `Channel` knows how to construct sub-URLs for different platforms.
 
 ``` {.rust #install-parse-channels}
-    let channels: Vec<Channel> = manifest
-        .project
-        .channels
-        .iter()
-        .map(|s| Channel::from_str(s, &channel_config))
-        .collect::<Result<_, _>>()
-        .into_diagnostic()
-        .context("parsing channels")?;
+let channels: Vec<Channel> = manifest
+    .project
+    .channels
+    .iter()
+    .map(|s| Channel::from_str(s, &channel_config))
+    .collect::<Result<_, _>>()
+    .into_diagnostic()
+    .context("parsing channels")?;
 ```
 
 #### Building the Gateway
@@ -387,20 +387,20 @@ The Gateway is the long-lived object that manages repodata fetching, caching,
 and the HTTP client. We configure it to prefer the sharded format when available.
 
 ``` {.rust #install-gateway-builder}
-    let platform = Platform::current();
+let platform = Platform::current();
 
-    let gateway = Gateway::builder()
-        .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
-        .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
-        .with_client(client.clone())
-        .with_channel_config(rattler_repodata_gateway::ChannelConfig {
-            default: SourceConfig {
-                sharded_enabled: true, // prefer the fast sharded format
-                ..SourceConfig::default()
-            },
-            per_channel: HashMap::new(),
-        })
-        .finish();
+let gateway = Gateway::builder()
+    .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
+    .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
+    .with_client(client.clone())
+    .with_channel_config(rattler_repodata_gateway::ChannelConfig {
+        default: SourceConfig {
+            sharded_enabled: true, // prefer the fast sharded format
+            ..SourceConfig::default()
+        },
+        per_channel: HashMap::new(),
+    })
+    .finish();
 ```
 
 #### Querying the Gateway
@@ -408,25 +408,21 @@ and the HTTP client. We configure it to prefer the sharded format when available
 With the gateway configured, we fetch the repodata for our requested packages.
 
 ``` {.rust #install-gateway-query}
-    let repo_data: Vec<RepoData> = with_spinner(
-        "Fetching repodata",
-        gateway
-            .query(
-                channels,
-                [platform, Platform::NoArch],
-                specs.clone(),
-            )
-            .recursive(true),
-    )
-    .await
-    .into_diagnostic()
-    .context("fetching repodata")?;
+let repo_data: Vec<RepoData> = with_spinner(
+    "Fetching repodata",
+    gateway
+        .query(channels, [platform, Platform::NoArch], specs.clone())
+        .recursive(true),
+)
+.await
+.into_diagnostic()
+.context("fetching repodata")?;
 
-    let total_records: usize = repo_data.iter().map(RepoData::len).sum();
-    println!(
-        "  {} repodata records loaded",
-        console::style(total_records).cyan()
-    );
+let total_records: usize = repo_data.iter().map(RepoData::len).sum();
+println!(
+    "  {} repodata records loaded",
+    console::style(total_records).cyan()
+);
 ```
 
 `gateway.query(...)` builds a `Query` object.  `.recursive(true)` makes the
@@ -448,15 +444,15 @@ Before calling the solver, we detect what the host system provides. These
 synthetic packages let the solver reject incompatible packages early.
 
 ``` {.rust #install-virtual-packages}
-    let virtual_packages: Vec<GenericVirtualPackage> =
-        rattler_virtual_packages::VirtualPackage::detect(
-            &rattler_virtual_packages::VirtualPackageOverrides::default(),
-        )
-        .into_diagnostic()
-        .context("detecting virtual packages")?
-        .into_iter()
-        .map(|v| v.into())
-        .collect();
+let virtual_packages: Vec<GenericVirtualPackage> =
+    rattler_virtual_packages::VirtualPackage::detect(
+        &rattler_virtual_packages::VirtualPackageOverrides::default(),
+    )
+    .into_diagnostic()
+    .context("detecting virtual packages")?
+    .into_iter()
+    .map(|v| v.into())
+    .collect();
 ```
 
 `GenericVirtualPackage` is a simpler wrapper around `VirtualPackage` that
@@ -468,8 +464,8 @@ We scan the prefix's `conda-meta/` directory to find out what is already
 installed. These records become locked packages in the solver task.
 
 ``` {.rust #install-read-installed}
-    let installed_packages =
-        PrefixRecord::collect_from_prefix::<PrefixRecord>(&prefix).into_diagnostic()?;
+let installed_packages =
+    PrefixRecord::collect_from_prefix::<PrefixRecord>(&prefix).into_diagnostic()?;
 ```
 
 `PrefixRecord` is rattler's representation of a package that's already installed.
@@ -484,17 +480,17 @@ a single `SolverTask`. The installed packages are passed as locked packages so
 the solver prefers to keep them.
 
 ``` {.rust #install-solver-task}
-    let locked = installed_packages
-        .iter()
-        .map(|r| r.repodata_record.clone())
-        .collect::<Vec<_>>();
+let locked = installed_packages
+    .iter()
+    .map(|r| r.repodata_record.clone())
+    .collect::<Vec<_>>();
 
-    let solver_task = SolverTask {
-        locked_packages: locked,
-        virtual_packages,
-        specs: specs.clone(),
-        ..SolverTask::from_iter(&repo_data)
-    };
+let solver_task = SolverTask {
+    locked_packages: locked,
+    virtual_packages,
+    specs: specs.clone(),
+    ..SolverTask::from_iter(&repo_data)
+};
 ```
 
 `SolverTask::from_iter(&repo_data)` builds the task's `available_packages` field
@@ -516,13 +512,12 @@ The complete `SolverTask` contains:
 rattler ships two solver backends: `resolvo` (pure Rust, the default, used by pixi) and `libsolv_c` (a C binding to [libsolv], used by older conda tooling).  We use resolvo throughout this book.
 
 ``` {.rust #install-solve}
-    let start_solve = Instant::now();
-    let solution: Vec<RepoDataRecord> = with_spinner_sync("Solving", || {
-        resolvo::Solver.solve(solver_task)
-    })
-    .into_diagnostic()
-    .context("solving dependencies")?
-    .records;
+let start_solve = Instant::now();
+let solution: Vec<RepoDataRecord> =
+    with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
+        .into_diagnostic()
+        .context("solving dependencies")?
+        .records;
 ```
 
 `resolvo::Solver.solve(solver_task)` is synchronous and CPU-bound.  We run it in
@@ -534,11 +529,11 @@ closures.
 After solving, we report how many packages were selected and how long it took.
 
 ``` {.rust #install-solve-progress}
-    println!(
-        "  Solved {} packages in {:.1}s",
-        console::style(solution.len()).cyan(),
-        start_solve.elapsed().as_secs_f64()
-    );
+println!(
+    "  Solved {} packages in {:.1}s",
+    console::style(solution.len()).cyan(),
+    start_solve.elapsed().as_secs_f64()
+);
 ```
 
 #### The Installer
@@ -546,18 +541,18 @@ After solving, we report how many packages were selected and how long it took.
 We configure the installer with a builder and call `.install()` to apply the transaction.
 
 ``` {.rust #install-installer}
-    let start_install = Instant::now();
-    let result = Installer::new()
-        .with_download_client(client)
-        .with_target_platform(platform)
-        .with_installed_packages(installed_packages)
-        .with_execute_link_scripts(true)
-        .with_requested_specs(specs)
-        .with_reporter(IndicatifReporter::builder().finish())
-        .install(&prefix, solution)
-        .await
-        .into_diagnostic()
-        .context("installing packages")?;
+let start_install = Instant::now();
+let result = Installer::new()
+    .with_download_client(client)
+    .with_target_platform(platform)
+    .with_installed_packages(installed_packages)
+    .with_execute_link_scripts(true)
+    .with_requested_specs(specs)
+    .with_reporter(IndicatifReporter::builder().finish())
+    .install(&prefix, solution)
+    .await
+    .into_diagnostic()
+    .context("installing packages")?;
 ```
 
 `IndicatifReporter` is a rattler-provided reporter that shows per-package
@@ -588,23 +583,21 @@ Once installation finishes, we check whether the transaction changed anything.
 If all operations are empty, the environment was already up to date.
 
 ``` {.rust #install-result}
-    if result.transaction.operations.is_empty() {
-        println!(
-            "{} Environment already up to date",
-            console::style("✔").green()
-        );
-    } else {
-        println!(
-            "{} Environment updated in {:.1}s",
-            console::style("✔").green(),
-            start_install.elapsed().as_secs_f64()
-        );
-        println!(
-            "  Activate with:  eval $(shot shell)"
-        );
-    }
+if result.transaction.operations.is_empty() {
+    println!(
+        "{} Environment already up to date",
+        console::style("✔").green()
+    );
+} else {
+    println!(
+        "{} Environment updated in {:.1}s",
+        console::style("✔").green(),
+        start_install.elapsed().as_secs_f64()
+    );
+    println!("  Activate with:  eval $(shot shell)");
+}
 
-    Ok(())
+Ok(())
 ```
 
 `result.transaction.operations` is a list of what the installer did.
@@ -620,9 +613,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let cwd = env::current_dir().into_diagnostic()?;
     let (_, manifest) = Manifest::find_in_dir(&cwd)?;
 
-    let prefix = args
-        .prefix
-        .unwrap_or_else(|| super::prefix_dir(&cwd));
+    let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
     std::fs::create_dir_all(&prefix)
         .into_diagnostic()
         .context("creating prefix directory")?;
@@ -638,10 +629,7 @@ A thin wrapper that forwards to the progress module's sync spinner. This avoids
 importing the progress module in every call site.
 
 ``` {.rust #install-private-helpers}
-fn with_spinner_sync<T, F: FnOnce() -> T>(
-    msg: &'static str,
-    f: F,
-) -> T {
+fn with_spinner_sync<T, F: FnOnce() -> T>(msg: &'static str, f: F) -> T {
     crate::progress::with_spinner_sync(msg, f)
 }
 ```

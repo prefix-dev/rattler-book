@@ -220,15 +220,15 @@ authentication middleware, configure the Gateway, then query repodata.
 
 ``` {.rust #search-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
-<<search-parse-channels>>
+    <<search-parse-channels>>
 
-<<search-http-client>>
+    <<search-http-client>>
 
-<<search-gateway>>
+    <<search-gateway>>
 
-<<search-query>>
+    <<search-query>>
 
-<<search-results>>
+    <<search-results>>
 }
 ```
 
@@ -239,25 +239,25 @@ user's query into a `MatchSpec`. The `ChannelConfig` provides the base URL for
 named channels (defaulting to `https://conda.anaconda.org/`).
 
 ``` {.rust #search-parse-channels}
-    let channel_config =
-        ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
+let channel_config =
+    ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
 
-    let channels: Vec<Channel> = args
-        .channel
-        .iter()
-        .map(|s| Channel::from_str(s, &channel_config))
-        .collect::<Result<_, _>>()
-        .into_diagnostic()
-        .context("parsing channels")?;
+let channels: Vec<Channel> = args
+    .channel
+    .iter()
+    .map(|s| Channel::from_str(s, &channel_config))
+    .collect::<Result<_, _>>()
+    .into_diagnostic()
+    .context("parsing channels")?;
 
-    let spec = MatchSpec::from_str(&args.query, ParseMatchSpecOptions::default())
-        .into_diagnostic()
-        .with_context(|| format!("parsing search query `{}`", args.query))?;
+let spec = MatchSpec::from_str(&args.query, ParseMatchSpecOptions::default())
+    .into_diagnostic()
+    .with_context(|| format!("parsing search query `{}`", args.query))?;
 
-    let cache_dir = rattler::default_cache_dir()
-        .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
-    rattler_cache::ensure_cache_dir(&cache_dir)
-        .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
+let cache_dir = rattler::default_cache_dir()
+    .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
+rattler_cache::ensure_cache_dir(&cache_dir)
+    .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
 ```
 
 #### HTTP client
@@ -268,19 +268,19 @@ with `AuthenticationMiddleware` (for tokens and keyrings) and `OciMiddleware`
 (for `oci://` channel URLs).
 
 ``` {.rust #search-http-client}
-    let raw_client = reqwest::Client::builder()
-        .no_gzip()
-        .build()
-        .expect("failed to build HTTP client");
+let raw_client = reqwest::Client::builder()
+    .no_gzip()
+    .build()
+    .expect("failed to build HTTP client");
 
-    let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
-        .with_arc(Arc::new(
-            AuthenticationMiddleware::from_env_and_defaults()
-                .into_diagnostic()
-                .context("setting up auth middleware")?,
-        ))
-        .with(rattler_networking::OciMiddleware::new(raw_client))
-        .build();
+let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
+    .with_arc(Arc::new(
+        AuthenticationMiddleware::from_env_and_defaults()
+            .into_diagnostic()
+            .context("setting up auth middleware")?,
+    ))
+    .with(rattler_networking::OciMiddleware::new(raw_client))
+    .build();
 ```
 
 #### Gateway
@@ -290,20 +290,20 @@ configuration. Setting `sharded_enabled: true` tells it to prefer the fast
 sharded format when a channel supports it.
 
 ``` {.rust #search-gateway}
-    let platform = Platform::current();
+let platform = Platform::current();
 
-    let gateway = Gateway::builder()
-        .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
-        .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
-        .with_client(client)
-        .with_channel_config(rattler_repodata_gateway::ChannelConfig {
-            default: SourceConfig {
-                sharded_enabled: true,
-                ..SourceConfig::default()
-            },
-            per_channel: HashMap::new(),
-        })
-        .finish();
+let gateway = Gateway::builder()
+    .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
+    .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
+    .with_client(client)
+    .with_channel_config(rattler_repodata_gateway::ChannelConfig {
+        default: SourceConfig {
+            sharded_enabled: true,
+            ..SourceConfig::default()
+        },
+        per_channel: HashMap::new(),
+    })
+    .finish();
 ```
 
 #### Query
@@ -314,19 +314,15 @@ not resolve transitive dependencies. This keeps the fetch fast. We query both
 the current platform and `NoArch` to cover pure-Lua packages.
 
 ``` {.rust #search-query}
-    let repo_data: Vec<RepoData> = with_spinner(
-        "Fetching repodata",
-        gateway
-            .query(
-                channels,
-                [platform, Platform::NoArch],
-                vec![spec],
-            )
-            .recursive(false),
-    )
-    .await
-    .into_diagnostic()
-    .context("fetching repodata")?;
+let repo_data: Vec<RepoData> = with_spinner(
+    "Fetching repodata",
+    gateway
+        .query(channels, [platform, Platform::NoArch], vec![spec])
+        .recursive(false),
+)
+.await
+.into_diagnostic()
+.context("fetching repodata")?;
 ```
 
 #### Result formatting
@@ -336,40 +332,40 @@ flatten the records, deduplicate by (name, version), sort alphabetically, and
 print only the latest version per package name.
 
 ``` {.rust #search-results}
-    // Collect and deduplicate results by (name, version), keeping the latest.
-    let mut seen: HashMap<(String, String), String> = HashMap::new();
-    for repo in &repo_data {
-        for record in repo.iter() {
-            let name = record.package_record.name.as_normalized().to_string();
-            let version = record.package_record.version.to_string();
-            let key = (name.clone(), version.clone());
-            seen.entry(key).or_insert_with(|| name);
-        }
+// Collect and deduplicate results by (name, version), keeping the latest.
+let mut seen: HashMap<(String, String), String> = HashMap::new();
+for repo in &repo_data {
+    for record in repo.iter() {
+        let name = record.package_record.name.as_normalized().to_string();
+        let version = record.package_record.version.to_string();
+        let key = (name.clone(), version.clone());
+        seen.entry(key).or_insert_with(|| name);
     }
+}
 
-    if seen.is_empty() {
-        println!("No packages found matching `{}`.", args.query);
-        return Ok(());
+if seen.is_empty() {
+    println!("No packages found matching `{}`.", args.query);
+    return Ok(());
+}
+
+// Sort by name, then by version descending.
+let mut results: Vec<(String, String)> = seen.into_keys().collect();
+results.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
+
+// Deduplicate by name (show only latest version per package).
+let mut last_name = String::new();
+let mut count = 0usize;
+for (name, version) in &results {
+    if *name == last_name {
+        continue;
     }
+    last_name.clone_from(name);
+    println!("{:<30} {}", console::style(name).cyan(), version);
+    count += 1;
+}
 
-    // Sort by name, then by version descending.
-    let mut results: Vec<(String, String)> = seen.into_keys().collect();
-    results.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
-
-    // Deduplicate by name (show only latest version per package).
-    let mut last_name = String::new();
-    let mut count = 0usize;
-    for (name, version) in &results {
-        if *name == last_name {
-            continue;
-        }
-        last_name.clone_from(name);
-        println!("{:<30} {}", console::style(name).cyan(), version);
-        count += 1;
-    }
-
-    println!("\n{} package(s) found.", count);
-    Ok(())
+println!("\n{} package(s) found.", count);
+Ok(())
 ```
 
 ### `src/progress.rs`

@@ -264,13 +264,13 @@ async fn async_main() -> miette::Result<()> {
         .init();
 
     match cli.command {
-        Command::Init(args)    => commands::init::execute(args).await,
-        Command::Search(args)  => commands::search::execute(args).await,
-        Command::Add(args)     => commands::add::execute(args).await,
+        Command::Init(args) => commands::init::execute(args).await,
+        Command::Search(args) => commands::search::execute(args).await,
+        Command::Add(args) => commands::add::execute(args).await,
         Command::Install(args) => commands::install::execute(args).await,
-        Command::Shell(args)   => commands::shell::execute(args),
-        Command::Run(args)     => commands::run::execute(args).await,
-        Command::Build(args)   => commands::build::execute(args).await,
+        Command::Shell(args) => commands::shell::execute(args),
+        Command::Run(args) => commands::run::execute(args).await,
+        Command::Build(args) => commands::build::execute(args).await,
     }
 }
 ```

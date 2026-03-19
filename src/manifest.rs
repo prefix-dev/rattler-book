@@ -36,7 +36,7 @@ fn default_channels() -> Vec<String> {
 
 // ~/~ begin <<book/src/ch03-init.md#manifest-impl>>[init]
 impl Manifest {
-// ~/~ begin <<book/src/ch03-init.md#manifest-from-path>>[init]
+    // ~/~ begin <<book/src/ch03-init.md#manifest-from-path>>[init]
     pub fn from_path(path: &Path) -> miette::Result<Self> {
         let content = std::fs::read_to_string(path)
             .into_diagnostic()
@@ -46,9 +46,9 @@ impl Manifest {
             .into_diagnostic()
             .with_context(|| format!("parsing manifest at `{}`", path.display()))
     }
-// ~/~ end
+    // ~/~ end
 
-// ~/~ begin <<book/src/ch03-init.md#manifest-write>>[init]
+    // ~/~ begin <<book/src/ch03-init.md#manifest-write>>[init]
     pub fn write(&self, path: &Path) -> miette::Result<()> {
         let content = toml::to_string_pretty(self)
             .into_diagnostic()
@@ -58,9 +58,9 @@ impl Manifest {
             .into_diagnostic()
             .with_context(|| format!("writing manifest to `{}`", path.display()))
     }
-// ~/~ end
+    // ~/~ end
 
-// ~/~ begin <<book/src/ch03-init.md#manifest-find-in-dir>>[init]
+    // ~/~ begin <<book/src/ch03-init.md#manifest-find-in-dir>>[init]
     pub fn find_in_dir(dir: &Path) -> miette::Result<(PathBuf, Self)> {
         let path = dir.join(MANIFEST_FILENAME);
         if !path.exists() {
@@ -73,7 +73,7 @@ impl Manifest {
         let manifest = Self::from_path(&path)?;
         Ok((path, manifest))
     }
-// ~/~ end
+    // ~/~ end
 }
 // ~/~ end
 // ~/~ end

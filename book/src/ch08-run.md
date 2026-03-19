@@ -95,9 +95,7 @@ does not exist we bail early with a helpful message.
 
 ``` {.rust #run-setup}
 let cwd = env::current_dir().into_diagnostic()?;
-let prefix = args
-    .prefix
-    .unwrap_or_else(|| super::prefix_dir(&cwd));
+let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
 let prefix = std::path::absolute(prefix).into_diagnostic()?;
 
 if !prefix.exists() {
@@ -110,8 +108,7 @@ if !prefix.exists() {
 let platform = Platform::current();
 let shell: ShellEnum = ShellEnum::from_env().unwrap_or_else(|| Bash.into());
 
-let activator =
-    Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
+let activator = Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
 let current_vars = ActivationVariables::from_env().into_diagnostic()?;
 ```
 
@@ -126,12 +123,11 @@ It then runs that script and diffs the two snapshots, returning only the changed
 variables as a `HashMap<String, String>`.
 
 ``` {.rust #run-activation}
-let activation_env = tokio::task::spawn_blocking(move || {
-    activator.run_activation(current_vars, None)
-})
-.await
-.into_diagnostic()?
-.into_diagnostic()?;
+let activation_env =
+    tokio::task::spawn_blocking(move || activator.run_activation(current_vars, None))
+        .await
+        .into_diagnostic()?
+        .into_diagnostic()?;
 ```
 
 ### Spawning the child process
