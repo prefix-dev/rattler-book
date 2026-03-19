@@ -1,4 +1,5 @@
 // ~/~ begin <<book/src/ch02-project-setup.md#src/main.rs>>[init]
+// ~/~ begin <<book/src/ch02-project-setup.md#main-imports>>[init]
 use clap::Parser;
 use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
@@ -7,7 +8,9 @@ mod commands;
 mod manifest;
 mod progress;
 mod recipe;
+// ~/~ end
 
+// ~/~ begin <<book/src/ch02-project-setup.md#main-cli-struct>>[init]
 /// moonshot — a minimal Lua package manager powered by rattler.
 #[derive(Debug, Parser)]
 #[clap(author, version, about, long_about = None)]
@@ -43,7 +46,9 @@ enum Command {
     /// Build a Lua package from a recipe.toml.
     Build(commands::build::Args),
 }
+// ~/~ end
 
+// ~/~ begin <<book/src/ch02-project-setup.md#main-fn>>[init]
 fn main() -> miette::Result<()> {
     let num_cpus = std::thread::available_parallelism()
         .map_or(2, std::num::NonZero::get)
@@ -58,7 +63,9 @@ fn main() -> miette::Result<()> {
 
     runtime.block_on(async_main())
 }
+// ~/~ end
 
+// ~/~ begin <<book/src/ch02-project-setup.md#main-async>>[init]
 async fn async_main() -> miette::Result<()> {
     let cli = Cli::parse();
 
@@ -88,4 +95,5 @@ async fn async_main() -> miette::Result<()> {
         Command::Build(args) => commands::build::execute(args).await,
     }
 }
+// ~/~ end
 // ~/~ end

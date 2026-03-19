@@ -1,4 +1,5 @@
 // ~/~ begin <<book/src/ch09-build.md#src/commands/build.rs>>[init]
+// ~/~ begin <<book/src/ch09-build.md#build-imports>>[init]
 use std::env;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
@@ -18,7 +19,9 @@ use walkdir::WalkDir;
 use crate::commands::install::install_from_manifest;
 use crate::manifest::{Manifest, ProjectMetadata};
 use crate::recipe::{Recipe, RECIPE_FILENAME};
+// ~/~ end
 
+// ~/~ begin <<book/src/ch09-build.md#build-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Path to `recipe.toml`.  Defaults to `./recipe.toml`.
@@ -31,7 +34,9 @@ pub struct Args {
     #[clap(long, default_value = "output")]
     pub output_dir: PathBuf,
 }
+// ~/~ end
 
+// ~/~ begin <<book/src/ch09-build.md#build-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
     let cwd = env::current_dir().into_diagnostic()?;
 
@@ -179,9 +184,13 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     Ok(())
 }
+// ~/~ end
 
+// ~/~ begin <<book/src/ch09-build.md#build-prelude-const>>[init]
 const BUILD_PRELUDE: &str = include_str!("../build_prelude.lua");
+// ~/~ end
 
+// ~/~ begin <<book/src/ch09-build.md#build-run-script>>[init]
 async fn run_build_script(
     lua_bin: &Path,
     script: &Path,
@@ -238,7 +247,9 @@ async fn run_build_script(
     }
     Ok(())
 }
+// ~/~ end
 
+// ~/~ begin <<book/src/ch09-build.md#build-write-metadata>>[init]
 fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Result<()> {
     let info_dir = install_prefix.join("info");
     std::fs::create_dir_all(&info_dir)
@@ -304,7 +315,9 @@ fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Res
 
     Ok(())
 }
+// ~/~ end
 
+// ~/~ begin <<book/src/ch09-build.md#build-collect-paths>>[init]
 fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
     let mut entries = Vec::new();
 
@@ -339,7 +352,9 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
         paths_version: 1,
     })
 }
+// ~/~ end
 
+// ~/~ begin <<book/src/ch09-build.md#build-sha256>>[init]
 fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u64)> {
     use std::io::Read;
     let file = File::open(path)
@@ -359,7 +374,9 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
     }
     Ok((hasher.finalize(), size))
 }
+// ~/~ end
 
+// ~/~ begin <<book/src/ch09-build.md#build-pack-conda>>[init]
 fn pack_conda(install_prefix: &Path, output_path: &Path, recipe: &Recipe) -> miette::Result<()> {
     // Collect all files relative to the install prefix.
     let files: Vec<PathBuf> = WalkDir::new(install_prefix)
@@ -412,7 +429,9 @@ fn pack_conda(install_prefix: &Path, output_path: &Path, recipe: &Recipe) -> mie
 
     Ok(())
 }
+// ~/~ end
 
+// ~/~ begin <<book/src/ch09-build.md#build-find-lua>>[init]
 fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
     let bin = prefix.join("bin").join("lua");
     if bin.exists() {
@@ -431,4 +450,5 @@ fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
         prefix.join("bin").display()
     )
 }
+// ~/~ end
 // ~/~ end

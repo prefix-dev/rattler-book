@@ -1,4 +1,5 @@
 -- ~/~ begin <<book/src/ch09-build.md#src/build_prelude.lua>>[init]
+-- ~/~ begin <<book/src/ch09-build.md#prelude-header>>[init]
 -- moonshot build prelude
 -- Automatically sourced before every build.lua by `shot build`.
 --
@@ -28,7 +29,9 @@
 --   exists(path)              returns true if path exists
 --   is_file(path)             returns true if path is a regular file
 --   log(msg)                  prints "[moonshot] msg" to stderr
+-- ~/~ end
 
+-- ~/~ begin <<book/src/ch09-build.md#prelude-globals>>[init]
 -- ── Globals ───────────────────────────────────────────────────────────────────
 
 PREFIX        = os.getenv("PREFIX")        or error("PREFIX not set")
@@ -37,7 +40,9 @@ BUILD_PREFIX  = os.getenv("BUILD_PREFIX")  or error("BUILD_PREFIX not set")
 PKG_NAME      = os.getenv("PKG_NAME")      or error("PKG_NAME not set")
 PKG_VERSION   = os.getenv("PKG_VERSION")   or error("PKG_VERSION not set")
 PKG_BUILD_NUM = tonumber(os.getenv("PKG_BUILD_NUM") or "0")
+-- ~/~ end
 
+-- ~/~ begin <<book/src/ch09-build.md#prelude-internal-helpers>>[init]
 -- ── Internal helpers ──────────────────────────────────────────────────────────
 
 local function shell(cmd)
@@ -52,7 +57,9 @@ local function q(path)
     -- Wrap in single quotes; escape any embedded single quotes.
     return "'" .. path:gsub("'", "'\\''") .. "'"
 end
+-- ~/~ end
 
+-- ~/~ begin <<book/src/ch09-build.md#prelude-public-api>>[init]
 -- ── Public API ────────────────────────────────────────────────────────────────
 
 --- Join path segments with "/", collapsing duplicate slashes.
@@ -99,7 +106,9 @@ end
 function log(msg)
     io.stderr:write("[moonshot] " .. tostring(msg) .. "\n")
 end
+-- ~/~ end
 
+-- ~/~ begin <<book/src/ch09-build.md#prelude-install-helpers>>[init]
 -- ── Install helpers ───────────────────────────────────────────────────────────
 
 --- Install files matching `src` (a path or shell glob) into `PREFIX/subdir/`.
@@ -159,10 +168,13 @@ end
 function install_share(src, name)
     install(src, path_join("share", name))
 end
+-- ~/~ end
 
+-- ~/~ begin <<book/src/ch09-build.md#prelude-done>>[init]
 -- ── Done ──────────────────────────────────────────────────────────────────────
 
 log(string.format("Building %s %s (build %d)", PKG_NAME, PKG_VERSION, PKG_BUILD_NUM))
 log(string.format("PREFIX    = %s", PREFIX))
 log(string.format("SRC_DIR   = %s", SRC_DIR))
+-- ~/~ end
 -- ~/~ end
