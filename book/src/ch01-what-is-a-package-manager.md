@@ -43,13 +43,24 @@ The answer is a **channel** (conda terminology) or **registry** (npm/cargo
 terminology) or **index** (pip terminology): a server that publishes a catalog of
 available packages.  The catalog is called **repodata** in conda.
 
-```text
-Channel: https://conda.anaconda.org/conda-forge/
-  └── linux-64/
-  │     repodata.json     ← catalog for 64-bit Linux packages
-  └── noarch/
-        repodata.json     ← catalog for architecture-independent packages
-```
+<div class="file-tree">
+<ul>
+  <li class="dir"><span class="name">Channel: https://conda.anaconda.org/conda-forge/</span>
+    <ul>
+      <li class="dir"><span class="name">linux-64/</span>
+        <ul>
+          <li class="file"><span class="name">repodata.json</span> <span class="comment">catalog for 64-bit Linux packages</span></li>
+        </ul>
+      </li>
+      <li class="dir"><span class="name">noarch/</span>
+        <ul>
+          <li class="file"><span class="name">repodata.json</span> <span class="comment">catalog for architecture-independent packages</span></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+</div>
 
 `repodata.json` is a large JSON file (often hundreds of megabytes) that lists
 every package, every version of every package, and the dependencies of each
@@ -138,12 +149,17 @@ Each chapter in Part I implements one of these commands (or a supporting module 
 A conda package is an archive.  Historically it was a `.tar.bz2` file.  In the
 modern [`.conda` format][cep-35] (version 2) it is an uncompressed ZIP that contains:
 
-```text
-moonshine-0.3.0-lua_0.conda
-├── metadata.json          ← {"conda_pkg_format_version": 2}
-├── pkg-moonshine-….tar.zst  ← payload files
-└── info-moonshine-….tar.zst ← info/index.json, info/paths.json, …
-```
+<div class="file-tree">
+<ul>
+  <li class="file"><span class="name">moonshine-0.3.0-lua_0.conda</span>
+    <ul>
+      <li class="file"><span class="name">metadata.json</span> <span class="comment">{"conda_pkg_format_version": 2}</span></li>
+      <li class="file"><span class="name">pkg-moonshine-….tar.zst</span> <span class="comment">payload files</span></li>
+      <li class="file"><span class="name">info-moonshine-….tar.zst</span> <span class="comment">info/index.json, info/paths.json, …</span></li>
+    </ul>
+  </li>
+</ul>
+</div>
 
 The payload and metadata live in separate inner archives, so tools can read the
 metadata without unpacking the (potentially large) payload.

@@ -112,24 +112,32 @@ Notice that `reqwest` is declared with `features = ["stream"]` for streaming dow
 
 Here is how the project is structured:
 
-```text
-src/
-├── main.rs          ← CLI wiring, Tokio runtime
-├── lock.rs          ← moonshot.lock reader/writer
-├── manifest.rs      ← moonshot.toml parser
-├── recipe.rs        ← recipe.toml parser
-├── progress.rs      ← spinner helpers
-├── resolve.rs       ← shared dependency resolver
-└── commands/
-    ├── mod.rs       ← shared helpers (prefix_dir)
-    ├── init.rs
-    ├── add.rs
-    ├── install.rs
-    ├── lock.rs
-    ├── shell.rs
-    ├── run.rs
-    └── build.rs
-```
+<div class="file-tree">
+<ul>
+  <li class="dir"><span class="name">src/</span>
+    <ul>
+      <li class="file"><span class="name">main.rs</span> <span class="comment">CLI wiring, Tokio runtime</span></li>
+      <li class="file"><span class="name">lock.rs</span> <span class="comment">moonshot.lock reader/writer</span></li>
+      <li class="file"><span class="name">manifest.rs</span> <span class="comment">moonshot.toml parser</span></li>
+      <li class="file"><span class="name">recipe.rs</span> <span class="comment">recipe.toml parser</span></li>
+      <li class="file"><span class="name">progress.rs</span> <span class="comment">spinner helpers</span></li>
+      <li class="file"><span class="name">resolve.rs</span> <span class="comment">shared dependency resolver</span></li>
+      <li class="dir"><span class="name">commands/</span>
+        <ul>
+          <li class="file"><span class="name">mod.rs</span> <span class="comment">shared helpers (prefix_dir)</span></li>
+          <li class="file"><span class="name">init.rs</span></li>
+          <li class="file"><span class="name">add.rs</span></li>
+          <li class="file"><span class="name">install.rs</span></li>
+          <li class="file"><span class="name">lock.rs</span></li>
+          <li class="file"><span class="name">shell.rs</span></li>
+          <li class="file"><span class="name">run.rs</span></li>
+          <li class="file"><span class="name">build.rs</span></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+</div>
 
 ### Subcommand modules
 

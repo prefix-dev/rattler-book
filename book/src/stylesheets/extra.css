@@ -524,3 +524,79 @@
 [data-md-color-scheme="slate"] .md-nav__item--active > .md-nav__link {
   color: var(--rb-nav-active);
 }
+
+/* ===========================================================================
+   File tree component (Starlight-inspired)
+   =========================================================================== */
+.file-tree {
+  --ft-line: var(--rb-table-border);
+  --ft-icon-dir: #e8a854;
+  --ft-icon-file: var(--rb-text-lighter);
+  --ft-comment: var(--rb-blockquote-text);
+  border: 1px solid var(--rb-code-border);
+  border-radius: 6px;
+  background: var(--rb-code-bg);
+  padding: 0.8em 1em;
+  margin: 1em 0;
+  font-family: var(--rb-font-code);
+  font-size: calc(var(--rb-code-size) * 0.95);
+  line-height: 1.7;
+  overflow-x: auto;
+}
+
+.file-tree ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.file-tree ul ul {
+  padding-left: 1.4em;
+  border-left: 1px solid var(--ft-line);
+  margin-left: 0.45em;
+}
+
+.file-tree li {
+  margin: 0;
+  padding: 0;
+  position: relative;
+  white-space: nowrap;
+}
+
+/* Remove Material's default list margins */
+.md-typeset .file-tree ul li {
+  margin-bottom: 0;
+}
+
+/* Directory entries */
+.file-tree li.dir > span::before {
+  content: "📁 ";
+  font-style: normal;
+  margin-right: 0.15em;
+}
+
+/* File entries */
+.file-tree li.file > span::before {
+  content: "📄 ";
+  font-style: normal;
+  margin-right: 0.15em;
+}
+
+/* Entry name */
+.file-tree .name {
+  color: var(--rb-text);
+}
+
+.file-tree li.dir > .name {
+  font-weight: 600;
+}
+
+/* Comment / description */
+.file-tree .comment {
+  color: var(--ft-comment);
+  font-style: italic;
+  font-weight: 400;
+  margin-left: 0.8em;
+  font-family: var(--rb-font-body);
+  font-size: 0.9em;
+}

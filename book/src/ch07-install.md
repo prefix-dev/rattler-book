@@ -347,21 +347,41 @@ $ shot install
 
 After `shot install`, the prefix looks like this:
 
-```text
-.env/
-├── bin/
-│   ├── lua             ← the Lua interpreter
-│   └── luarocks        ← LuaRocks (if installed)
-├── lib/
-│   ├── liblua.so.5.4
-│   └── ...
-├── share/
-│   └── lua/5.4/
-│       └── ...         ← pure-Lua libraries
-└── conda-meta/
-    ├── lua-5.4.7-h5eee18b_0.json
-    └── ...             ← one file per installed package
-```
+<div class="file-tree">
+<ul>
+  <li class="dir"><span class="name">.env/</span>
+    <ul>
+      <li class="dir"><span class="name">bin/</span>
+        <ul>
+          <li class="file"><span class="name">lua</span> <span class="comment">the Lua interpreter</span></li>
+          <li class="file"><span class="name">luarocks</span> <span class="comment">LuaRocks (if installed)</span></li>
+        </ul>
+      </li>
+      <li class="dir"><span class="name">lib/</span>
+        <ul>
+          <li class="file"><span class="name">liblua.so.5.4</span></li>
+          <li class="file"><span class="name">…</span></li>
+        </ul>
+      </li>
+      <li class="dir"><span class="name">share/</span>
+        <ul>
+          <li class="dir"><span class="name">lua/5.4/</span>
+            <ul>
+              <li class="file"><span class="name">…</span> <span class="comment">pure-Lua libraries</span></li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+      <li class="dir"><span class="name">conda-meta/</span>
+        <ul>
+          <li class="file"><span class="name">lua-5.4.7-h5eee18b_0.json</span></li>
+          <li class="file"><span class="name">…</span> <span class="comment">one file per installed package</span></li>
+        </ul>
+      </li>
+    </ul>
+  </li>
+</ul>
+</div>
 
 The `conda-meta/` directory is rattler's installation database.  Each JSON file
 records the package name, version, build, all installed files, and their hashes.

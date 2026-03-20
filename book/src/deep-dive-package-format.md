@@ -10,18 +10,26 @@ problem or writing tooling that reads package archives, you'll want it.
 
 The original conda package format is a simple tar archive compressed with bzip2:
 
-```text
-lua-5.4.7-h5eee18b_0.tar.bz2
-├── bin/lua
-├── lib/liblua.so.5.4
-├── info/
-│   ├── index.json
-│   ├── paths.json
-│   ├── files
-│   ├── hash_input.json
-│   └── test/
-└── ...
-```
+<div class="file-tree">
+<ul>
+  <li class="file"><span class="name">lua-5.4.7-h5eee18b_0.tar.bz2</span>
+    <ul>
+      <li class="file"><span class="name">bin/lua</span></li>
+      <li class="file"><span class="name">lib/liblua.so.5.4</span></li>
+      <li class="dir"><span class="name">info/</span>
+        <ul>
+          <li class="file"><span class="name">index.json</span></li>
+          <li class="file"><span class="name">paths.json</span></li>
+          <li class="file"><span class="name">files</span></li>
+          <li class="file"><span class="name">hash_input.json</span></li>
+          <li class="dir"><span class="name">test/</span></li>
+        </ul>
+      </li>
+      <li class="file"><span class="name">…</span></li>
+    </ul>
+  </li>
+</ul>
+</div>
 
 The entire archive must be decompressed sequentially before any file can be
 accessed.  For large packages this is slow.
@@ -30,12 +38,17 @@ accessed.  For large packages this is slow.
 
 The modern `.conda` format is an **uncompressed ZIP** containing three members:
 
-```text
-lua-5.4.7-h5eee18b_0.conda
-├── metadata.json                          (uncompressed)
-├── pkg-lua-5.4.7-h5eee18b_0.tar.zst      (zstd-compressed tar)
-└── info-lua-5.4.7-h5eee18b_0.tar.zst     (zstd-compressed tar)
-```
+<div class="file-tree">
+<ul>
+  <li class="file"><span class="name">lua-5.4.7-h5eee18b_0.conda</span>
+    <ul>
+      <li class="file"><span class="name">metadata.json</span> <span class="comment">uncompressed</span></li>
+      <li class="file"><span class="name">pkg-lua-5.4.7-h5eee18b_0.tar.zst</span> <span class="comment">zstd-compressed tar</span></li>
+      <li class="file"><span class="name">info-lua-5.4.7-h5eee18b_0.tar.zst</span> <span class="comment">zstd-compressed tar</span></li>
+    </ul>
+  </li>
+</ul>
+</div>
 
 The outer ZIP is not compressed; the compression happens in the inner tars.
 Because ZIP stores a central directory at the end, tools can `mmap` the file,
