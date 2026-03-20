@@ -24,6 +24,7 @@ mkdocs-redirects = ">=1.2"
 entangled-cli = ">=2.0"
 mkdocs-entangled-plugin = { git = "https://github.com/tdejager/mkdocs-plugin.git" }
 mkdocs-print-site-plugin = ">=2.0"
+mkdocs-panzoom-plugin = ">=0.5"
 
 [feature.book.tasks]
 book-build = { cmd = "mkdocs build", cwd = "book" }

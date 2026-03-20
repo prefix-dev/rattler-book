@@ -74,6 +74,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/88/29/744136411e785c4b0b744d5413e56555265939ab3a104c6a4b719dad33fd/mkdocs_get_deps-0.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/45/e1/e8080dcfa95cca267662a6f4afe29237452bdeb5a2a6555ac83646d21915/mkdocs_material-9.7.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5b/54/662a4743aa81d9582ee9339d4ffa3c8fd40a4965e033d77b9da9774d3960/mkdocs_material_extensions-1.3.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3d/58/370541865a451fc9e06f74d407f6d99581224455b5ffe5f55504a43ba6e4/mkdocs_panzoom_plugin-0.5.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/3e/7513f2f37c563da65d1b91781e047f4a1c0ceac8206d4f6042428428e4ad/mkdocs_print_site_plugin-2.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c4/ec/38443b1f2a3821bbcb24e46cd8ba979154417794d54baf949fefde1c2146/mkdocs_redirects-1.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/b8/8e/6b17e43f6eb9369d9858ee32c97959fcd515628a1df376af96c11606cf70/msgspec-0.20.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl
@@ -182,6 +183,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/88/29/744136411e785c4b0b744d5413e56555265939ab3a104c6a4b719dad33fd/mkdocs_get_deps-0.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/45/e1/e8080dcfa95cca267662a6f4afe29237452bdeb5a2a6555ac83646d21915/mkdocs_material-9.7.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5b/54/662a4743aa81d9582ee9339d4ffa3c8fd40a4965e033d77b9da9774d3960/mkdocs_material_extensions-1.3.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3d/58/370541865a451fc9e06f74d407f6d99581224455b5ffe5f55504a43ba6e4/mkdocs_panzoom_plugin-0.5.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/3e/7513f2f37c563da65d1b91781e047f4a1c0ceac8206d4f6042428428e4ad/mkdocs_print_site_plugin-2.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c4/ec/38443b1f2a3821bbcb24e46cd8ba979154417794d54baf949fefde1c2146/mkdocs_redirects-1.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/bb/18/62dc13ab0260c7d741dda8dc7f481495b93ac9168cd887dda5929880eef8/msgspec-0.20.0-cp314-cp314-macosx_10_15_x86_64.whl
@@ -290,6 +292,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/88/29/744136411e785c4b0b744d5413e56555265939ab3a104c6a4b719dad33fd/mkdocs_get_deps-0.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/45/e1/e8080dcfa95cca267662a6f4afe29237452bdeb5a2a6555ac83646d21915/mkdocs_material-9.7.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5b/54/662a4743aa81d9582ee9339d4ffa3c8fd40a4965e033d77b9da9774d3960/mkdocs_material_extensions-1.3.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3d/58/370541865a451fc9e06f74d407f6d99581224455b5ffe5f55504a43ba6e4/mkdocs_panzoom_plugin-0.5.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/3e/7513f2f37c563da65d1b91781e047f4a1c0ceac8206d4f6042428428e4ad/mkdocs_print_site_plugin-2.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c4/ec/38443b1f2a3821bbcb24e46cd8ba979154417794d54baf949fefde1c2146/mkdocs_redirects-1.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/dd/1d/b9949e4ad6953e9f9a142c7997b2f7390c81e03e93570c7c33caf65d27e1/msgspec-0.20.0-cp314-cp314-macosx_11_0_arm64.whl
@@ -378,6 +381,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/88/29/744136411e785c4b0b744d5413e56555265939ab3a104c6a4b719dad33fd/mkdocs_get_deps-0.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/45/e1/e8080dcfa95cca267662a6f4afe29237452bdeb5a2a6555ac83646d21915/mkdocs_material-9.7.5-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/5b/54/662a4743aa81d9582ee9339d4ffa3c8fd40a4965e033d77b9da9774d3960/mkdocs_material_extensions-1.3.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/3d/58/370541865a451fc9e06f74d407f6d99581224455b5ffe5f55504a43ba6e4/mkdocs_panzoom_plugin-0.5.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/3f/3e/7513f2f37c563da65d1b91781e047f4a1c0ceac8206d4f6042428428e4ad/mkdocs_print_site_plugin-2.8-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/c4/ec/38443b1f2a3821bbcb24e46cd8ba979154417794d54baf949fefde1c2146/mkdocs_redirects-1.2.2-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ff/37/9c4b58ff11d890d788e700b827db2366f4d11b3313bf136780da7017278b/msgspec-0.20.0-cp314-cp314-win_amd64.whl
@@ -1963,6 +1967,13 @@ packages:
   version: 1.3.1
   sha256: adff8b62700b25cb77b53358dad940f3ef973dd6db797907c49e3c2ef3ab4e31
   requires_python: '>=3.8'
+- pypi: https://files.pythonhosted.org/packages/3d/58/370541865a451fc9e06f74d407f6d99581224455b5ffe5f55504a43ba6e4/mkdocs_panzoom_plugin-0.5.2-py3-none-any.whl
+  name: mkdocs-panzoom-plugin
+  version: 0.5.2
+  sha256: 58746d7f7b8aef8787543a75b7a5ddcd04b67cfd6af964f25bbd9bc822ced68a
+  requires_dist:
+  - mkdocs>=1.0.4
+  requires_python: '>=3.7'
 - pypi: https://files.pythonhosted.org/packages/3f/3e/7513f2f37c563da65d1b91781e047f4a1c0ceac8206d4f6042428428e4ad/mkdocs_print_site_plugin-2.8-py3-none-any.whl
   name: mkdocs-print-site-plugin
   version: '2.8'

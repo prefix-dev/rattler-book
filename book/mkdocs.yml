@@ -53,6 +53,7 @@ nav:
     - Virtual Packages: deep-dive-virtual-packages.md
     - The Networking Stack: deep-dive-networking.md
     - The resolvo SAT Solver: deep-dive-resolvo.md
+    - Overview of the rattler crates: deep-dive-crate-ecosystem.md
 
 extra_css:
   - stylesheets/extra.css
@@ -63,6 +64,8 @@ plugins:
   - redirects:
       redirect_maps:
         'introduction.md': 'index.md'
+  - panzoom:
+      full_screen: true
   - print-site
 
 markdown_extensions:
@@ -70,7 +73,11 @@ markdown_extensions:
       anchor_linenums: true
       pygments_lang_class: true
   - pymdownx.inlinehilite
-  - pymdownx.superfences
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
   - pymdownx.tabbed:
       alternate_style: true
   - attr_list

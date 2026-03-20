@@ -171,6 +171,10 @@ What it *does* do is wire together all the major rattler subsystems:
 | Shell activation | `rattler_shell` | Generate activation scripts |
 | Lock files | `rattler_lock` | Persist exact solve results |
 
+These are just the crates moonshot uses directly.  The full rattler project
+contains roughly 28 crates; see [Overview of the rattler crates](deep-dive-crate-ecosystem.md)
+for the complete picture.
+
 ## Summary
 
 - Every package manager shares four concepts: versions, requirements, artifacts,
