@@ -28,7 +28,7 @@ where
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch05-install.md#with-spinner-sync>>[init]
+// ~/~ begin <<book/src/ch06-install.md#with-spinner-sync>>[init]
 pub fn with_spinner_sync<T, F: FnOnce() -> T>(msg: impl Into<Cow<'static, str>>, f: F) -> T {
     let pb = ProgressBar::new_spinner();
     pb.enable_steady_tick(Duration::from_millis(80));

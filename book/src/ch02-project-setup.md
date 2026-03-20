@@ -49,6 +49,7 @@ rattler_repodata_gateway = { version = "0.27.0", default-features = false, featu
 rattler_shell = { version = "0.26.3", default-features = false }
 rattler_solve = { version = "5.0.0", default-features = false, features = ["resolvo"] }
 rattler_index = { version = "0.27.17", default-features = false }
+rattler_lock = { version = "0.27.1", default-features = false }
 rattler_virtual_packages = { version = "2.3.12", default-features = false }
 
 # Async runtime
@@ -114,6 +115,7 @@ Here is how the project is structured:
 ```text
 src/
 ├── main.rs          ← CLI wiring, Tokio runtime
+├── lock.rs          ← moonshot.lock reader/writer
 ├── manifest.rs      ← moonshot.toml parser
 ├── recipe.rs        ← recipe.toml parser
 ├── progress.rs      ← spinner helpers
@@ -153,6 +155,7 @@ use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 
 mod commands;
+mod lock;
 mod manifest;
 mod progress;
 mod recipe;
@@ -185,7 +188,7 @@ enum Command {
     /// Search for packages in a channel.
     Search(commands::search::Args),
 
-    /// Add one or more packages to the manifest and install them.
+    /// Add one or more packages to the manifest.
     Add(commands::add::Args),
 
     /// Install (or update) all packages listed in moonshot.toml.

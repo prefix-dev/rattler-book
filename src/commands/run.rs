@@ -1,5 +1,5 @@
-// ~/~ begin <<book/src/ch08-run.md#src/commands/run.rs>>[init]
-// ~/~ begin <<book/src/ch08-run.md#run-imports>>[init]
+// ~/~ begin <<book/src/ch09-run.md#src/commands/run.rs>>[init]
+// ~/~ begin <<book/src/ch09-run.md#run-imports>>[init]
 use std::env;
 use std::process::Stdio;
 
@@ -11,7 +11,7 @@ use rattler_shell::shell::{Bash, ShellEnum};
 use tokio::process::Command;
 // ~/~ end
 
-// ~/~ begin <<book/src/ch08-run.md#run-args>>[init]
+// ~/~ begin <<book/src/ch09-run.md#run-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
     /// The command to run (and its arguments).
@@ -26,9 +26,9 @@ pub struct Args {
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch08-run.md#run-execute>>[init]
+// ~/~ begin <<book/src/ch09-run.md#run-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
-    // ~/~ begin <<book/src/ch08-run.md#run-setup>>[init]
+    // ~/~ begin <<book/src/ch09-run.md#run-setup>>[init]
     let cwd = env::current_dir().into_diagnostic()?;
     let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
     let prefix = std::path::absolute(prefix).into_diagnostic()?;
@@ -47,7 +47,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let current_vars = ActivationVariables::from_env().into_diagnostic()?;
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch08-run.md#run-activation>>[init]
+    // ~/~ begin <<book/src/ch09-run.md#run-activation>>[init]
     let activation_env =
         tokio::task::spawn_blocking(move || activator.run_activation(current_vars, None))
             .await
@@ -55,7 +55,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             .into_diagnostic()?;
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch08-run.md#run-spawn>>[init]
+    // ~/~ begin <<book/src/ch09-run.md#run-spawn>>[init]
     let (program, rest_args) = args.command.split_first().expect("clap ensures non-empty");
     
     let status = Command::new(program)
@@ -69,7 +69,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .into_diagnostic()?;
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch08-run.md#run-exit-code>>[init]
+    // ~/~ begin <<book/src/ch09-run.md#run-exit-code>>[init]
     if !status.success() {
         let code = status.code().unwrap_or(1);
         std::process::exit(code);

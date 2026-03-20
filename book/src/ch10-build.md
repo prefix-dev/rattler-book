@@ -1,4 +1,4 @@
-# Chapter 9: The `build` Command
+# Chapter 10: The `build` Command
 
 We've covered installing packages from existing channels.  Now let's close the
 loop: building a new package from source and publishing it so others can install

@@ -60,10 +60,12 @@ smoke-test-init = { cmd = "rm -rf .tmp-smoke-test && mkdir .tmp-smoke-test && cd
 smoke-test-build-moonjson = { cmd = "cargo run -- build", cwd = "examples/moonjson", depends-on = [
   "build"
 ], description = "Smoke test: moonjson build" }
+smoke-test-lock = { cmd = "cargo test lock", depends-on = ["build"], description = "Smoke test: lock roundtrip" }
 smoke-test = { depends-on = [
   "smoke-test-help",
   "smoke-test-init",
-  "smoke-test-build-moonjson"
+  "smoke-test-build-moonjson",
+  "smoke-test-lock"
 ], description = "Run all smoke tests" }
 
 # Release

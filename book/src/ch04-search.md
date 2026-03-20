@@ -215,7 +215,7 @@ pub struct Args {
 #### Execute
 
 The execute function walks through the same networking setup that the install
-command will reuse in [Chapter 5](ch05-install.md): parse channels, build an HTTP client with
+command will reuse in [Chapter 6](ch06-install.md): parse channels, build an HTTP client with
 authentication middleware, configure the Gateway, then query repodata.
 
 ``` {.rust #search-execute}
@@ -415,7 +415,7 @@ where
 ### Updates to `src/commands/mod.rs` and `src/main.rs`
 
 The `search` module needs to be registered. We add `pub mod search;` to
-`src/commands/mod.rs` (the full file is shown in [Chapter 5](ch05-install.md)) and a `Search`
+`src/commands/mod.rs` (the full file is shown in [Chapter 6](ch06-install.md)) and a `Search`
 variant to the `Command` enum in `src/main.rs` (shown in [Chapter 2](ch02-project-setup.md)).
 
 ## Running `shot search`

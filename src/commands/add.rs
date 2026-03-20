@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch06-add.md#src/commands/add.rs>>[init]
+// ~/~ begin <<book/src/ch05-add.md#src/commands/add.rs>>[init]
 use std::env;
 
 use clap::Parser;
@@ -11,10 +11,6 @@ pub struct Args {
     /// Packages to add, e.g. `luarocks` or `"lua >=5.4"`.
     #[clap(required = true)]
     pub packages: Vec<String>,
-
-    /// Override the target prefix.
-    #[clap(long)]
-    pub prefix: Option<std::path::PathBuf>,
 }
 
 pub async fn execute(args: Args) -> miette::Result<()> {
@@ -24,7 +20,6 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     let mut added = 0usize;
     for pkg in &args.packages {
-        // Split "name version" or just "name".
         let (name, version) = split_spec(pkg);
         manifest
             .dependencies
@@ -38,16 +33,11 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         "{} Added {added} package(s) to `{MANIFEST_FILENAME}`",
         console::style("✔").green()
     );
-
-    // Install immediately.
-    let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
-    std::fs::create_dir_all(&prefix).into_diagnostic()?;
-    let prefix = std::path::absolute(prefix).into_diagnostic()?;
-
-    super::install::install_from_manifest(&manifest, prefix).await
+    println!("  Run `shot install` to apply changes.");
+    Ok(())
 }
 
-// ~/~ begin <<book/src/ch06-add.md#split-spec>>[init]
+// ~/~ begin <<book/src/ch05-add.md#split-spec>>[init]
 fn split_spec(spec: &str) -> (&str, &str) {
     // Respect quoted strings and handle the common "name version" pattern.
     if let Some(pos) = spec.find(|c: char| c.is_whitespace() || c == '=') {

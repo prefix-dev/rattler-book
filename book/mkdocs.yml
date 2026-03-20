@@ -42,11 +42,12 @@ nav:
     - 2. Setting Up the Project: ch02-project-setup.md
     - 3. The init Command: ch03-init.md
     - 4. The search Command: ch04-search.md
-    - 5. The install Command: ch05-install.md
-    - 6. The add Command: ch06-add.md
-    - 7. The shell Command: ch07-shell.md
-    - 8. The run Command: ch08-run.md
-    - 9. The build Command: ch09-build.md
+    - 5. The add Command: ch05-add.md
+    - 6. The install Command: ch06-install.md
+    - 7. The Lock File: ch07-the-lock-file.md
+    - 8. The shell Command: ch08-shell.md
+    - 9. The run Command: ch09-run.md
+    - 10. The build Command: ch10-build.md
   - Part II — Deep Dives:
     - The conda Package Format: deep-dive-package-format.md
     - Virtual Packages: deep-dive-virtual-packages.md

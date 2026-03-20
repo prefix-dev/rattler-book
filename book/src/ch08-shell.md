@@ -1,4 +1,4 @@
-# Chapter 7: The `shell` Command
+# Chapter 8: The `shell` Command
 
 After installing packages into `.env/`, the user needs to be able to
 *use* them.  That means getting `lua`, `luarocks`, and any other installed
@@ -20,7 +20,7 @@ dialect and `--prefix` to override the environment location.
 
 !!! info "`shell` vs `run`"
 
-    `shot shell` and `shot run` ([Chapter 8](ch08-run.md)) represent a design fork.
+    `shot shell` and `shot run` ([Chapter 9](ch09-run.md)) represent a design fork.
     `shell` generates a script the user evaluates, which means it must know the
     user's shell dialect. `run` spawns a child process with the right
     environment variables, which is shell-agnostic but only lasts for one

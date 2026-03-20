@@ -1,4 +1,4 @@
-# Chapter 8: The `run` Command
+# Chapter 9: The `run` Command
 
 `shot shell` requires the user to evaluate shell-specific output. That works for interactive use but creates two problems: it is awkward to use in scripts and CI pipelines, and it ties you to a specific shell dialect. `shot run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether the user runs Bash, Fish, PowerShell, or no shell at all.
 
@@ -24,7 +24,7 @@ environment of a child process.  The trick is:
 
 The child inherits the modified environment; the parent is untouched. This is the same pattern pixi uses for `pixi run`.
 
-This uses the same activation logic from [Chapter 7](ch07-shell.md), but instead of printing a script it captures the resulting environment as a map of variable names to values. Because `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
+This uses the same activation logic from [Chapter 8](ch08-shell.md), but instead of printing a script it captures the resulting environment as a map of variable names to values. Because `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
 
 ## Implementation
 

@@ -1,4 +1,4 @@
-# Chapter 5: The `install` Command
+# Chapter 6: The `install` Command
 
 The install command is the core of moonshot. It reads the manifest, fetches
 repodata (using the same Gateway we set up in [Chapter 4](ch04-search.md)), solves for a
@@ -265,14 +265,14 @@ pub struct Args {
 
 #### The `install_from_manifest` function
 
-This function contains all the install logic and is reused by `shot add` ([Chapter 6](ch06-add.md)).
+This function contains all the install logic. It is also reused by the build
+command ([Chapter 10](ch10-build.md)) to install build-time dependencies.
 
 ``` {.rust #install-from-manifest}
-/// Shared install logic used by both `install` and `add`.
+/// Shared install logic: solve from the manifest, then install into `prefix`.
 ///
-/// Takes a fully-parsed `Manifest` and installs (or updates) the environment
-/// at `prefix`.  Pulling this out into its own function means `add` can call
-/// it after mutating the manifest without duplicating any networking or
+/// Pulling this out into its own function means the build command can call
+/// it to install build dependencies without duplicating any networking or
 /// solving code.
 pub async fn install_from_manifest(
     manifest: &Manifest,
@@ -697,9 +697,8 @@ records the package name, version, build, all installed files, and their hashes.
   virtual packages.
 - The `Installer` computes a transaction (diff) and applies only the changes.
 - Files are hard-linked from the central cache into the prefix.
-- `install_from_manifest` is shared with the `add` command (next chapter).
 
-In the next chapter we implement `shot add`, a thin wrapper that updates the
-manifest and then installs.
+In the next chapter we introduce lock files — a way to record the exact solve
+result so it can be replayed without re-solving.
 
 [libsolv]: https://github.com/openSUSE/libsolv

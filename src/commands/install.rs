@@ -1,5 +1,5 @@
-// ~/~ begin <<book/src/ch05-install.md#src/commands/install.rs>>[init]
-// ~/~ begin <<book/src/ch05-install.md#install-imports>>[init]
+// ~/~ begin <<book/src/ch06-install.md#src/commands/install.rs>>[init]
+// ~/~ begin <<book/src/ch06-install.md#install-imports>>[init]
 use std::collections::HashMap;
 use std::env;
 use std::sync::Arc;
@@ -22,7 +22,7 @@ use crate::manifest::Manifest;
 use crate::progress::with_spinner;
 // ~/~ end
 
-// ~/~ begin <<book/src/ch05-install.md#install-args>>[init]
+// ~/~ begin <<book/src/ch06-install.md#install-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Override the target prefix (where packages are installed).
@@ -33,18 +33,17 @@ pub struct Args {
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch05-install.md#install-from-manifest>>[init]
-/// Shared install logic used by both `install` and `add`.
+// ~/~ begin <<book/src/ch06-install.md#install-from-manifest>>[init]
+/// Shared install logic: solve from the manifest, then install into `prefix`.
 ///
-/// Takes a fully-parsed `Manifest` and installs (or updates) the environment
-/// at `prefix`.  Pulling this out into its own function means `add` can call
-/// it after mutating the manifest without duplicating any networking or
+/// Pulling this out into its own function means the build command can call
+/// it to install build dependencies without duplicating any networking or
 /// solving code.
 pub async fn install_from_manifest(
     manifest: &Manifest,
     prefix: std::path::PathBuf,
 ) -> miette::Result<()> {
-    // ~/~ begin <<book/src/ch05-install.md#install-parse-specs>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-parse-specs>>[init]
     let channel_config =
         ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
     
@@ -65,14 +64,14 @@ pub async fn install_from_manifest(
         .collect::<miette::Result<_>>()?;
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-cache-dir>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-cache-dir>>[init]
     let cache_dir = rattler::default_cache_dir()
         .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
     rattler_cache::ensure_cache_dir(&cache_dir)
         .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-http-client>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-http-client>>[init]
     let raw_client = reqwest::Client::builder()
         .no_gzip() // repodata is already compressed; we handle it ourselves
         .build()
@@ -88,7 +87,7 @@ pub async fn install_from_manifest(
         .build();
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-parse-channels>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-parse-channels>>[init]
     let channels: Vec<Channel> = manifest
         .project
         .channels
@@ -99,7 +98,7 @@ pub async fn install_from_manifest(
         .context("parsing channels")?;
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-gateway-builder>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-gateway-builder>>[init]
     let platform = Platform::current();
     
     let gateway = Gateway::builder()
@@ -116,7 +115,7 @@ pub async fn install_from_manifest(
         .finish();
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-gateway-query>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-gateway-query>>[init]
     let repo_data: Vec<RepoData> = with_spinner(
         "Fetching repodata",
         gateway
@@ -134,7 +133,7 @@ pub async fn install_from_manifest(
     );
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-virtual-packages>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-virtual-packages>>[init]
     let virtual_packages: Vec<GenericVirtualPackage> =
         rattler_virtual_packages::VirtualPackage::detect(
             &rattler_virtual_packages::VirtualPackageOverrides::default(),
@@ -146,12 +145,12 @@ pub async fn install_from_manifest(
         .collect();
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-read-installed>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-read-installed>>[init]
     let installed_packages =
         PrefixRecord::collect_from_prefix::<PrefixRecord>(&prefix).into_diagnostic()?;
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-solver-task>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-solver-task>>[init]
     let locked = installed_packages
         .iter()
         .map(|r| r.repodata_record.clone())
@@ -165,7 +164,7 @@ pub async fn install_from_manifest(
     };
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-solve>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-solve>>[init]
     let start_solve = Instant::now();
     let solution: Vec<RepoDataRecord> =
         with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
@@ -174,7 +173,7 @@ pub async fn install_from_manifest(
             .records;
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-solve-progress>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-solve-progress>>[init]
     println!(
         "  Solved {} packages in {:.1}s",
         console::style(solution.len()).cyan(),
@@ -182,7 +181,7 @@ pub async fn install_from_manifest(
     );
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-installer>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-installer>>[init]
     let start_install = Instant::now();
     let result = Installer::new()
         .with_download_client(client)
@@ -197,7 +196,7 @@ pub async fn install_from_manifest(
         .context("installing packages")?;
     // ~/~ end
 
-    // ~/~ begin <<book/src/ch05-install.md#install-result>>[init]
+    // ~/~ begin <<book/src/ch06-install.md#install-result>>[init]
     if result.transaction.operations.is_empty() {
         println!(
             "{} Environment already up to date",
@@ -217,7 +216,7 @@ pub async fn install_from_manifest(
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch05-install.md#install-execute>>[init]
+// ~/~ begin <<book/src/ch06-install.md#install-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
     let cwd = env::current_dir().into_diagnostic()?;
     let (_, manifest) = Manifest::find_in_dir(&cwd)?;
@@ -232,7 +231,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch05-install.md#install-private-helpers>>[init]
+// ~/~ begin <<book/src/ch06-install.md#install-private-helpers>>[init]
 fn with_spinner_sync<T, F: FnOnce() -> T>(msg: &'static str, f: F) -> T {
     crate::progress::with_spinner_sync(msg, f)
 }

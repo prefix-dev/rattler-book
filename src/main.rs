@@ -5,6 +5,7 @@ use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 
 mod commands;
+mod lock;
 mod manifest;
 mod progress;
 mod recipe;
@@ -31,7 +32,7 @@ enum Command {
     /// Search for packages in a channel.
     Search(commands::search::Args),
 
-    /// Add one or more packages to the manifest and install them.
+    /// Add one or more packages to the manifest.
     Add(commands::add::Args),
 
     /// Install (or update) all packages listed in moonshot.toml.

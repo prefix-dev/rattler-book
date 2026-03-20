@@ -1,5 +1,5 @@
--- ~/~ begin <<book/src/ch09-build.md#src/build_prelude.lua>>[init]
--- ~/~ begin <<book/src/ch09-build.md#prelude-header>>[init]
+-- ~/~ begin <<book/src/ch10-build.md#src/build_prelude.lua>>[init]
+-- ~/~ begin <<book/src/ch10-build.md#prelude-header>>[init]
 -- moonshot build prelude
 -- Automatically sourced before every build.lua by `shot build`.
 --
@@ -31,7 +31,7 @@
 --   log(msg)                  prints "[moonshot] msg" to stderr
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch09-build.md#prelude-globals>>[init]
+-- ~/~ begin <<book/src/ch10-build.md#prelude-globals>>[init]
 -- ── Globals ───────────────────────────────────────────────────────────────────
 
 PREFIX        = os.getenv("PREFIX")        or error("PREFIX not set")
@@ -42,7 +42,7 @@ PKG_VERSION   = os.getenv("PKG_VERSION")   or error("PKG_VERSION not set")
 PKG_BUILD_NUM = tonumber(os.getenv("PKG_BUILD_NUM") or "0")
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch09-build.md#prelude-internal-helpers>>[init]
+-- ~/~ begin <<book/src/ch10-build.md#prelude-internal-helpers>>[init]
 -- ── Internal helpers ──────────────────────────────────────────────────────────
 
 --- Detect the operating system once.  `package.config` always starts with the
@@ -68,7 +68,7 @@ local function q(path)
 end
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch09-build.md#prelude-public-api>>[init]
+-- ~/~ begin <<book/src/ch10-build.md#prelude-public-api>>[init]
 -- ── Public API ────────────────────────────────────────────────────────────────
 
 --- Join path segments with "/", collapsing duplicate slashes.
@@ -131,7 +131,7 @@ function log(msg)
 end
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch09-build.md#prelude-install-helpers>>[init]
+-- ~/~ begin <<book/src/ch10-build.md#prelude-install-helpers>>[init]
 -- ── Install helpers ───────────────────────────────────────────────────────────
 
 --- Return true when `src` is an absolute path on the current platform.
@@ -209,7 +209,7 @@ function install_share(src, name)
 end
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch09-build.md#prelude-done>>[init]
+-- ~/~ begin <<book/src/ch10-build.md#prelude-done>>[init]
 -- ── Done ──────────────────────────────────────────────────────────────────────
 
 log(string.format("Building %s %s (build %d)", PKG_NAME, PKG_VERSION, PKG_BUILD_NUM))

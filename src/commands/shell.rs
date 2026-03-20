@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch07-shell.md#src/commands/shell.rs>>[init]
+// ~/~ begin <<book/src/ch08-shell.md#src/commands/shell.rs>>[init]
 use std::env;
 use std::str::FromStr;
 

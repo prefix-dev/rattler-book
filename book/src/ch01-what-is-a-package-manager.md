@@ -126,12 +126,12 @@ Each command in moonshot touches a different part of the pipeline:
 | `init` | Create a project manifest | (none, just writes a file) |
 | `search` | Query a channel for packages | Discovery |
 | `install` | Fetch, solve, and install | Discovery, Solving, Installation |
-| `add` | Add a dependency and install | Discovery, Solving, Installation |
+| `add` | Add a dependency to the manifest | (none, edits manifest) |
 | `shell` | Activate the environment | (post-installation) |
 | `run` | Run a command inside the environment | (post-installation) |
 | `build` | Create a new `.conda` package | (package creation) |
 
-Each chapter in Part I implements one of these commands from start to finish.
+Each chapter in Part I implements one of these commands (or a supporting module like the lock file) from start to finish.
 
 ## The conda file format
 
@@ -150,13 +150,13 @@ metadata without unpacking the (potentially large) payload.
 
 Using ZIP as the outer container is a common choice. ZIP stores a central directory at the end of the file, which means a reader can seek directly to any inner entry without scanning from the beginning. This is the same reason [Python wheels][wheels] (`.whl`) are ZIP files: a tool can extract just the metadata entry without downloading or reading the full archive.
 
-We'll see both of these inner archives in detail when we build the `shot build` command in [Chapter 9](ch09-build.md).
+We'll see both of these inner archives in detail when we build the `shot build` command in [Chapter 10](ch10-build.md).
 
 ## What moonshot does *not* do
 
 `moonshot` is intentionally minimal.  It does not:
 
-- **Generate lock files.** A real package manager needs them for reproducible installs, but they add file-format design, merge-conflict handling, and a separate resolution step. We discuss the concept in [Chapter 5](ch05-install.md) but skip the implementation.
+- **Generate lock files.** A real package manager needs them for reproducible installs, but they add file-format design, merge-conflict handling, and a separate resolution step. We build the lock file module in [Chapter 7](ch07-the-lock-file.md) using the `rattler_lock` crate, but leave wiring it into `shot install` as an exercise.
 - **Upload to a public channel.** Publishing requires authentication, signing, and a trust model. We build packages locally and index them as a local channel instead.
 - **Handle C extensions.** Supporting compiled extensions means invoking a C compiler, linking against the right libraries, and producing platform-specific artifacts. Our build command targets pure Lua only.
 
@@ -169,6 +169,7 @@ What it *does* do is wire together all the major rattler subsystems:
 | Solver | `rattler_solve` | Pick consistent package versions |
 | Installer | `rattler` | Download, extract, hard-link |
 | Shell activation | `rattler_shell` | Generate activation scripts |
+| Lock files | `rattler_lock` | Persist exact solve results |
 
 ## Summary
 

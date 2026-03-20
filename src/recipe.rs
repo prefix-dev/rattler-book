@@ -1,17 +1,17 @@
-// ~/~ begin <<book/src/ch09-build.md#src/recipe.rs>>[init]
-// ~/~ begin <<book/src/ch09-build.md#recipe-imports>>[init]
+// ~/~ begin <<book/src/ch10-build.md#src/recipe.rs>>[init]
+// ~/~ begin <<book/src/ch10-build.md#recipe-imports>>[init]
 use std::path::{Path, PathBuf};
 
 use miette::{Context, IntoDiagnostic};
 use serde::{Deserialize, Serialize};
 // ~/~ end
 
-// ~/~ begin <<book/src/ch09-build.md#recipe-filename-const>>[init]
+// ~/~ begin <<book/src/ch10-build.md#recipe-filename-const>>[init]
 /// File name we look for in the current directory.
 pub const RECIPE_FILENAME: &str = "recipe.toml";
 // ~/~ end
 
-// ~/~ begin <<book/src/ch09-build.md#recipe-structs>>[init]
+// ~/~ begin <<book/src/ch10-build.md#recipe-structs>>[init]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Recipe {
     pub package: PackageMeta,
@@ -116,7 +116,7 @@ impl Default for BuildConfig {
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch09-build.md#recipe-impl>>[init]
+// ~/~ begin <<book/src/ch10-build.md#recipe-impl>>[init]
 impl Recipe {
     /// Read a `recipe.toml` from a directory.
     #[allow(dead_code)]

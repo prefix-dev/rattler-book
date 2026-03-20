@@ -1,16 +1,14 @@
-# Chapter 6: The `add` Command
+# Chapter 5: The `add` Command
 
 `add` is the most common way to grow your dependency list. It modifies the
-manifest and then installs in one step.
+manifest so you can then run `shot install` to apply the changes.
 
 ## Design
 
 ```console
 $ shot add luarocks
 ✔ Added 1 package(s) to `moonshot.toml`
-⠋ Fetching repodata
-  ...
-✔ Environment updated in 1.8s
+  Run `shot install` to apply changes.
 ```
 
 You can also pass a version constraint inline:
@@ -19,17 +17,11 @@ You can also pass a version constraint inline:
 $ shot add "lua >=5.4"
 ```
 
-The command parses the spec, updates `[dependencies]` in `moonshot.toml`, and
-calls `install_from_manifest` (the same function `shot install` uses).
+The command parses the spec and updates `[dependencies]` in `moonshot.toml`.
+It does not install anything; run `shot install` afterward to fetch and install
+the new packages.
 
 ## Concepts
-
-### Composing commands
-
-`add` reuses `install_from_manifest` from [Chapter 5](ch05-install.md). After updating the
-manifest it calls the same install pipeline, so all the repodata fetching,
-solving, and installation logic stays in one place. This is a common pattern:
-small commands compose by calling shared functions rather than duplicating code.
 
 ### Idempotent manifest updates
 
@@ -54,10 +46,6 @@ pub struct Args {
     /// Packages to add, e.g. `luarocks` or `"lua >=5.4"`.
     #[clap(required = true)]
     pub packages: Vec<String>,
-
-    /// Override the target prefix.
-    #[clap(long)]
-    pub prefix: Option<std::path::PathBuf>,
 }
 
 pub async fn execute(args: Args) -> miette::Result<()> {
@@ -67,7 +55,6 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     let mut added = 0usize;
     for pkg in &args.packages {
-        // Split "name version" or just "name".
         let (name, version) = split_spec(pkg);
         manifest
             .dependencies
@@ -81,13 +68,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         "{} Added {added} package(s) to `{MANIFEST_FILENAME}`",
         console::style("✔").green()
     );
-
-    // Install immediately.
-    let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
-    std::fs::create_dir_all(&prefix).into_diagnostic()?;
-    let prefix = std::path::absolute(prefix).into_diagnostic()?;
-
-    super::install::install_from_manifest(&manifest, prefix).await
+    println!("  Run `shot install` to apply changes.");
+    Ok(())
 }
 
 <<split-spec>>
@@ -119,12 +101,7 @@ from the version constraint.
 ```console
 $ shot add luarocks
 ✔ Added 1 package(s) to `moonshot.toml`
-⠋ Fetching repodata
-  1842 repodata records loaded
-⠋ Solving
-  Solved 6 packages in 0.4s
-✔ Environment updated in 1.8s
-  Activate with:  eval $(shot shell)
+  Run `shot install` to apply changes.
 
 $ cat moonshot.toml
 [project]
@@ -138,9 +115,8 @@ luarocks = "*"
 
 ## Summary
 
-- `add` modifies the manifest and then runs the full install pipeline.
-- `install_from_manifest` is shared between `install` and `add`.
+- `add` modifies the manifest only; run `shot install` to apply changes.
 - Manifest updates are idempotent: adding an existing package is a no-op.
 
-In the next chapter we implement `shot shell`, which generates a shell
-activation script so you can use the installed packages.
+In the next chapter we implement `shot install`, which fetches, solves, and
+installs the packages listed in the manifest.

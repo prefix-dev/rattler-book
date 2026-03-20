@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch05-install.md#src/commands/mod.rs>>[init]
+// ~/~ begin <<book/src/ch06-install.md#src/commands/mod.rs>>[init]
 pub mod add;
 pub mod build;
 pub mod init;

@@ -32,6 +32,7 @@ rattler_repodata_gateway = { version = "0.27.0", default-features = false, featu
 rattler_shell = { version = "0.26.3", default-features = false }
 rattler_solve = { version = "5.0.0", default-features = false, features = ["resolvo"] }
 rattler_index = { version = "0.27.17", default-features = false }
+rattler_lock = { version = "0.27.1", default-features = false }
 rattler_virtual_packages = { version = "2.3.12", default-features = false }
 
 # Async runtime
