@@ -42,9 +42,10 @@
   --rb-header-text: #555;
   --rb-header-weight: 500;
 
-  /* Typography */
-  --rb-body-size: 0.875rem;
-  --rb-body-line-height: 1.25rem;
+  /* Typography — pinned to match Tufte CSS (21px / 30px), independent of
+     Material's responsive root scaling */
+  --rb-body-size: 21px;
+  --rb-body-line-height: 30px;
   --rb-code-size: 0.8em;
   --rb-nav-size: 0.8rem;
 
@@ -188,6 +189,8 @@
 .md-typeset {
   font-size: var(--rb-body-size);
   line-height: var(--rb-body-line-height);
+  -webkit-font-smoothing: auto;
+  -moz-osx-font-smoothing: auto;
 }
 
 .md-typeset p {
@@ -324,6 +327,13 @@
   font-weight: 600;
 }
 
+.md-sidebar__scrollwrap {
+  overflow: hidden;
+}
+.md-sidebar__scrollwrap:hover {
+  overflow-y: auto;
+}
+
 .md-main__inner {
   padding-bottom: var(--rb-footer-spacing);
 }
@@ -344,14 +354,22 @@
   margin-right: auto;
 }
 
-.md-content {
-  margin-left: var(--rb-content-gap);
+@media (min-width: 76.25em) {
+  .md-content {
+    margin-left: var(--rb-content-gap);
+  }
 }
 
 /* ===========================================================================
    Wide screen: margin admonitions
+   When active, left-align the grid and reserve 18rem on the right for notes.
    =========================================================================== */
 @media (min-width: 1400px) {
+  .md-grid {
+    max-width: calc(100vw - 2rem - 18rem);
+    margin-left: 2rem;
+    margin-right: 0;
+  }
   .md-typeset .admonition,
   .md-typeset details {
     float: right;
@@ -412,6 +430,15 @@
   .md-typeset .example > summary { border-bottom-color: #7c4dff; }
   .md-typeset .quote > .admonition-title,
   .md-typeset .quote > summary { border-bottom-color: #9e9e9e; }
+}
+
+/* Re-center on very wide screens where admonitions fit naturally */
+@media (min-width: 2100px) {
+  .md-grid {
+    max-width: var(--rb-grid-max-width);
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 /* ===========================================================================
