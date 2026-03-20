@@ -112,7 +112,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         println!("No packages found matching `{}`.", args.query);
         return Ok(());
     }
-    
+    // ~/~ end
+    // ~/~ begin <<book/src/ch04-search.md#search-results>>[1]
     // Sort by name, then by version descending.
     let mut results: Vec<(String, String)> = seen.into_keys().collect();
     results.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));

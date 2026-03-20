@@ -87,6 +87,7 @@ async fn run_installer(
     solution: Vec<RepoDataRecord>,
     platform: Platform,
 ) -> miette::Result<()> {
+    // ~/~ begin <<book/src/ch07-install.md#parse-install-specs>>[init]
     let match_spec_opts = ParseMatchSpecOptions::default();
     let specs: Vec<MatchSpec> = manifest
         .dependencies
@@ -102,12 +103,13 @@ async fn run_installer(
                 .with_context(|| format!("parsing spec `{spec_str}`"))
         })
         .collect::<miette::Result<_>>()?;
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch07-install.md#install-client>>[init]
     let raw_client = reqwest::Client::builder()
         .no_gzip()
         .build()
         .expect("failed to build HTTP client");
-
+    
     let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
         .with_arc(Arc::new(
             AuthenticationMiddleware::from_env_and_defaults()
@@ -116,10 +118,11 @@ async fn run_installer(
         ))
         .with(rattler_networking::OciMiddleware::new(raw_client))
         .build();
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch07-install.md#run-install>>[init]
     let installed_packages =
         PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix).into_diagnostic()?;
-
+    
     let start_install = Instant::now();
     let result = Installer::new()
         .with_download_client(client)
@@ -132,7 +135,7 @@ async fn run_installer(
         .await
         .into_diagnostic()
         .context("installing packages")?;
-
+    
     if result.transaction.operations.is_empty() {
         println!(
             "{} Environment already up to date",
@@ -146,8 +149,9 @@ async fn run_installer(
         );
         println!("  Activate with:  eval $(shot shell)");
     }
-
+    
     Ok(())
+    // ~/~ end
 }
 // ~/~ end
 // ~/~ end

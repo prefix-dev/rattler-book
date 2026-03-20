@@ -49,9 +49,10 @@ pub async fn resolve_from_manifest(
     manifest: &Manifest,
     locked_packages: Vec<RepoDataRecord>,
 ) -> miette::Result<(Vec<RepoDataRecord>, Vec<Channel>, Platform)> {
+    // ~/~ begin <<book/src/ch06-lock.md#parse-specs>>[init]
     let channel_config =
         ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
-
+    
     let match_spec_opts = ParseMatchSpecOptions::default();
     let specs: Vec<MatchSpec> = manifest
         .dependencies
@@ -67,17 +68,18 @@ pub async fn resolve_from_manifest(
                 .with_context(|| format!("parsing spec `{spec_str}`"))
         })
         .collect::<miette::Result<_>>()?;
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch06-lock.md#setup-client>>[init]
     let cache_dir = rattler::default_cache_dir()
         .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
     rattler_cache::ensure_cache_dir(&cache_dir)
         .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
-
+    
     let raw_client = reqwest::Client::builder()
         .no_gzip()
         .build()
         .expect("failed to build HTTP client");
-
+    
     let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
         .with_arc(Arc::new(
             AuthenticationMiddleware::from_env_and_defaults()
@@ -86,7 +88,8 @@ pub async fn resolve_from_manifest(
         ))
         .with(rattler_networking::OciMiddleware::new(raw_client))
         .build();
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch06-lock.md#fetch-repodata>>[init]
     let channels: Vec<Channel> = manifest
         .project
         .channels
@@ -95,9 +98,9 @@ pub async fn resolve_from_manifest(
         .collect::<Result<_, _>>()
         .into_diagnostic()
         .context("parsing channels")?;
-
+    
     let platform = Platform::current();
-
+    
     let gateway = Gateway::builder()
         .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
         .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
@@ -110,7 +113,7 @@ pub async fn resolve_from_manifest(
             per_channel: HashMap::new(),
         })
         .finish();
-
+    
     let repo_data: Vec<RepoData> = with_spinner(
         "Fetching repodata",
         gateway
@@ -120,13 +123,14 @@ pub async fn resolve_from_manifest(
     .await
     .into_diagnostic()
     .context("fetching repodata")?;
-
+    
     let total_records: usize = repo_data.iter().map(RepoData::len).sum();
     println!(
         "  {} repodata records loaded",
         console::style(total_records).cyan()
     );
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch06-lock.md#run-solver>>[init]
     let virtual_packages: Vec<GenericVirtualPackage> =
         rattler_virtual_packages::VirtualPackage::detect(
             &rattler_virtual_packages::VirtualPackageOverrides::default(),
@@ -136,28 +140,29 @@ pub async fn resolve_from_manifest(
         .into_iter()
         .map(|v| v.into())
         .collect();
-
+    
     let solver_task = SolverTask {
         locked_packages,
         virtual_packages,
         specs,
         ..SolverTask::from_iter(&repo_data)
     };
-
+    
     let start_solve = Instant::now();
     let solution =
         with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
             .into_diagnostic()
             .context("solving dependencies")?
             .records;
-
+    
     println!(
         "  Solved {} packages in {:.1}s",
         console::style(solution.len()).cyan(),
         start_solve.elapsed().as_secs_f64()
     );
-
+    
     Ok((solution, channels, platform))
+    // ~/~ end
 }
 // ~/~ end
 

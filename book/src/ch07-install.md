@@ -243,68 +243,89 @@ async fn run_installer(
     solution: Vec<RepoDataRecord>,
     platform: Platform,
 ) -> miette::Result<()> {
-    let match_spec_opts = ParseMatchSpecOptions::default();
-    let specs: Vec<MatchSpec> = manifest
-        .dependencies
-        .iter()
-        .map(|(name, version)| {
-            let spec_str = if version == "*" {
-                name.clone()
-            } else {
-                format!("{name} {version}")
-            };
-            MatchSpec::from_str(&spec_str, match_spec_opts)
-                .into_diagnostic()
-                .with_context(|| format!("parsing spec `{spec_str}`"))
-        })
-        .collect::<miette::Result<_>>()?;
-
-    let raw_client = reqwest::Client::builder()
-        .no_gzip()
-        .build()
-        .expect("failed to build HTTP client");
-
-    let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
-        .with_arc(Arc::new(
-            AuthenticationMiddleware::from_env_and_defaults()
-                .into_diagnostic()
-                .context("setting up auth middleware")?,
-        ))
-        .with(rattler_networking::OciMiddleware::new(raw_client))
-        .build();
-
-    let installed_packages =
-        PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix).into_diagnostic()?;
-
-    let start_install = Instant::now();
-    let result = Installer::new()
-        .with_download_client(client)
-        .with_target_platform(platform)
-        .with_installed_packages(installed_packages)
-        .with_execute_link_scripts(true)
-        .with_requested_specs(specs)
-        .with_reporter(IndicatifReporter::builder().finish())
-        .install(prefix, solution)
-        .await
-        .into_diagnostic()
-        .context("installing packages")?;
-
-    if result.transaction.operations.is_empty() {
-        println!(
-            "{} Environment already up to date",
-            console::style("✔").green()
-        );
-    } else {
-        println!(
-            "{} Environment updated in {:.1}s",
-            console::style("✔").green(),
-            start_install.elapsed().as_secs_f64()
-        );
-        println!("  Activate with:  eval $(shot shell)");
-    }
-
-    Ok(())
+    <<parse-install-specs>>
+    <<install-client>>
+    <<run-install>>
 }
+```
+
+We re-parse the manifest specs so the installer knows which packages were
+directly requested (as opposed to transitive dependencies pulled in by the
+solver).
+
+``` {.rust #parse-install-specs}
+let match_spec_opts = ParseMatchSpecOptions::default();
+let specs: Vec<MatchSpec> = manifest
+    .dependencies
+    .iter()
+    .map(|(name, version)| {
+        let spec_str = if version == "*" {
+            name.clone()
+        } else {
+            format!("{name} {version}")
+        };
+        MatchSpec::from_str(&spec_str, match_spec_opts)
+            .into_diagnostic()
+            .with_context(|| format!("parsing spec `{spec_str}`"))
+    })
+    .collect::<miette::Result<_>>()?;
+```
+
+The HTTP client follows the same pattern as [Chapter 4](ch04-search.md) and
+[Chapter 6](ch06-lock.md) — `reqwest` with authentication middleware.
+
+``` {.rust #install-client}
+let raw_client = reqwest::Client::builder()
+    .no_gzip()
+    .build()
+    .expect("failed to build HTTP client");
+
+let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
+    .with_arc(Arc::new(
+        AuthenticationMiddleware::from_env_and_defaults()
+            .into_diagnostic()
+            .context("setting up auth middleware")?,
+    ))
+    .with(rattler_networking::OciMiddleware::new(raw_client))
+    .build();
+```
+
+Finally we scan the prefix for already-installed packages, build a minimal
+transaction, and run the `Installer`. The installer shows per-package progress
+bars via `IndicatifReporter`.
+
+``` {.rust #run-install}
+let installed_packages =
+    PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix).into_diagnostic()?;
+
+let start_install = Instant::now();
+let result = Installer::new()
+    .with_download_client(client)
+    .with_target_platform(platform)
+    .with_installed_packages(installed_packages)
+    .with_execute_link_scripts(true)
+    .with_requested_specs(specs)
+    .with_reporter(IndicatifReporter::builder().finish())
+    .install(prefix, solution)
+    .await
+    .into_diagnostic()
+    .context("installing packages")?;
+
+if result.transaction.operations.is_empty() {
+    println!(
+        "{} Environment already up to date",
+        console::style("✔").green()
+    );
+} else {
+    println!(
+        "{} Environment updated in {:.1}s",
+        console::style("✔").green(),
+        start_install.elapsed().as_secs_f64()
+    );
+    println!("  Activate with:  eval $(shot shell)");
+}
+
+Ok(())
 ```
 
 `IndicatifReporter` is a rattler-provided reporter that shows per-package

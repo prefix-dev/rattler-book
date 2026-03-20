@@ -328,8 +328,8 @@ let repo_data: Vec<RepoData> = with_spinner(
 #### Result formatting
 
 The query returns a `Vec<RepoData>`, one per channel/platform combination. We
-flatten the records, deduplicate by (name, version), sort alphabetically, and
-print only the latest version per package name.
+flatten the records, deduplicate by (name, version), and bail early when the
+query matched nothing.
 
 ``` {.rust #search-results}
 // Collect and deduplicate results by (name, version), keeping the latest.
@@ -347,7 +347,11 @@ if seen.is_empty() {
     println!("No packages found matching `{}`.", args.query);
     return Ok(());
 }
+```
 
+Next we sort alphabetically and show only the latest version per package name.
+
+``` {.rust #search-results}
 // Sort by name, then by version descending.
 let mut results: Vec<(String, String)> = seen.into_keys().collect();
 results.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));

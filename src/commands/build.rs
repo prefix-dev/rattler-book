@@ -38,27 +38,29 @@ pub struct Args {
 
 // ~/~ begin <<book/src/ch10-build.md#build-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
+    // ~/~ begin <<book/src/ch10-build.md#parse-recipe>>[init]
     let cwd = env::current_dir().into_diagnostic()?;
-
+    
     let recipe_path = args
         .recipe
         .clone()
         .unwrap_or_else(|| cwd.join(RECIPE_FILENAME));
-
+    
     let recipe = Recipe::from_path(&recipe_path)?;
     let recipe_dir = recipe_path.parent().unwrap_or(&cwd).to_path_buf();
-
+    
     println!(
         "Building {} {} (build {})",
         console::style(&recipe.package.name).cyan(),
         recipe.package.version,
         recipe.build_string(),
     );
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch10-build.md#setup-dirs>>[init]
     let work_dir = tempfile::tempdir()
         .into_diagnostic()
         .context("creating temporary build directory")?;
-
+    
     let build_prefix = work_dir.path().join("build_prefix");
     let install_prefix = work_dir.path().join("install_prefix");
     std::fs::create_dir_all(&build_prefix)
@@ -67,7 +69,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     std::fs::create_dir_all(&install_prefix)
         .into_diagnostic()
         .context("creating install_prefix")?;
-
+    
     // Resolve the source directory.
     let src_dir = {
         let p = PathBuf::from(&recipe.source.path);
@@ -80,13 +82,14 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let src_dir = std::path::absolute(src_dir)
         .into_diagnostic()
         .context("resolving SRC_DIR")?;
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch10-build.md#install-deps>>[init]
     let mut build_deps = recipe.requirements.build.clone();
     // Always ensure lua is available in the build environment.
     if !build_deps.iter().any(|d| d.starts_with("lua")) {
         build_deps.push("lua >=5.1".to_string());
     }
-
+    
     if !build_deps.is_empty() {
         println!(
             "  {} Installing {} build dependencies…",
@@ -111,7 +114,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         };
         install_from_manifest(&build_manifest, build_prefix.clone()).await?;
     }
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch10-build.md#run-script-call>>[init]
     let script_path = recipe_dir.join(&recipe.build.script);
     if !script_path.exists() {
         miette::bail!(
@@ -120,15 +124,15 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             script_path.display()
         );
     }
-
+    
     let lua_bin = find_lua(&build_prefix)?;
-
+    
     println!(
         "  {} Running build script `{}`",
         console::style("→").blue(),
         recipe.build.script
     );
-
+    
     run_build_script(
         &lua_bin,
         &script_path,
@@ -138,23 +142,25 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         &recipe,
     )
     .await?;
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[init]
     write_package_metadata(&install_prefix, &recipe).context("writing package metadata")?;
-
+    
     let output_dir = std::path::absolute(&args.output_dir)
         .into_diagnostic()
         .context("resolving output directory")?;
-
+    
     let subdir_dir = output_dir.join(recipe.subdir());
     std::fs::create_dir_all(&subdir_dir)
         .into_diagnostic()
         .context("creating output subdir")?;
-
+    
     let filename = recipe.package_filename();
     let output_path = subdir_dir.join(&filename);
-
+    
     pack_conda(&install_prefix, &output_path, &recipe)?;
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[1]
     println!(
         "  {} Indexing channel at {}",
         console::style("→").blue(),
@@ -173,7 +179,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     .await
     .map_err(|e| miette::miette!("{e:#}"))
     .context("indexing output channel")?;
-
+    
     println!(
         "{} Built {}",
         console::style("✔").green(),
@@ -181,8 +187,9 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     );
     println!("  package → {}", output_path.display());
     println!("  channel → {}", output_dir.display());
-
+    
     Ok(())
+    // ~/~ end
 }
 // ~/~ end
 
@@ -199,15 +206,16 @@ async fn run_build_script(
     build_prefix: &Path,
     recipe: &Recipe,
 ) -> miette::Result<()> {
+    // ~/~ begin <<book/src/ch10-build.md#create-wrapper>>[init]
     let wrapper_dir = tempfile::tempdir()
         .into_diagnostic()
         .context("creating wrapper temp dir")?;
-
+    
     let prelude_path = wrapper_dir.path().join("prelude.lua");
     std::fs::write(&prelude_path, BUILD_PRELUDE)
         .into_diagnostic()
         .context("writing build prelude")?;
-
+    
     // The wrapper dofile()s the prelude then the user script.
     let wrapper_src = format!(
         "dofile({prelude:?})\ndofile({script:?})\n",
@@ -218,7 +226,8 @@ async fn run_build_script(
     std::fs::write(&wrapper_path, &wrapper_src)
         .into_diagnostic()
         .context("writing build wrapper")?;
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch10-build.md#exec-lua>>[init]
     // Prepend build_prefix bin directories to PATH so the script can call
     // any installed build tools (luarocks, make, etc.).
     // On Windows, conda puts binaries in Library/bin as well as bin.
@@ -236,7 +245,7 @@ async fn run_build_script(
             build_prefix.join("bin").display(),
         )
     };
-
+    
     let status = tokio::process::Command::new(lua_bin)
         .arg(&wrapper_path)
         .env("PREFIX", install_prefix)
@@ -250,7 +259,7 @@ async fn run_build_script(
         .await
         .into_diagnostic()
         .context("launching Lua interpreter")?;
-
+    
     if !status.success() {
         miette::bail!(
             "Build script exited with status {}",
@@ -258,28 +267,30 @@ async fn run_build_script(
         );
     }
     Ok(())
+    // ~/~ end
 }
 // ~/~ end
 
 // ~/~ begin <<book/src/ch10-build.md#build-write-metadata>>[init]
 fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Result<()> {
+    // ~/~ begin <<book/src/ch10-build.md#create-index-json>>[init]
     let info_dir = install_prefix.join("info");
     std::fs::create_dir_all(&info_dir)
         .into_diagnostic()
         .context("creating info/ directory")?;
-
+    
     let noarch = if recipe.build.noarch {
         NoArchType::generic()
     } else {
         NoArchType::default()
     };
-
+    
     let subdir = if recipe.build.noarch {
         Some("noarch".to_string())
     } else {
         Some(rattler_conda_types::Platform::current().to_string())
     };
-
+    
     let index = IndexJson {
         name: PackageName::from_str(&recipe.package.name)
             .into_diagnostic()
@@ -306,7 +317,8 @@ fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Res
             rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now()),
         ),
     };
-
+    // ~/~ end
+    // ~/~ begin <<book/src/ch10-build.md#write-meta-files>>[init]
     let index_path = install_prefix.join(IndexJson::package_path());
     let index_json = serde_json::to_string_pretty(&index)
         .into_diagnostic()
@@ -314,9 +326,9 @@ fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Res
     std::fs::write(&index_path, index_json)
         .into_diagnostic()
         .context("writing info/index.json")?;
-
+    
     let paths = collect_paths_json(install_prefix).context("building paths.json")?;
-
+    
     let paths_path = install_prefix.join(PathsJson::package_path());
     let paths_json = serde_json::to_string_pretty(&paths)
         .into_diagnostic()
@@ -324,8 +336,9 @@ fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Res
     std::fs::write(&paths_path, paths_json)
         .into_diagnostic()
         .context("writing info/paths.json")?;
-
+    
     Ok(())
+    // ~/~ end
 }
 // ~/~ end
 

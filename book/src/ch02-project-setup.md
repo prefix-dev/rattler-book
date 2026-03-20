@@ -16,6 +16,15 @@ cd moonshot
 Open `Cargo.toml` and add the following.  We'll explain each crate as we use it.
 
 ``` {.toml file=Cargo.toml}
+<<cargo-header>>
+
+<<cargo-deps>>
+```
+
+The header declares the package metadata, binary name, and TLS feature flags
+that propagate `rustls-tls` through reqwest and the rattler crates.
+
+``` {.toml #cargo-header}
 [package]
 name = "moonshot"
 version = "0.1.0"
@@ -36,7 +45,12 @@ rustls-tls = [
     "rattler_networking/rustls-tls",
     "rattler_repodata_gateway/rustls-tls",
 ]
+```
 
+The dependencies start with the core rattler crates — these implement the conda
+specification. Each is fine-grained so you only pull in what you need.
+
+``` {.toml #cargo-deps}
 [dependencies]
 # Core rattler crates
 rattler = { version = "0.40.0", default-features = false, features = ["indicatif"] }
@@ -51,6 +65,12 @@ rattler_solve = { version = "5.0.0", default-features = false, features = ["reso
 rattler_index = { version = "0.27.17", default-features = false }
 rattler_lock = { version = "0.27.1", default-features = false }
 rattler_virtual_packages = { version = "2.3.12", default-features = false }
+```
+
+The remaining dependencies are general-purpose infrastructure: `clap` for CLI
+parsing, `tokio` for async I/O, `reqwest` for HTTP, and so on.
+
+``` {.toml #cargo-deps}
 
 # Async runtime
 tokio = { version = "1", features = ["rt-multi-thread", "macros", "process"] }

@@ -279,126 +279,154 @@ pub async fn resolve_from_manifest(
     manifest: &Manifest,
     locked_packages: Vec<RepoDataRecord>,
 ) -> miette::Result<(Vec<RepoDataRecord>, Vec<Channel>, Platform)> {
-    let channel_config =
-        ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
-
-    let match_spec_opts = ParseMatchSpecOptions::default();
-    let specs: Vec<MatchSpec> = manifest
-        .dependencies
-        .iter()
-        .map(|(name, version)| {
-            let spec_str = if version == "*" {
-                name.clone()
-            } else {
-                format!("{name} {version}")
-            };
-            MatchSpec::from_str(&spec_str, match_spec_opts)
-                .into_diagnostic()
-                .with_context(|| format!("parsing spec `{spec_str}`"))
-        })
-        .collect::<miette::Result<_>>()?;
-
-    let cache_dir = rattler::default_cache_dir()
-        .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
-    rattler_cache::ensure_cache_dir(&cache_dir)
-        .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
-
-    let raw_client = reqwest::Client::builder()
-        .no_gzip()
-        .build()
-        .expect("failed to build HTTP client");
-
-    let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
-        .with_arc(Arc::new(
-            AuthenticationMiddleware::from_env_and_defaults()
-                .into_diagnostic()
-                .context("setting up auth middleware")?,
-        ))
-        .with(rattler_networking::OciMiddleware::new(raw_client))
-        .build();
-
-    let channels: Vec<Channel> = manifest
-        .project
-        .channels
-        .iter()
-        .map(|s| Channel::from_str(s, &channel_config))
-        .collect::<Result<_, _>>()
-        .into_diagnostic()
-        .context("parsing channels")?;
-
-    let platform = Platform::current();
-
-    let gateway = Gateway::builder()
-        .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
-        .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
-        .with_client(client)
-        .with_channel_config(rattler_repodata_gateway::ChannelConfig {
-            default: SourceConfig {
-                sharded_enabled: true,
-                ..SourceConfig::default()
-            },
-            per_channel: HashMap::new(),
-        })
-        .finish();
-
-    let repo_data: Vec<RepoData> = with_spinner(
-        "Fetching repodata",
-        gateway
-            .query(channels.clone(), [platform, Platform::NoArch], specs.clone())
-            .recursive(true),
-    )
-    .await
-    .into_diagnostic()
-    .context("fetching repodata")?;
-
-    let total_records: usize = repo_data.iter().map(RepoData::len).sum();
-    println!(
-        "  {} repodata records loaded",
-        console::style(total_records).cyan()
-    );
-
-    let virtual_packages: Vec<GenericVirtualPackage> =
-        rattler_virtual_packages::VirtualPackage::detect(
-            &rattler_virtual_packages::VirtualPackageOverrides::default(),
-        )
-        .into_diagnostic()
-        .context("detecting virtual packages")?
-        .into_iter()
-        .map(|v| v.into())
-        .collect();
-
-    let solver_task = SolverTask {
-        locked_packages,
-        virtual_packages,
-        specs,
-        ..SolverTask::from_iter(&repo_data)
-    };
-
-    let start_solve = Instant::now();
-    let solution =
-        with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
-            .into_diagnostic()
-            .context("solving dependencies")?
-            .records;
-
-    println!(
-        "  Solved {} packages in {:.1}s",
-        console::style(solution.len()).cyan(),
-        start_solve.elapsed().as_secs_f64()
-    );
-
-    Ok((solution, channels, platform))
+    <<parse-specs>>
+    <<setup-client>>
+    <<fetch-repodata>>
+    <<run-solver>>
 }
 ```
 
-The function follows the same gateway and HTTP client pattern introduced in
-[Chapter 4](ch04-search.md)'s search command. The key differences are
-`.recursive(true)` on the query (to fetch transitive dependencies) and the
-solver step at the end.
+##### Parsing match specs
 
-`locked_packages` allows callers to pass records from an existing (stale) lock
-file. The solver treats them as preferences, not hard constraints. On the first
-run with no lock, callers pass an empty vector.
+We convert each `(name, version)` pair from the manifest into a `MatchSpec`,
+the same way the search command does in [Chapter 4](ch04-search.md).
+
+``` {.rust #parse-specs}
+let channel_config =
+    ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
+
+let match_spec_opts = ParseMatchSpecOptions::default();
+let specs: Vec<MatchSpec> = manifest
+    .dependencies
+    .iter()
+    .map(|(name, version)| {
+        let spec_str = if version == "*" {
+            name.clone()
+        } else {
+            format!("{name} {version}")
+        };
+        MatchSpec::from_str(&spec_str, match_spec_opts)
+            .into_diagnostic()
+            .with_context(|| format!("parsing spec `{spec_str}`"))
+    })
+    .collect::<miette::Result<_>>()?;
+```
+
+##### Setting up the HTTP client
+
+The HTTP client and authentication middleware follow the same pattern from
+[Chapter 4](ch04-search.md). See that chapter for a detailed walkthrough.
+
+``` {.rust #setup-client}
+let cache_dir = rattler::default_cache_dir()
+    .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
+rattler_cache::ensure_cache_dir(&cache_dir)
+    .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
+
+let raw_client = reqwest::Client::builder()
+    .no_gzip()
+    .build()
+    .expect("failed to build HTTP client");
+
+let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
+    .with_arc(Arc::new(
+        AuthenticationMiddleware::from_env_and_defaults()
+            .into_diagnostic()
+            .context("setting up auth middleware")?,
+    ))
+    .with(rattler_networking::OciMiddleware::new(raw_client))
+    .build();
+```
+
+##### Fetching repodata
+
+Next we parse channels, set up the Gateway, and query repodata. The key
+difference from the search command is `.recursive(true)` — we need transitive
+dependencies, not just direct matches.
+
+``` {.rust #fetch-repodata}
+let channels: Vec<Channel> = manifest
+    .project
+    .channels
+    .iter()
+    .map(|s| Channel::from_str(s, &channel_config))
+    .collect::<Result<_, _>>()
+    .into_diagnostic()
+    .context("parsing channels")?;
+
+let platform = Platform::current();
+
+let gateway = Gateway::builder()
+    .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
+    .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
+    .with_client(client)
+    .with_channel_config(rattler_repodata_gateway::ChannelConfig {
+        default: SourceConfig {
+            sharded_enabled: true,
+            ..SourceConfig::default()
+        },
+        per_channel: HashMap::new(),
+    })
+    .finish();
+
+let repo_data: Vec<RepoData> = with_spinner(
+    "Fetching repodata",
+    gateway
+        .query(channels.clone(), [platform, Platform::NoArch], specs.clone())
+        .recursive(true),
+)
+.await
+.into_diagnostic()
+.context("fetching repodata")?;
+
+let total_records: usize = repo_data.iter().map(RepoData::len).sum();
+println!(
+    "  {} repodata records loaded",
+    console::style(total_records).cyan()
+);
+```
+
+##### Running the solver
+
+Finally we detect virtual packages (like `__linux` or `__osx`), build a
+`SolverTask`, and run the solver. `locked_packages` allows callers to pass
+records from an existing (stale) lock file — the solver treats them as
+preferences, not hard constraints. On the first run with no lock, callers pass
+an empty vector.
+
+``` {.rust #run-solver}
+let virtual_packages: Vec<GenericVirtualPackage> =
+    rattler_virtual_packages::VirtualPackage::detect(
+        &rattler_virtual_packages::VirtualPackageOverrides::default(),
+    )
+    .into_diagnostic()
+    .context("detecting virtual packages")?
+    .into_iter()
+    .map(|v| v.into())
+    .collect();
+
+let solver_task = SolverTask {
+    locked_packages,
+    virtual_packages,
+    specs,
+    ..SolverTask::from_iter(&repo_data)
+};
+
+let start_solve = Instant::now();
+let solution =
+    with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
+        .into_diagnostic()
+        .context("solving dependencies")?
+        .records;
+
+println!(
+    "  Solved {} packages in {:.1}s",
+    console::style(solution.len()).cyan(),
+    start_solve.elapsed().as_secs_f64()
+);
+
+Ok((solution, channels, platform))
+```
 
 #### Sync spinner helper
 
