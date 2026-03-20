@@ -28,7 +28,7 @@ mkdocs-panzoom-plugin = ">=0.5"
 
 [feature.book.tasks]
 book-build = { cmd = "mkdocs build", cwd = "book" }
-book-serve = { cmd = "mkdocs serve --watch-theme -w src/stylesheets", cwd = "book" }
+book-serve = { cmd = "mkdocs serve --livereload --watch-theme -w src/stylesheets", cwd = "book" }
 _tangle = { cmd = "entangled tangle --force", description = "Extract code blocks from the book into source files" }
 stitch = { cmd = "entangled stitch", description = "Update the book from source file edits" }
 watch = { cmd = "entangled watch", description = "Watch for changes and keep book and source files in sync" }
