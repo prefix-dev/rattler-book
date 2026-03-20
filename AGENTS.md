@@ -53,4 +53,15 @@ the `<<references>>` with literal expanded code, destroying the book structure.
 CI runs a stitch roundtrip check after tangle. If it fails, the usual fix is to
 ensure you edited the **book** (not just the source) and ran tangle.
 
-Make sure to run:
+
+# Pixi
+We are using the package manager pixi throughout the code and the book
+<Important>
+Try to use pixi before trying anything else
+</Important>
+<Important>
+You do usually not need to add `-e` for tasks, this is automatically inferred if possible
+</Important>
+
+# Debugging HTML Book output
+Try and use `playwright-cli` for debugging the queries regarding the web-page. There are corresponding installed skills.
