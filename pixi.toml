@@ -22,7 +22,7 @@ python = ">=3.11"
 mkdocs-material = ">=9.0"
 mkdocs-redirects = ">=1.2"
 entangled-cli = ">=2.0"
-mkdocs-entangled-plugin = { path = "../mkdocs-plugin", editable = true }
+mkdocs-entangled-plugin = { git = "https://github.com/tdejager/mkdocs-plugin.git" }
 mkdocs-print-site-plugin = ">=2.0"
 mkdocs-panzoom-plugin = ">=0.5"
 
