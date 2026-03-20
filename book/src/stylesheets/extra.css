@@ -595,18 +595,33 @@
   margin-bottom: 0;
 }
 
-/* Directory entries */
-.file-tree li.dir > span::before {
-  content: "📁 ";
-  font-style: normal;
-  margin-right: 0.15em;
+/* Shared icon base */
+.file-tree li.dir > span::before,
+.file-tree li.file > span::before {
+  content: "";
+  display: inline-block;
+  width: 1.2em;
+  height: 1.2em;
+  vertical-align: -0.2em;
+  margin-right: 0.35em;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
 }
 
-/* File entries */
+/* Directory icon — flat folder */
+.file-tree li.dir > span::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23e8a854'%3E%3Cpath d='M2 4.5A1.5 1.5 0 013.5 3h3.29a1.5 1.5 0 011.06.44l1.3 1.3a.5.5 0 00.35.14h4a1.5 1.5 0 011.5 1.5v.62H3.5A1.5 1.5 0 002 5.88V4.5z'/%3E%3Cpath d='M3.5 7A1.5 1.5 0 002 8.5v5A1.5 1.5 0 003.5 15h11a1.5 1.5 0 001.5-1.5v-6A1.5 1.5 0 0014.5 6h-4a.5.5 0 01-.35-.15l-1.3-1.3A1.5 1.5 0 007.79 4H3.5A1.5 1.5 0 002 5.5V7h1.5z'/%3E%3C/svg%3E");
+}
+
+/* File icon — flat document */
 .file-tree li.file > span::before {
-  content: "📄 ";
-  font-style: normal;
-  margin-right: 0.15em;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23888'%3E%3Cpath fill-rule='evenodd' d='M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z' clip-rule='evenodd'/%3E%3C/svg%3E");
+}
+
+/* Dark mode: lighten file icon */
+[data-md-color-scheme="slate"] .file-tree li.file > span::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23999'%3E%3Cpath fill-rule='evenodd' d='M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z' clip-rule='evenodd'/%3E%3C/svg%3E");
 }
 
 /* Entry name */
