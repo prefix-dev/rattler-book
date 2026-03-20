@@ -226,10 +226,8 @@
 }
 
 .md-typeset h4 {
-  font-weight: 600;
+  font-weight: 400;
   font-size: var(--rb-h4-size);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   margin-top: 1.4em;
   margin-bottom: 0.4em;
 }
