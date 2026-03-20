@@ -9,6 +9,7 @@ mod lock;
 mod manifest;
 mod progress;
 mod recipe;
+mod resolve;
 // ~/~ end
 
 // ~/~ begin <<book/src/ch02-project-setup.md#main-cli-struct>>[init]
@@ -37,6 +38,9 @@ enum Command {
 
     /// Install (or update) all packages listed in moonshot.toml.
     Install(commands::install::Args),
+
+    /// Resolve dependencies and write moonshot.lock.
+    Lock(commands::lock::Args),
 
     /// Print a shell activation script.
     Shell(commands::shell::Args),
@@ -91,6 +95,7 @@ async fn async_main() -> miette::Result<()> {
         Command::Search(args) => commands::search::execute(args).await,
         Command::Add(args) => commands::add::execute(args).await,
         Command::Install(args) => commands::install::execute(args).await,
+        Command::Lock(args) => commands::lock::execute(args).await,
         Command::Shell(args) => commands::shell::execute(args),
         Command::Run(args) => commands::run::execute(args).await,
         Command::Build(args) => commands::build::execute(args).await,

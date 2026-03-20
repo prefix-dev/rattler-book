@@ -24,7 +24,7 @@ environment of a child process.  The trick is:
 
 The child inherits the modified environment; the parent is untouched. This is the same pattern pixi uses for `pixi run`.
 
-This uses the same activation logic from [Chapter 8](ch08-shell.md), but instead of printing a script it captures the resulting environment as a map of variable names to values. Because `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
+This uses the same activation logic from [Chapter 8](ch08-shell-hook.md), but instead of printing a script it captures the resulting environment as a map of variable names to values. Because `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
 
 ## Implementation
 

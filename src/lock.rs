@@ -1,6 +1,6 @@
 #![allow(dead_code)]
-// ~/~ begin <<book/src/ch07-the-lock-file.md#src/lock.rs>>[init]
-// ~/~ begin <<book/src/ch07-the-lock-file.md#lock-imports>>[init]
+// ~/~ begin <<book/src/ch06-lock.md#src/lock.rs>>[init]
+// ~/~ begin <<book/src/ch06-lock.md#lock-imports>>[init]
 use std::path::Path;
 
 use miette::{Context, IntoDiagnostic};
@@ -8,12 +8,12 @@ use rattler_conda_types::{Channel, Platform, RepoDataRecord};
 use rattler_lock::LockFile;
 // ~/~ end
 
-// ~/~ begin <<book/src/ch07-the-lock-file.md#lock-filename>>[init]
+// ~/~ begin <<book/src/ch06-lock.md#lock-filename>>[init]
 /// The name of the lock file written alongside `moonshot.toml`.
 pub const LOCK_FILENAME: &str = "moonshot.lock";
 // ~/~ end
 
-// ~/~ begin <<book/src/ch07-the-lock-file.md#lock-is-fresh>>[init]
+// ~/~ begin <<book/src/ch06-lock.md#lock-is-fresh>>[init]
 /// Returns `true` when the lock file exists and is newer than the manifest.
 pub fn is_lock_fresh(lock_path: &Path, manifest_path: &Path) -> bool {
     let (Ok(lock_meta), Ok(manifest_meta)) = (
@@ -31,7 +31,7 @@ pub fn is_lock_fresh(lock_path: &Path, manifest_path: &Path) -> bool {
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch07-the-lock-file.md#lock-read>>[init]
+// ~/~ begin <<book/src/ch06-lock.md#lock-read>>[init]
 /// Read a lock file and extract the conda records for the given platform.
 ///
 /// Returns the exact packages that were solved last time, ready to be
@@ -58,7 +58,7 @@ pub fn read_lock_file(
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch07-the-lock-file.md#lock-write>>[init]
+// ~/~ begin <<book/src/ch06-lock.md#lock-write>>[init]
 /// Write a lock file containing the solved packages.
 ///
 /// The lock captures the exact solution so that future installs can skip
@@ -95,7 +95,7 @@ pub fn write_lock_file(
 }
 // ~/~ end
 
-// ~/~ begin <<book/src/ch07-the-lock-file.md#lock-tests>>[init]
+// ~/~ begin <<book/src/ch06-lock.md#lock-tests>>[init]
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -119,14 +119,44 @@ src/
 ├── manifest.rs      ← moonshot.toml parser
 ├── recipe.rs        ← recipe.toml parser
 ├── progress.rs      ← spinner helpers
+├── resolve.rs       ← shared dependency resolver
 └── commands/
     ├── mod.rs       ← shared helpers (prefix_dir)
     ├── init.rs
     ├── add.rs
     ├── install.rs
+    ├── lock.rs
     ├── shell.rs
     ├── run.rs
     └── build.rs
+```
+
+### Subcommand modules
+
+The `src/commands/mod.rs` file declares all subcommand modules and provides
+the shared `prefix_dir` helper that every command uses to locate the
+environment:
+
+``` {.rust file=src/commands/mod.rs}
+pub mod add;
+pub mod build;
+pub mod init;
+pub mod install;
+pub mod lock;
+pub mod run;
+pub mod search;
+pub mod shell;
+
+use std::path::{Path, PathBuf};
+
+/// Return the path to the conda prefix managed by `moonshot`.
+///
+/// By convention we store the environment at `.env/` relative to the
+/// project root (the directory that contains `moonshot.toml`).  This is similar
+/// to how pixi stores its environments in `.pixi/envs/`.
+pub fn prefix_dir(project_root: &Path) -> PathBuf {
+    project_root.join(".env")
+}
 ```
 
 The full `main.rs` is assembled from four named sections:
@@ -159,6 +189,7 @@ mod lock;
 mod manifest;
 mod progress;
 mod recipe;
+mod resolve;
 ```
 
 ### The CLI struct and subcommands
@@ -193,6 +224,9 @@ enum Command {
 
     /// Install (or update) all packages listed in moonshot.toml.
     Install(commands::install::Args),
+
+    /// Resolve dependencies and write moonshot.lock.
+    Lock(commands::lock::Args),
 
     /// Print a shell activation script.
     Shell(commands::shell::Args),
@@ -271,6 +305,7 @@ async fn async_main() -> miette::Result<()> {
         Command::Search(args) => commands::search::execute(args).await,
         Command::Add(args) => commands::add::execute(args).await,
         Command::Install(args) => commands::install::execute(args).await,
+        Command::Lock(args) => commands::lock::execute(args).await,
         Command::Shell(args) => commands::shell::execute(args),
         Command::Run(args) => commands::run::execute(args).await,
         Command::Build(args) => commands::build::execute(args).await,

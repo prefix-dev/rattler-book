@@ -118,5 +118,6 @@ luarocks = "*"
 - `add` modifies the manifest only; run `shot install` to apply changes.
 - Manifest updates are idempotent: adding an existing package is a no-op.
 
-In the next chapter we implement `shot install`, which fetches, solves, and
-installs the packages listed in the manifest.
+In the next chapter we implement `shot lock`, which resolves the packages
+listed in the manifest and records the exact solution. `shot install` follows
+in Chapter 7.

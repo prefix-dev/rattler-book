@@ -214,8 +214,8 @@ pub struct Args {
 
 #### Execute
 
-The execute function walks through the same networking setup that the install
-command will reuse in [Chapter 6](ch06-install.md): parse channels, build an HTTP client with
+The execute function walks through the same networking setup that
+`resolve_from_manifest` will reuse in [Chapter 6](ch06-lock.md): parse channels, build an HTTP client with
 authentication middleware, configure the Gateway, then query repodata.
 
 ``` {.rust #search-execute}
@@ -415,7 +415,7 @@ where
 ### Updates to `src/commands/mod.rs` and `src/main.rs`
 
 The `search` module needs to be registered. We add `pub mod search;` to
-`src/commands/mod.rs` (the full file is shown in [Chapter 6](ch06-install.md)) and a `Search`
+`src/commands/mod.rs` (the full file is shown in [Chapter 2](ch02-project-setup.md)) and a `Search`
 variant to the `Command` enum in `src/main.rs` (shown in [Chapter 2](ch02-project-setup.md)).
 
 ## Running `shot search`
@@ -439,5 +439,5 @@ luafilesystem                  1.8.0
 - The `search` command queries with `.recursive(false)` since it only needs
   direct matches.
 
-In the next chapter we build on this foundation to implement `shot install`,
-which adds solving and installation to the repodata pipeline.
+In the next chapter we build on this foundation to implement `shot lock`,
+which adds solving to the repodata pipeline and records the result.

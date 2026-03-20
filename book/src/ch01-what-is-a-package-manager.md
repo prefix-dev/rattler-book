@@ -156,7 +156,7 @@ We'll see both of these inner archives in detail when we build the `shot build` 
 
 `moonshot` is intentionally minimal.  It does not:
 
-- **Generate lock files.** A real package manager needs them for reproducible installs, but they add file-format design, merge-conflict handling, and a separate resolution step. We build the lock file module in [Chapter 7](ch07-the-lock-file.md) using the `rattler_lock` crate, but leave wiring it into `shot install` as an exercise.
+- **Generate lock files.** A real package manager needs them for reproducible installs, but they add file-format design, merge-conflict handling, and a separate resolution step. We build the lock file module in [Chapter 6](ch06-lock.md) using the `rattler_lock` crate, and wire it into `shot install` in [Chapter 7](ch07-install.md).
 - **Upload to a public channel.** Publishing requires authentication, signing, and a trust model. We build packages locally and index them as a local channel instead.
 - **Handle C extensions.** Supporting compiled extensions means invoking a C compiler, linking against the right libraries, and producing platform-specific artifacts. Our build command targets pure Lua only.
 
