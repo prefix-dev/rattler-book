@@ -4,7 +4,7 @@ We've covered installing packages from existing channels.  Now let's close the
 loop: building a new package from source and publishing it so others can install
 it.
 
-Moving from consumer to producer makes moonshot self-sufficient for the Lua ecosystem. Up to now, moonshot only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like [conda-build] or [rattler-build]) to create new packages. By adding a build command, you can write a library, package it, host it on a local channel, and install it with the same tool.
+Moving from consumer to producer makes moonshot self-sufficient for the Lua ecosystem. Up to now, we've only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like [conda-build] or [rattler-build]) to create new packages. By adding a build command, we can write a library, package it, host it on a local channel, and install it with the same tool.
 
 ## Design
 
@@ -24,7 +24,7 @@ Building moonshine 0.3.0 (build lua_0)
   channel → /home/user/moonshine/output
 ```
 
-The command accepts `--recipe` (path to recipe.toml, defaults to `./recipe.toml`)
+You can pass `--recipe` (path to recipe.toml, defaults to `./recipe.toml`)
 and `--output-dir` (defaults to `./output/`).
 
 ## Configuration: `recipe.toml`
@@ -275,12 +275,12 @@ impl Recipe {
 
 ### Build isolation
 
-The two-prefix design is build isolation. Tools in `build_prefix`
-(compilers, interpreters, build utilities) are available during the build
-but never leak into the final package. Without this separation, a build tool
-could accidentally end up as a runtime dependency, making the package larger
-and less portable. This is the same principle behind Debian's Build-Depends
-vs Depends, and it is a key requirement for reproducible builds.
+This two-prefix design gives us build isolation. Tools in `build_prefix`
+(compilers, interpreters, build utilities) are available during the build but
+never leak into the final package. Without this separation, a build tool could
+accidentally end up as a runtime dependency, making the package larger and less
+portable. It's the same principle behind Debian's Build-Depends vs Depends, and
+it's a key requirement for reproducible builds.
 
 ### The `.conda` format
 
@@ -309,7 +309,7 @@ per-platform.
 ### The build script prelude
 
 Writing a build script that manually uses `os.execute("cp ...")` works but is
-tedious.  We embed a Lua prelude that provides helper functions.
+tedious.  So we embed a Lua prelude that provides helper functions.
 
 The prelude defines helpers like `install_lua(pattern)`,
 `install_bin(path)`, `install_share(path, pkg_name)` and sets globals like
@@ -649,7 +649,7 @@ pub struct Args {
 
 #### The `execute` function
 
-The `execute` function orchestrates the entire build. Its skeleton shows the
+Our `execute` function orchestrates the entire build. Its skeleton shows the
 five stages at a glance:
 
 ``` {.rust #build-execute}
@@ -690,13 +690,13 @@ println!(
 
 Next we create a temporary directory with two subdirectories:
 
-- **`build_prefix`** — where build-time dependencies are installed. The Lua
+- **`build_prefix`**: where build-time dependencies are installed. The Lua
   interpreter lives here. These never appear in the final package.
-- **`install_prefix`** — the "fake root" where the build script installs files.
+- **`install_prefix`**: the "fake root" where the build script installs files.
   Everything in here ends up in the package.
 
-The temporary directory is automatically cleaned up when `work_dir` goes out of
-scope. We also resolve the source directory from the recipe, making relative
+The temporary directory is automatically cleaned up when `work_dir` goes out
+of scope. We also resolve the source directory from the recipe, making relative
 paths absolute.
 
 ``` {.rust #setup-dirs}
@@ -729,10 +729,10 @@ let src_dir = std::path::absolute(src_dir)
 
 ##### Installing build dependencies
 
-We construct a temporary manifest from the recipe's build requirements,
-reusing `install_from_manifest` (the same function `shot install` uses) to
-install them into the build prefix instead of the project's environment. Lua is
-always added as a build dependency since the build script needs it.
+We construct a temporary manifest from the recipe's build requirements and
+reuse `install_from_manifest` (the same function `shot install` uses) to
+install them into the build prefix. We always add Lua as a build dependency
+since the build script needs it.
 
 ``` {.rust #install-deps}
 let mut build_deps = recipe.requirements.build.clone();
@@ -769,8 +769,8 @@ if !build_deps.is_empty() {
 
 ##### Running the build script
 
-Next we verify the build script exists, find the Lua interpreter in the build
-prefix, and call `run_build_script` (defined below).
+Next we verify the build script exists, find the Lua interpreter in the
+build prefix, and call `run_build_script` (defined below).
 
 ``` {.rust #run-script-call}
 let script_path = recipe_dir.join(&recipe.build.script);
@@ -804,7 +804,7 @@ run_build_script(
 ##### Packing and indexing
 
 Finally we write package metadata, pack the `.conda` archive, and index the
-output channel so it can be used as a local channel by other tools.
+output channel so other tools can use it as a local channel.
 
 ``` {.rust #pack-and-index}
 write_package_metadata(&install_prefix, &recipe).context("writing package metadata")?;
@@ -866,10 +866,10 @@ const BUILD_PRELUDE: &str = include_str!("../build_prelude.lua");
 
 #### Running the build script
 
-We locate the Lua interpreter in the build prefix and run the user's build
-script through a wrapper that loads the prelude first.  We use a wrapper file
-rather than `-e '...'` so that error messages show correct line numbers and the
-real filename instead of `<string>`.
+We locate the Lua interpreter in the build prefix and run your build script
+through a wrapper that loads the prelude first.  We use a wrapper file rather
+than `-e '...'` so that error messages show correct line numbers and the real
+filename instead of `<string>`.
 
 The build script can use any tool installed in `build_prefix/bin` because we
 prepend it to `PATH`.
@@ -889,7 +889,7 @@ async fn run_build_script(
 ```
 
 First we create a temporary wrapper script that loads the build prelude (helper
-functions) before the user's actual build script. Using `dofile()` rather than
+functions) before your actual build script. Using `dofile()` rather than
 `-e '...'` preserves correct line numbers in error messages.
 
 ``` {.rust #create-wrapper}
@@ -964,11 +964,11 @@ Ok(())
 
 Every conda package contains an `info/` directory with metadata.  We need two
 files: `index.json` and `paths.json`.  The solver reads `IndexJson` from
-`conda-meta/*.json` after installation to track what is present in the
+`conda-meta/*.json` after installation to track what's present in the
 environment.
 
 We populate an `IndexJson` struct from the recipe metadata, then walk the
-install prefix to build `paths.json`.
+install prefix to build `paths.json`:
 
 ``` {.rust #build-write-metadata}
 fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Result<()> {
@@ -1232,7 +1232,7 @@ fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
 
 #### Indexing the channel
 
-After packing, the output directory is not yet a valid conda channel; it has
+After packing, the output directory isn't yet a valid conda channel. It has
 packages but no `repodata.json`.  The `index_fs` call inside `execute` scans
 the directory, reads every `.conda` file's `info/index.json`, and writes:
 
@@ -1268,7 +1268,7 @@ moonshine = ">=0.3"
 - `write_conda_package` produces the `.conda` archive format.
 - `rattler_index` turns the output directory into a valid conda channel.
 
-With `shot build` working, our package manager is feature-complete.  In Part II
+With `shot build` working, our package manager is feature-complete!  In Part II
 we'll dive deeper into the underlying mechanisms.
 
 [conda-build]: https://docs.conda.io/projects/conda-build/

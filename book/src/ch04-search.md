@@ -1,8 +1,8 @@
 # Chapter 4: The `search` Command
 
-Before we can install anything, we need to know what exists. This chapter
-introduces repodata, channels, and the rattler Gateway through a standalone
-command that lets the user search for packages by name.
+Before we can install anything, we need to know what's out there. This chapter
+introduces repodata, channels, and the rattler Gateway by building a standalone
+command that lets you search for packages by name.
 
 ## Design
 
@@ -48,7 +48,7 @@ platform.  The file lists every available package with its metadata:
 For a large channel like conda-forge, this file can be **hundreds of megabytes**.
 Loading the whole thing into RAM for every command would be slow.
 
-Repodata is the contract between server and client. The channel publishes it; the package manager consumes it. How you design this contract determines download speed, caching behavior, and how much work the client does before it can start solving.
+Think of repodata as the contract between server and client. The channel publishes it; our package manager consumes it. How you design this contract determines download speed, caching behavior, and how much work the client has to do before it can start solving.
 
 ### Channels
 
@@ -151,7 +151,7 @@ once across all tools.
 rattler uses `reqwest` for HTTP.  We build a client with authentication and OCI
 support.
 
-The `.no_gzip()` call disables reqwest's automatic gzip decompression. This is a format-level decision: repodata files are already served as `.json.zst` or `.json.bz2` by the channel, and rattler handles that decompression itself. Letting reqwest also decompress would either double-decompress or interfere with rattler's streaming parser.
+The `.no_gzip()` call disables reqwest's automatic gzip decompression. This is a format-level decision: repodata files are already served as `.json.zst` or `.json.bz2` by the channel, and rattler handles that decompression itself. If we let reqwest also decompress, we'd either double-decompress or interfere with rattler's streaming parser.
 
 #### `reqwest_middleware` and the middleware pattern
 
@@ -374,10 +374,10 @@ Ok(())
 
 ### `src/progress.rs`
 
-The progress module provides spinner wrappers used by both `search` and
-`install`. The full rattler binary uses `indicatif::MultiProgress` with a custom
-log writer to prevent tracing output from interleaving with spinners, but for a
-teaching project a simple spinner suffices.
+The progress module provides spinner wrappers that we'll reuse in both `search`
+and `install`. A more polished tool would use `indicatif::MultiProgress` with a
+custom log writer to prevent tracing output from interleaving with spinners, but
+for our purposes a simple spinner does the job.
 
 ``` {.rust file=src/progress.rs}
 use std::borrow::Cow;

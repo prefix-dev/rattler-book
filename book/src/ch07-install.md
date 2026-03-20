@@ -1,10 +1,10 @@
 # Chapter 7: The `install` Command
 
-The install command is the core of moonshot. It reads the manifest, checks the
-lock file, resolves if needed, and installs packages into a local prefix. The
-lock file (produced by [Chapter 6](ch06-lock.md)'s `shot lock`) is the source
-of truth: if it is fresh, `shot install` replays it without touching the
-network or the solver.
+Now we get to the heart of moonshot: the install command. It reads the manifest,
+checks the lock file, resolves if needed, and installs packages into a local
+prefix. The lock file (produced by [Chapter 6](ch06-lock.md)'s `shot lock`) is
+our source of truth: if it's fresh, `shot install` replays it without touching
+the network or the solver.
 
 ## Design
 
@@ -30,8 +30,8 @@ $ shot install
 ✔ Environment already up to date
 ```
 
-The command accepts an optional `--prefix` flag to override the install
-location. By default, packages are installed to `.env/` relative to the
+You can pass an optional `--prefix` flag to override the install
+location. By default, packages go into `.env/` relative to the
 project root.
 
 ## Configuration
@@ -49,7 +49,7 @@ are defined in [Chapter 2](ch02-project-setup.md).
 ### The package cache
 
 Every package is first extracted into a *central cache* shared across all
-environments on the machine (at `~/.rattler/pkgs/`).  The cache key is the
+environments on your machine (at `~/.rattler/pkgs/`).  The cache key is the
 package's content hash, so `lua-5.4.7` is stored exactly once regardless of how
 many environments use it. Content-addressed keys (rather than name-plus-version) prevent collisions when the same version is rebuilt with a different build string. Two builds of `lua-5.4.7` with different compiler flags get different hashes and coexist safely in the cache.
 
@@ -62,13 +62,13 @@ many environments use it. Content-addressed keys (rather than name-plus-version)
     multiple environments can share the same inodes because nobody writes to
     them.
 
-Files are linked from the cache into the target prefix. On most systems,
-rattler uses **reflinks** (copy-on-write clones) by default when the filesystem
-supports them (APFS on macOS, Btrfs and XFS on Linux). A reflink shares the
-underlying data blocks without sharing the inode, so writing to one copy does
-not affect the other. On filesystems without reflink support, rattler falls back
-to **hard links**, which are a second directory entry pointing to the same
-inode. If hard links are also unavailable (some network filesystems, Windows
+From the cache, files are linked into the target prefix. On most systems,
+rattler uses **reflinks** (copy-on-write clones) when the filesystem supports
+them (APFS on macOS, Btrfs and XFS on Linux). A reflink shares the underlying
+data blocks without sharing the inode, so writing to one copy doesn't affect
+the other. On filesystems without reflink support, rattler falls back to
+**hard links**, which are a second directory entry pointing to the same inode.
+If hard links are also unavailable (some network filesystems, Windows
 cross-volume), it copies the file.
 
 This means:
@@ -156,8 +156,8 @@ pub struct Args {
 
 #### The `install_from_manifest` function
 
-This function resolves dependencies and installs them in one step. It is reused
-by the build command ([Chapter 10](ch10-build.md)) to install build-time
+This function resolves dependencies and installs them in one step. We'll reuse
+it in the build command ([Chapter 10](ch10-build.md)) to install build-time
 dependencies. It returns the solved records so callers can inspect what was
 installed.
 
@@ -186,7 +186,7 @@ going through the lock file, since build environments are temporary.
 
 #### The execute function
 
-The `execute` function is the entry point for `shot install`. It checks the
+The `execute` function is our entry point for `shot install`. It checks the
 lock file before deciding whether to resolve.
 
 ``` {.rust #install-execute}
@@ -231,9 +231,9 @@ confirmation message.
 
 #### The installer
 
-`run_installer` takes a solved set of packages and links them into the prefix.
-It builds a lightweight HTTP client for package downloads, scans the prefix for
-already-installed packages (to compute a minimal transaction), and runs the
+`run_installer` takes our solved set of packages and links them into the prefix.
+We build a lightweight HTTP client for package downloads, scan the prefix for
+already-installed packages (to compute a minimal transaction), and run the
 `Installer`.
 
 ``` {.rust #install-run-installer}
@@ -249,7 +249,7 @@ async fn run_installer(
 }
 ```
 
-We re-parse the manifest specs so the installer knows which packages were
+We re-parse the manifest specs so the installer knows which packages you
 directly requested (as opposed to transitive dependencies pulled in by the
 solver).
 
@@ -272,7 +272,7 @@ let specs: Vec<MatchSpec> = manifest
 ```
 
 The HTTP client follows the same pattern as [Chapter 4](ch04-search.md) and
-[Chapter 6](ch06-lock.md) — `reqwest` with authentication middleware.
+[Chapter 6](ch06-lock.md): `reqwest` with authentication middleware.
 
 ``` {.rust #install-client}
 let raw_client = reqwest::Client::builder()
@@ -291,8 +291,8 @@ let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
 ```
 
 Finally we scan the prefix for already-installed packages, build a minimal
-transaction, and run the `Installer`. The installer shows per-package progress
-bars via `IndicatifReporter`.
+transaction, and run the `Installer`. It shows per-package progress bars via
+`IndicatifReporter`.
 
 ``` {.rust #run-install}
 let installed_packages =
@@ -329,18 +329,18 @@ Ok(())
 ```
 
 `IndicatifReporter` is a rattler-provided reporter that shows per-package
-progress bars during download and extraction. You can implement your own
-reporter if you want custom progress display; it is a trait, not a concrete type.
+progress bars during download and extraction. If you want custom progress
+display, you can implement your own; it's a trait, not a concrete type.
 
 Setting `with_execute_link_scripts(true)` tells the installer to run conda's
 **link scripts** after installation. These are scripts in
 `<prefix>/etc/conda/activate.d/` that some packages use to set up post-install
 configuration (updating `LUA_PATH`, for example).
 
-The installer needs to know which packages were *directly* requested (as opposed
-to installed as transitive dependencies) via `with_requested_specs`. It records
-this in the `conda-meta/*.json` files so that future updates can correctly
-distinguish "user wants this" from "installed because something else needed it".
+The installer needs to know which packages you *directly* requested (as opposed
+to transitive dependencies) via `with_requested_specs`. It records this in the
+`conda-meta/*.json` files so that future updates can correctly distinguish
+"you asked for this" from "installed because something else needed it".
 
 !!! info "Tracking direct vs transitive"
 
@@ -404,8 +404,9 @@ After `shot install`, the prefix looks like this:
 </ul>
 </div>
 
-The `conda-meta/` directory is rattler's installation database.  Each JSON file
-records the package name, version, build, all installed files, and their hashes.
+The `conda-meta/` directory is rattler's installation database.  Each JSON
+file records the package name, version, build, all installed files, and their
+hashes. You can inspect these to see exactly what's in your environment.
 
 ## Summary
 

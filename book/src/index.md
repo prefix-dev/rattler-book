@@ -154,7 +154,7 @@ cargo build
 
 ## Why build on conda?
 
-Reasons to choose conda as a foundation for a new package manager:
+Here's why we chose conda as the foundation:
 
 - **Existing packages.** [conda-forge] has thousands of packages across Python,
   R, C++, Fortran, etc.  Your language's packages can depend on native libraries
@@ -166,7 +166,7 @@ Reasons to choose conda as a foundation for a new package manager:
 - **Mature tooling.** rattler provides a solver, installer, networking stack, and
   shell activation in reusable Rust crates.
 
-Reasons you might not:
+That said, conda isn't always the right choice:
 
 - **One version per package** means dependency resolution is NP-complete and
   requires a SAT solver.  If your ecosystem can tolerate duplicate versions (like

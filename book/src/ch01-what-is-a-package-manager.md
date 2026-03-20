@@ -26,8 +26,8 @@ dependencies), and sometimes pre-compiled binaries.
 npm has the npm registry, pip has [PyPI], cargo has [crates.io]. conda has
 **channels**, each of which publishes a catalog called **repodata**.
 
-These four concepts appear in every ecosystem. The differences lie in how each
-system implements them and what trade-offs it makes.
+You'll find these four concepts in every ecosystem. The differences lie in how
+each system implements them and what trade-offs it makes.
 
 ## The three steps
 
@@ -82,9 +82,9 @@ installable, the formula is satisfiable.
 
 Not every package manager hits this complexity.  If you allow multiple versions
 of the same package to coexist (as [Nix] and [Go modules] do), you can install
-everything the dependency graph asks for and the problem becomes much more tractable. In our case, the
+everything the dependency graph asks for and the problem becomes much simpler. In our case, the
 hardness comes from the "exactly one version" constraint.  conda enforces that
-constraint, so we need a more complex solver.
+constraint, so we need a real solver.
 
 In practice, real package ecosystems have enough structure that modern SAT
 heuristics solve them quickly, in most cases.  We'll use rattler's solver implementation, which is backed by
@@ -120,8 +120,8 @@ These are some of the things you need to think about:
 
 ## What we're building
 
-`moonshot` is a minimal Lua package manager built on rattler. Here is how conda and
-rattler map to the universal concepts:
+`moonshot` is the minimal Lua package manager we're building on top of rattler.
+Here's how conda and rattler map to the universal concepts:
 
 | Universal concept | conda / rattler term |
 |---|---|
@@ -142,12 +142,12 @@ Each command in moonshot touches a different part of the pipeline:
 | `run` | Run a command inside the environment | (post-installation) |
 | `build` | Create a new `.conda` package | (package creation) |
 
-Each chapter in Part I implements one of these commands (or a supporting module like the lock file) from start to finish.
+We'll implement each of these commands (plus a supporting lock file module) in its own chapter in Part I.
 
 ## The conda file format
 
-A conda package is an archive.  Historically it was a `.tar.bz2` file.  In the
-modern [`.conda` format][cep-35] (version 2) it is an uncompressed ZIP that contains:
+A conda package is an archive.  Historically it was a `.tar.bz2` file, but the
+modern [`.conda` format][cep-35] (version 2) is an uncompressed ZIP that contains:
 
 <div class="file-tree">
 <ul>
@@ -161,7 +161,7 @@ modern [`.conda` format][cep-35] (version 2) it is an uncompressed ZIP that cont
 </ul>
 </div>
 
-The payload and metadata live in separate inner archives, so tools can read the
+The payload and metadata live in separate inner archives, so we can read the
 metadata without unpacking the (potentially large) payload.
 
 Using ZIP as the outer container is a common choice. ZIP stores a central directory at the end of the file, which means a reader can seek directly to any inner entry without scanning from the beginning. This is the same reason [Python wheels][wheels] (`.whl`) are ZIP files: a tool can extract just the metadata entry without downloading or reading the full archive.
@@ -170,7 +170,7 @@ We'll see both of these inner archives in detail when we build the `shot build` 
 
 ## What moonshot does *not* do
 
-`moonshot` is intentionally minimal.  It does not:
+We're keeping `moonshot` intentionally minimal.  It does not:
 
 - **Generate lock files.** A real package manager needs them for reproducible installs, but they add file-format design, merge-conflict handling, and a separate resolution step. We build the lock file module in [Chapter 6](ch06-lock.md) using the `rattler_lock` crate, and wire it into `shot install` in [Chapter 7](ch07-install.md).
 - **Upload to a public channel.** Publishing requires authentication, signing, and a trust model. We build packages locally and index them as a local channel instead.

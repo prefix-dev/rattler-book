@@ -47,7 +47,7 @@ rustls-tls = [
 ]
 ```
 
-The dependencies start with the core rattler crates — these implement the conda
+The dependencies start with the core rattler crates. These implement the conda
 specification. Each is fine-grained so you only pull in what you need.
 
 ``` {.toml #cargo-deps}
@@ -124,9 +124,9 @@ The rattler crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) implement
     parts you need.  A tool that only needs to solve dependencies doesn't have
     to pull in the HTTP stack.  We use most of them, so the list is long.
 
-Package managers surface errors from many sources (network, filesystem, solver conflicts, malformed metadata), so [miette] with `features = ["fancy"]` is worth pulling in early. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string.
+A package manager surfaces errors from many sources (network, filesystem, solver conflicts, malformed metadata), so we pull in [miette] with `features = ["fancy"]` early. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string.
 
-Notice that `reqwest` is declared with `features = ["stream"]` for streaming downloads. TLS is handled at the crate level through the `[features]` section, where the `rustls-tls` feature propagates `reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots` (along with matching features for the rattler crates). This selects the pure-Rust TLS implementation without linking against the system's OpenSSL.
+Notice that we declare `reqwest` with `features = ["stream"]` for streaming downloads. TLS is handled at the crate level through the `[features]` section, where our `rustls-tls` feature propagates `reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots` (along with matching features for the rattler crates). This gives us a pure-Rust TLS implementation without linking against the system's OpenSSL.
 
 ## The entry point: `src/main.rs`
 

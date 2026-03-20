@@ -1,6 +1,6 @@
 # Chapter 9: The `run` Command
 
-`shot shell` requires the user to evaluate shell-specific output. That works for interactive use but creates two problems: it is awkward to use in scripts and CI pipelines, and it ties you to a specific shell dialect. `shot run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether the user runs Bash, Fish, PowerShell, or no shell at all.
+`shot shell` requires you to evaluate shell-specific output. That works for interactive use but creates two problems: it's awkward in scripts and CI pipelines, and it ties you to a specific shell dialect. `shot run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether you use Bash, Fish, PowerShell, or no shell at all.
 
 ## Design
 
@@ -9,8 +9,8 @@ shot run lua -e 'print("hello from conda")'
 shot run luarocks install inspect
 ```
 
-Everything after `run` is passed verbatim to the OS. The command accepts an
-optional `--prefix` flag to override the environment location.
+Everything after `run` is passed verbatim to the OS. You can pass an optional
+`--prefix` flag to override the environment location.
 
 ## Concepts
 
@@ -54,7 +54,7 @@ use tokio::process::Command;
 
 ### Command arguments
 
-The `Args` struct accepts a trailing variadic argument for the command to run,
+Our `Args` struct accepts a trailing variadic argument for the command to run,
 plus an optional `--prefix` override.
 
 ``` {.rust #run-args}
@@ -74,9 +74,9 @@ pub struct Args {
 
 ### The execute function
 
-The body of `execute` breaks into four steps: resolving the prefix and building
-the activator, computing the activation environment, spawning the child process,
-and propagating its exit code.
+Our `execute` function breaks into four steps: resolve the prefix and build
+the activator, compute the activation environment, spawn the child process,
+and propagate its exit code.
 
 ``` {.rust #run-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
@@ -91,7 +91,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 ```
 
 First we resolve the prefix path and construct an `Activator`. If the prefix
-does not exist we bail early with a helpful message.
+doesn't exist, we bail early with a helpful message.
 
 ``` {.rust #run-setup}
 let cwd = env::current_dir().into_diagnostic()?;
@@ -132,7 +132,8 @@ let activation_env =
 
 ### Spawning the child process
 
-We use `tokio::process::Command` (the async version of `std::process::Command`).
+We use `tokio::process::Command` (the async version of `std::process::Command`)
+to launch the child.
 
 `.envs(&activation_env)` overlays the activation variables on top of the
 *inherited* environment.  So the child gets:
@@ -168,8 +169,8 @@ let status = Command::new(program)
     Without exit code propagation, `shot run` is unusable in CI: a failing
     test would appear as a successful pipeline step.
 
-If the child fails, we exit with the same code.  This lets `shot run` compose
-correctly in shell scripts:
+If the child fails, we exit with the same code.  This lets you compose
+`shot run` in shell scripts:
 
 ```bash
 shot run lua test.lua || echo "tests failed"
@@ -188,9 +189,9 @@ Ok(())
 exit code.  It doesn't run destructors or flush buffers, but since we're about
 to exit anyway, that's fine.
 
-Why not `return Err(...)`?  Because there's no meaningful error to report.  The
-child ran successfully but indicated failure via its exit code.  Returning an
-error would cause `miette` to print an error message, cluttering the output.
+Why not `return Err(...)`?  There's no meaningful error to report. The child
+ran successfully but indicated failure via its exit code.  Returning an error
+would cause `miette` to print a message, cluttering the output.
 
 ## Summary
 

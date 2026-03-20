@@ -1,7 +1,7 @@
 # Chapter 3: The `init` Command
 
 Every moonshot project starts with `shot init`. This command creates
-`moonshot.toml`, the manifest that describes which packages the user wants and
+`moonshot.toml`, the manifest that describes which packages you want and
 from which channels to fetch them.
 
 ## Design
@@ -48,7 +48,7 @@ to version constraints.  Version specs follow the conda MatchSpec mini-language:
 | `"5.4.*"`     | any 5.4.x release                 |
 | `">=5.4,<6"`  | 5.4 series, exclusive upper bound |
 
-A manifest records human intent: which packages the user wants and from which channels. It is distinct from a lock file, which records the exact versions the solver chose, including transitive dependencies. The manifest says "I want `lua >=5.4`"; a lock file says "install `lua 5.4.7 build h5eee18b_0` from conda-forge, plus these 12 transitive dependencies at these exact versions." We implement only the manifest in moonshot, but understanding the distinction matters for any package manager design.
+A manifest records your intent: which packages you want and from which channels. It's distinct from a lock file, which records the exact versions the solver chose, including transitive dependencies. The manifest says "I want `lua >=5.4`"; a lock file says "install `lua 5.4.7 build h5eee18b_0` from conda-forge, plus these 12 transitive dependencies at these exact versions." We implement only the manifest in moonshot, but understanding the distinction matters for any package manager design.
 
 ## Concepts
 
@@ -58,7 +58,7 @@ We model the manifest as nested Rust structs that derive `Serialize` and
 `Deserialize`. [serde] handles the conversion between [TOML] text and Rust values
 in both directions.
 
-TOML works well for manifests because it is readable without documentation, preserves comments on round-trip (with the right library), and has strict typing that catches mistakes like quoting a number.
+We chose TOML because it's readable without documentation, preserves comments on round-trip (with the right library), and has strict typing that catches mistakes like quoting a number.
 
 The `#[serde(default)]` annotations make `[dependencies]` optional (defaults to
 an empty map), and `#[serde(default = "default_channels")]` on `channels` falls
@@ -135,12 +135,12 @@ top-level TOML, and `ProjectMetadata` maps to the `[project]` section. The
 `name` field is used only for display; it does not affect resolution or
 installation.
 
-The dependency values are kept as plain `String`s rather than parsed
+We keep the dependency values as plain `String`s rather than parsing them
 immediately. `rattler_conda_types` parses them into `MatchSpec` values at
 solve-time, so parse errors surface with full context instead of at
 manifest-read time.
 
-Channels are listed in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine does not silently pick up a different channel list.
+We list channels in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine doesn't silently pick up a different channel list.
 
 !!! note "Why default to conda-forge?"
 

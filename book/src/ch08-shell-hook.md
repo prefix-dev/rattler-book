@@ -1,9 +1,8 @@
 # Chapter 8: The `shell` Command
 
-After installing packages into `.env/`, the user needs to be able to
-*use* them.  That means getting `lua`, `luarocks`, and any other installed
-binaries onto their `PATH`, and setting any environment variables that packages
-declare.
+After installing packages into `.env/`, you need to be able to *use* them.
+That means getting `lua`, `luarocks`, and any other installed binaries onto
+your `PATH`, and setting any environment variables that packages declare.
 
 ## Design
 
@@ -15,7 +14,7 @@ shot shell | source        # fish
 The `eval` trick runs the output of `shot shell` as shell code in the current
 process, which *can* modify `PATH`.
 
-The command accepts an optional `--shell` flag to override the detected shell
+You can pass an optional `--shell` flag to override the detected shell
 dialect and `--prefix` to override the environment location.
 
 !!! info "`shell` vs `run`"
@@ -30,7 +29,7 @@ dialect and `--prefix` to override the environment location.
 
 ### Why activation is non-trivial
 
-Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. conda uses eval-based activation: the tool prints a shell script and the user evaluates it in their current shell. This gives packages full control over the environment (including `PATH`, `LD_LIBRARY_PATH`, `LUA_PATH`, and other variables), at the cost of being shell-dependent.
+Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. conda uses eval-based activation: the tool prints a shell script and you evaluate it in your current shell. This gives packages full control over the environment (including `PATH`, `LD_LIBRARY_PATH`, `LUA_PATH`, and other variables), at the cost of being shell-dependent.
 
 A child process cannot modify the environment of its parent.  That's a Unix
 rule with no exceptions.  So when you run `shot shell`, it can't just set
@@ -38,7 +37,7 @@ rule with no exceptions.  So when you run `shot shell`, it can't just set
 
 ### Shell dialects and nesting
 
-Several complications arise:
+This sounds simple, but several complications arise:
 
 - **Different shells** have different syntax for setting variables, exporting
   them, and sourcing scripts.  Bash uses `export FOO=bar`; fish uses
@@ -111,9 +110,9 @@ pub fn execute(args: Args) -> miette::Result<()> {
 }
 ```
 
-Note that `execute` is *not* `async`.  Generating an activation script is
-synchronous: no network, no disk I/O beyond reading a few small files in the
-prefix.
+Notice that `execute` is *not* `async`.  Generating an activation script is
+purely synchronous: no network, no disk I/O beyond reading a few small files
+in the prefix.
 
 ## `ShellEnum`: a type-safe shell dialect
 
@@ -134,8 +133,8 @@ pub enum ShellEnum {
 
 Each variant wraps a unit struct that implements the `Shell` trait.  The trait
 defines methods like `set_env_var`, `export_env_var`, `source_script`, etc.  The
-`Activator` calls these methods generically; it doesn't need to know which shell
-it's generating for.
+`Activator` calls these methods generically; it doesn't need to know which
+shell we're generating for.
 
 ### Detecting the shell from `$SHELL`
 
@@ -193,7 +192,7 @@ export CONDA_DEFAULT_ENV="/home/user/my-app/.env"
 . "/home/user/my-app/.env/etc/conda/activate.d/lua_path.sh"
 ```
 
-The user evaluates this, and from that point `lua`, `luarocks`, etc. are on their
+You evaluate this, and from that point on `lua`, `luarocks`, etc. are on your
 PATH.
 
 !!! note "Why `CONDA_` variables?"

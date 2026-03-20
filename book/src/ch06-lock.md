@@ -1,7 +1,8 @@
 # Chapter 6: The `lock` Command
 
-The manifest declares what you need; the lock command resolves those
-requirements into exact packages and records the solution. Later
+The manifest declares what you want; now we need to figure out exactly
+which packages satisfy those requirements. The lock command resolves
+your dependencies into exact packages and records the solution. Later
 commands (like `shot install`) consume the lock file instead of
 re-solving from scratch.
 
@@ -80,7 +81,7 @@ ecosystems have structure that makes good heuristics very effective.
 
 ### Virtual packages
 
-Virtual packages model the host system as if it were a package. Instead of special-casing "requires glibc 2.17" as a platform check, the solver treats `__glibc` as a regular dependency that happens to be provided by the OS. This lets package authors express system requirements using the same constraint syntax they use for library dependencies.
+Virtual packages model the host system as if it were a regular package. Instead of special-casing "requires glibc 2.17" as a platform check, the solver treats `__glibc` as a regular dependency that happens to be provided by the OS. This lets package authors express system requirements using the same constraint syntax they use for library dependencies.
 
 The system is probed for things like:
 
@@ -155,7 +156,7 @@ Every serious package manager converges on this pattern:
 
 ### Two-phase model
 
-Lock files split the install into two phases:
+The lock file splits our install into two phases:
 
 1. **Resolve** (slow): fetch repodata, run the SAT solver, write the lock.
 2. **Install from lock** (fast): read exact packages from the lock, download
@@ -199,9 +200,9 @@ The `rattler_lock` crate handles serialization and deserialization.
 
 ### `src/resolve.rs`
 
-The resolve module is a shared helper that both the lock and install commands
-use. It handles the full resolve pipeline: parse specs from the manifest, set
-up an HTTP client and gateway (the same pattern as
+The resolve module is a shared helper that we'll reuse in both the lock and
+install commands. It handles the full resolve pipeline: parse specs from the
+manifest, set up an HTTP client and gateway (the same pattern we built in
 [Chapter 4](ch04-search.md)'s search command), fetch repodata recursively,
 detect virtual packages, and run the solver.
 
@@ -341,7 +342,7 @@ let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
 ##### Fetching repodata
 
 Next we parse channels, set up the Gateway, and query repodata. The key
-difference from the search command is `.recursive(true)` — we need transitive
+difference from the search command is `.recursive(true)`, because we need transitive
 dependencies, not just direct matches.
 
 ``` {.rust #fetch-repodata}
@@ -390,7 +391,7 @@ println!(
 
 Finally we detect virtual packages (like `__linux` or `__osx`), build a
 `SolverTask`, and run the solver. `locked_packages` allows callers to pass
-records from an existing (stale) lock file — the solver treats them as
+records from an existing (stale) lock file. The solver treats them as
 preferences, not hard constraints. On the first run with no lock, callers pass
 an empty vector.
 
@@ -455,8 +456,8 @@ pub fn with_spinner_sync<T, F: FnOnce() -> T>(msg: impl Into<Cow<'static, str>>,
 
 ### `src/lock.rs`
 
-The utility module provides the building blocks: a freshness check, a reader,
-and a writer. The lock command orchestrates them.
+Let's build the utility module that provides the building blocks: a freshness
+check, a reader, and a writer. The lock command will orchestrate them.
 
 ``` {.rust file=src/lock.rs}
 #![allow(dead_code)]
@@ -492,7 +493,7 @@ pub const LOCK_FILENAME: &str = "moonshot.lock";
 
 #### Freshness check
 
-We compare modification times to decide whether the lock is still valid.
+We compare modification times to decide whether our lock is still valid.
 
 ``` {.rust #lock-is-fresh}
 /// Returns `true` when the lock file exists and is newer than the manifest.
@@ -597,8 +598,8 @@ dependency metadata.
 
 ### `src/commands/lock.rs`
 
-With the resolve logic in `src/resolve.rs`, the lock command is small. It
-checks freshness, calls the resolver, and writes the result.
+With the resolve logic in `src/resolve.rs`, our lock command ends up quite
+small. It checks freshness, calls the resolver, and writes the result.
 
 ``` {.rust file=src/commands/lock.rs}
 <<lock-cmd-imports>>
@@ -635,7 +636,7 @@ pub struct Args {
 
 #### The execute function
 
-The function has three phases: check freshness, resolve, and write the lock.
+Our execute function has three phases: check freshness, resolve, and write the lock.
 
 ``` {.rust #lock-cmd-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
@@ -675,8 +676,8 @@ preference and call `resolve_from_manifest` to run the full pipeline.
 
 ## Testing
 
-We add unit tests in `src/lock.rs` to verify the write/read roundtrip and the
-freshness check.
+Let's add unit tests in `src/lock.rs` to verify that our write/read roundtrip
+and the freshness check work correctly.
 
 ``` {.rust #lock-tests}
 #[cfg(test)]
