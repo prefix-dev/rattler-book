@@ -78,8 +78,8 @@
   --rb-text: #111;
   --rb-text-lighter: #333;
   --rb-heading: #111;
-  --rb-link: #2a6496;
-  --rb-link-hover: #1a4a73;
+  --rb-link: #076678;
+  --rb-link-hover: #458588;
   --rb-blockquote-border: #d0cbc2;
   --rb-blockquote-text: #555;
   --rb-code-bg: #f7f5ef;
@@ -87,9 +87,9 @@
   --rb-code-border: #e8e3db;
   --rb-table-border: #ccc;
   --rb-nav-text: #555;
-  --rb-nav-active: #111;
-  --rb-accent: #d4903e;
-  --rb-accent-transparent: #d4903e1a;
+  --rb-nav-active: #427b58;
+  --rb-accent: #427b58;
+  --rb-accent-transparent: #427b581a;
 
   /* Material mappings */
   --md-default-bg-color: var(--rb-bg);
@@ -110,8 +110,8 @@
   --rb-text: #ddd;
   --rb-text-lighter: #bbb;
   --rb-heading: #eee;
-  --rb-link: #6cb4e0;
-  --rb-link-hover: #8fcbef;
+  --rb-link: #83a598;
+  --rb-link-hover: #458588;
   --rb-blockquote-border: #444;
   --rb-blockquote-text: #aaa;
   --rb-code-bg: #2a2a2a;
@@ -119,16 +119,18 @@
   --rb-code-border: #3a3a3a;
   --rb-table-border: #555;
   --rb-nav-text: #999;
-  --rb-nav-active: #eee;
+  --rb-nav-active: #8ec07c;
   --rb-header-text: #ddd;
-  --rb-accent: #f0c07a;
-  --rb-accent-transparent: #f0c07a1a;
+  --rb-accent: #8ec07c;
+  --rb-accent-transparent: #8ec07c1a;
   --rb-code-shadow: 0 1px 3px rgba(255, 255, 255, 0.05);
 
   /* Material mappings */
-  --md-primary-fg-color: #c4a87a;
-  --md-primary-fg-color--light: #d4bc96;
-  --md-primary-fg-color--dark: #b09468;
+  --md-primary-fg-color: #282828;
+  --md-primary-fg-color--light: #3c3836;
+  --md-primary-fg-color--dark: #1d2021;
+  --md-primary-bg-color: #ebdbb2;
+  --md-primary-bg-color--light: #a89984;
   --md-default-bg-color: var(--rb-bg);
   --md-default-bg-color--light: var(--rb-bg-light);
   --md-code-bg-color: var(--rb-code-bg);
@@ -139,41 +141,83 @@
 }
 
 /* ---------------------------------------------------------------------------
-   Primary color (shared, light mode default)
+   Primary color — Gruvbox
    --------------------------------------------------------------------------- */
 [data-md-color-primary="custom"] {
-  --md-primary-fg-color: #e8a854;
-  --md-primary-fg-color--light: #f0c07a;
-  --md-primary-fg-color--dark: #d4903e;
-  --md-primary-bg-color: #fff;
-  --md-primary-bg-color--light: #ffffffb3;
+  --md-primary-fg-color: #d79921;
+  --md-primary-fg-color--light: #fabd2f;
+  --md-primary-fg-color--dark: #b57614;
+  --md-primary-bg-color: #fbf1c7;
+  --md-primary-bg-color--light: #ebdbb2;
+}
+
+[data-md-color-scheme="slate"][data-md-color-primary="custom"] {
+  --md-primary-fg-color: #282828;
+  --md-primary-fg-color--light: #3c3836;
+  --md-primary-fg-color--dark: #1d2021;
+  --md-primary-bg-color: #ebdbb2;
+  --md-primary-bg-color--light: #a89984;
 }
 
 /* ===========================================================================
-   Header
+   Header — Gruvbox gradient
    =========================================================================== */
 .md-header,
 .md-tabs {
   font-family: var(--rb-font-body);
   font-weight: var(--rb-header-weight);
-  color: var(--rb-header-text);
 }
 
-.md-search__input,
-.md-search__input::placeholder,
-.md-search__icon {
-  color: var(--rb-header-text) !important;
+/* Light mode: Gruvbox yellow → light fg gradient */
+[data-md-color-scheme="default"] .md-header {
+  background: linear-gradient(90deg, #d79921 0%, #ebdbb2 100%) !important;
+  color: #000;
+  box-shadow: 0 1px 3px rgba(60, 56, 54, 0.10);
+}
+[data-md-color-scheme="default"] .md-tabs {
+  background: #ebdbb2 !important;
+  color: #000;
+  border-bottom: 1px solid #d5c4a1;
+}
+[data-md-color-scheme="default"] .md-header .md-header__button,
+[data-md-color-scheme="default"] .md-header .md-header__topic,
+[data-md-color-scheme="default"] .md-tabs .md-tabs__link {
+  color: #000;
+}
+[data-md-color-scheme="default"] .md-tabs .md-tabs__link--active,
+[data-md-color-scheme="default"] .md-tabs .md-tabs__link:hover {
+  color: #000;
+}
+[data-md-color-scheme="default"] .md-search__input,
+[data-md-color-scheme="default"] .md-search__input::placeholder,
+[data-md-color-scheme="default"] .md-search__icon {
+  color: #000 !important;
 }
 
-[data-md-color-scheme="slate"] .md-header,
+/* Dark mode: Gruvbox dark bg0 → bg1 gradient */
+[data-md-color-scheme="slate"] .md-header {
+  background: linear-gradient(180deg, #282828 0%, #3c3836 100%) !important;
+  color: #ebdbb2;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.25);
+}
 [data-md-color-scheme="slate"] .md-tabs {
-  color: var(--rb-header-text);
+  background: #3c3836 !important;
+  color: #ebdbb2;
+  border-bottom: 1px solid #504945;
 }
-
+[data-md-color-scheme="slate"] .md-header .md-header__button,
+[data-md-color-scheme="slate"] .md-header .md-header__topic,
+[data-md-color-scheme="slate"] .md-tabs .md-tabs__link {
+  color: #a89984;
+}
+[data-md-color-scheme="slate"] .md-tabs .md-tabs__link--active,
+[data-md-color-scheme="slate"] .md-tabs .md-tabs__link:hover {
+  color: #fbf1c7;
+}
 [data-md-color-scheme="slate"] .md-search__input,
 [data-md-color-scheme="slate"] .md-search__input::placeholder,
 [data-md-color-scheme="slate"] .md-search__icon {
-  color: var(--rb-header-text) !important;
+  color: #a89984 !important;
 }
 
 .md-header {
@@ -331,11 +375,41 @@
   font-weight: 600;
 }
 
+/* TOC / nav active indicator — Gruvbox aqua */
+[data-md-color-scheme="default"] .md-sidebar,
+[data-md-color-scheme="default"] .md-nav {
+  --md-accent-fg-color: #427b58;
+}
+[data-md-color-scheme="default"] .md-nav__link--active {
+  color: #427b58 !important;
+}
+[data-md-color-scheme="default"] .md-nav__list {
+  border-color: #427b58 !important;
+}
+[data-md-color-scheme="slate"] .md-sidebar,
+[data-md-color-scheme="slate"] .md-nav {
+  --md-accent-fg-color: #8ec07c;
+}
+[data-md-color-scheme="slate"] .md-nav__link--active {
+  color: #8ec07c !important;
+}
+[data-md-color-scheme="slate"] .md-nav__list {
+  border-color: #8ec07c !important;
+}
+
 .md-sidebar__scrollwrap {
   overflow: hidden;
 }
 .md-sidebar__scrollwrap:hover {
   overflow-y: auto;
+}
+
+/* Reset scrollbars to browser defaults */
+* {
+  scrollbar-color: auto !important;
+}
+*::-webkit-scrollbar {
+  all: unset;
 }
 
 .md-main__inner {
