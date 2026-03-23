@@ -22,8 +22,7 @@ pub fn is_lock_fresh(lock_path: &Path, manifest_path: &Path) -> bool {
     ) else {
         return false;
     };
-    let (Ok(lock_mtime), Ok(manifest_mtime)) =
-        (lock_meta.modified(), manifest_meta.modified())
+    let (Ok(lock_mtime), Ok(manifest_mtime)) = (lock_meta.modified(), manifest_meta.modified())
     else {
         return false;
     };
@@ -36,10 +35,7 @@ pub fn is_lock_fresh(lock_path: &Path, manifest_path: &Path) -> bool {
 ///
 /// Returns the exact packages that were solved last time, ready to be
 /// handed to the `Installer`.
-pub fn read_lock_file(
-    lock_path: &Path,
-    platform: Platform,
-) -> miette::Result<Vec<RepoDataRecord>> {
+pub fn read_lock_file(lock_path: &Path, platform: Platform) -> miette::Result<Vec<RepoDataRecord>> {
     let lock_file = LockFile::from_path(lock_path)
         .into_diagnostic()
         .context("reading lock file")?;
@@ -107,9 +103,8 @@ mod tests {
 
     /// Build a minimal `RepoDataRecord` for testing.
     fn dummy_record(name: &str, version: &str) -> RepoDataRecord {
-        let channel_config = ChannelConfig::default_with_root_dir(
-            std::env::current_dir().expect("cwd"),
-        );
+        let channel_config =
+            ChannelConfig::default_with_root_dir(std::env::current_dir().expect("cwd"));
         let channel = Channel::from_str("conda-forge", &channel_config).unwrap();
         let mut record = PackageRecord::new(
             PackageName::from_str(name).unwrap(),
@@ -127,11 +122,9 @@ mod tests {
             .parse()
             .unwrap(),
             channel: Some(channel.name().to_string()),
-            identifier: CondaArchiveIdentifier::from_str(
-                &format!("{name}-{version}-h0_0.conda"),
-            )
-            .unwrap()
-            .into(),
+            identifier: CondaArchiveIdentifier::from_str(&format!("{name}-{version}-h0_0.conda"))
+                .unwrap()
+                .into(),
         }
     }
 
@@ -139,12 +132,9 @@ mod tests {
     fn write_then_read_roundtrip() {
         let dir = tempfile::tempdir().unwrap();
         let lock_path = dir.path().join(LOCK_FILENAME);
-        let channel_config = ChannelConfig::default_with_root_dir(
-            std::env::current_dir().expect("cwd"),
-        );
-        let channels = vec![
-            Channel::from_str("conda-forge", &channel_config).unwrap(),
-        ];
+        let channel_config =
+            ChannelConfig::default_with_root_dir(std::env::current_dir().expect("cwd"));
+        let channels = vec![Channel::from_str("conda-forge", &channel_config).unwrap()];
         let platform = Platform::current();
         let solution = vec![dummy_record("lua", "5.4.7")];
 

@@ -171,8 +171,7 @@ pub async fn install_from_manifest(
     manifest: &Manifest,
     prefix: std::path::PathBuf,
 ) -> miette::Result<Vec<RepoDataRecord>> {
-    let (solution, _channels, platform) =
-        resolve_from_manifest(manifest, vec![]).await?;
+    let (solution, _channels, platform) = resolve_from_manifest(manifest, vec![]).await?;
     let result = solution.clone();
     run_installer(manifest, &prefix, solution, platform).await?;
     Ok(result)
@@ -207,8 +206,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         read_lock_file(&lock_path, platform)?
     } else {
         let existing = read_locked_packages(&lock_path, platform);
-        let (solution, channels, platform) =
-            resolve_from_manifest(&manifest, existing).await?;
+        let (solution, channels, platform) = resolve_from_manifest(&manifest, existing).await?;
         write_lock_file(&lock_path, &channels, platform, &solution)?;
         println!(
             "{} Wrote {} ({} packages)",

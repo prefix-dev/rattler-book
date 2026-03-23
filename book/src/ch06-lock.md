@@ -373,7 +373,11 @@ let gateway = Gateway::builder()
 let repo_data: Vec<RepoData> = with_spinner(
     "Fetching repodata",
     gateway
-        .query(channels.clone(), [platform, Platform::NoArch], specs.clone())
+        .query(
+            channels.clone(),
+            [platform, Platform::NoArch],
+            specs.clone(),
+        )
         .recursive(true),
 )
 .await
@@ -414,11 +418,10 @@ let solver_task = SolverTask {
 };
 
 let start_solve = Instant::now();
-let solution =
-    with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
-        .into_diagnostic()
-        .context("solving dependencies")?
-        .records;
+let solution = with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
+    .into_diagnostic()
+    .context("solving dependencies")?
+    .records;
 
 println!(
     "  Solved {} packages in {:.1}s",
@@ -504,8 +507,7 @@ pub fn is_lock_fresh(lock_path: &Path, manifest_path: &Path) -> bool {
     ) else {
         return false;
     };
-    let (Ok(lock_mtime), Ok(manifest_mtime)) =
-        (lock_meta.modified(), manifest_meta.modified())
+    let (Ok(lock_mtime), Ok(manifest_mtime)) = (lock_meta.modified(), manifest_meta.modified())
     else {
         return false;
     };
@@ -523,10 +525,7 @@ conservatively return `false` (re-solve).
 ///
 /// Returns the exact packages that were solved last time, ready to be
 /// handed to the `Installer`.
-pub fn read_lock_file(
-    lock_path: &Path,
-    platform: Platform,
-) -> miette::Result<Vec<RepoDataRecord>> {
+pub fn read_lock_file(lock_path: &Path, platform: Platform) -> miette::Result<Vec<RepoDataRecord>> {
     let lock_file = LockFile::from_path(lock_path)
         .into_diagnostic()
         .context("reading lock file")?;
@@ -645,17 +644,13 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let lock_path = cwd.join(LOCK_FILENAME);
 
     if !args.force && is_lock_fresh(&lock_path, &manifest_path) {
-        println!(
-            "{} Lock is already up to date",
-            console::style("✔").green()
-        );
+        println!("{} Lock is already up to date", console::style("✔").green());
         return Ok(());
     }
 
     let platform = Platform::current();
     let existing = read_locked_packages(&lock_path, platform);
-    let (solution, channels, platform) =
-        resolve_from_manifest(&manifest, existing).await?;
+    let (solution, channels, platform) = resolve_from_manifest(&manifest, existing).await?;
 
     write_lock_file(&lock_path, &channels, platform, &solution)?;
 
@@ -691,9 +686,8 @@ mod tests {
 
     /// Build a minimal `RepoDataRecord` for testing.
     fn dummy_record(name: &str, version: &str) -> RepoDataRecord {
-        let channel_config = ChannelConfig::default_with_root_dir(
-            std::env::current_dir().expect("cwd"),
-        );
+        let channel_config =
+            ChannelConfig::default_with_root_dir(std::env::current_dir().expect("cwd"));
         let channel = Channel::from_str("conda-forge", &channel_config).unwrap();
         let mut record = PackageRecord::new(
             PackageName::from_str(name).unwrap(),
@@ -711,11 +705,9 @@ mod tests {
             .parse()
             .unwrap(),
             channel: Some(channel.name().to_string()),
-            identifier: CondaArchiveIdentifier::from_str(
-                &format!("{name}-{version}-h0_0.conda"),
-            )
-            .unwrap()
-            .into(),
+            identifier: CondaArchiveIdentifier::from_str(&format!("{name}-{version}-h0_0.conda"))
+                .unwrap()
+                .into(),
         }
     }
 
@@ -723,12 +715,9 @@ mod tests {
     fn write_then_read_roundtrip() {
         let dir = tempfile::tempdir().unwrap();
         let lock_path = dir.path().join(LOCK_FILENAME);
-        let channel_config = ChannelConfig::default_with_root_dir(
-            std::env::current_dir().expect("cwd"),
-        );
-        let channels = vec![
-            Channel::from_str("conda-forge", &channel_config).unwrap(),
-        ];
+        let channel_config =
+            ChannelConfig::default_with_root_dir(std::env::current_dir().expect("cwd"));
+        let channels = vec![Channel::from_str("conda-forge", &channel_config).unwrap()];
         let platform = Platform::current();
         let solution = vec![dummy_record("lua", "5.4.7")];
 

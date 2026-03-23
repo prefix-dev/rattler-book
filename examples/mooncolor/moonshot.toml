@@ -1,0 +1,13 @@
+[project]
+name        = "mooncolor"
+version     = "0.2.0"
+license     = "MIT"
+description = "ANSI terminal color and style library, NO_COLOR aware"
+channels    = ["conda-forge"]
+
+[dependencies]
+lua = ">=5.4"
+
+[build]
+script = "build.lua"
+noarch = true

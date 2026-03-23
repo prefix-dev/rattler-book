@@ -23,8 +23,9 @@ lua = ">=5.4"
 ```
 
 The command accepts an optional project name (defaults to the current directory
-name) and one or more `--channel` flags. If `moonshot.toml` already exists, it
-refuses to overwrite.
+name) and one or more `--channel` flags. Pass `--library` to scaffold a
+buildable package (adds a `[build]` section and `version`). If `moonshot.toml`
+already exists, it refuses to overwrite.
 
 ## Configuration: `moonshot.toml`
 
@@ -115,6 +116,10 @@ pub struct Manifest {
 
     #[serde(default)]
     pub dependencies: HashMap<String, String>,
+
+    /// Present only for buildable packages.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build: Option<BuildConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -123,6 +128,18 @@ pub struct ProjectMetadata {
 
     #[serde(default = "default_channels")]
     pub channels: Vec<String>,
+
+    /// Package version (required when [build] is present).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+
+    /// SPDX license identifier, e.g. "MIT".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub license: Option<String>,
+
+    /// One-line package description.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }
 
 fn default_channels() -> Vec<String> {
@@ -134,6 +151,11 @@ We model the manifest as nested Rust structs. `Manifest` maps directly to the
 top-level TOML, and `ProjectMetadata` maps to the `[project]` section. The
 `name` field is used only for display; it does not affect resolution or
 installation.
+
+The `version`, `license`, and `description` fields are all optional. The
+`build` field references `BuildConfig`, which we define in
+[Chapter 10](ch10-build.md) when we implement `shot build`. A consume-only
+project can leave all of these out.
 
 We keep the dependency values as plain `String`s rather than parsing them
 immediately. `rattler_conda_types` parses them into `MatchSpec` values at
@@ -151,7 +173,7 @@ We list channels in the manifest rather than in a global config file. This means
 
 #### Methods
 
-The three methods live in a single `impl` block:
+The methods live in a single `impl` block:
 
 ``` {.rust #manifest-impl}
 impl Manifest {
@@ -160,6 +182,8 @@ impl Manifest {
     <<manifest-write>>
 
     <<manifest-find-in-dir>>
+
+    <<manifest-build-helpers>>
 }
 ```
 
@@ -229,7 +253,7 @@ use std::collections::HashMap;
 use clap::Parser;
 use miette::IntoDiagnostic;
 
-use crate::manifest::{Manifest, ProjectMetadata, MANIFEST_FILENAME};
+use crate::manifest::{BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME};
 
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -239,6 +263,10 @@ pub struct Args {
     /// Conda channels to search (can be repeated).
     #[clap(short, long, default_value = "conda-forge")]
     pub channel: Vec<String>,
+
+    /// Scaffold a buildable library (adds [build] section and version).
+    #[clap(long)]
+    pub library: bool,
 }
 
 pub async fn execute(args: Args) -> miette::Result<()> {
@@ -267,8 +295,20 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         project: ProjectMetadata {
             name: name.clone(),
             channels: args.channel,
+            version: if args.library {
+                Some("0.1.0".to_string())
+            } else {
+                None
+            },
+            license: None,
+            description: None,
         },
         dependencies: HashMap::from([("lua".to_string(), ">=5.4".to_string())]),
+        build: if args.library {
+            Some(BuildConfig::default())
+        } else {
+            None
+        },
     };
 
     manifest.write(&manifest_path)?;
@@ -277,6 +317,9 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         "{} Created `{MANIFEST_FILENAME}` for project \"{name}\"",
         console::style("✔").green()
     );
+    if args.library {
+        println!("  Build a package with:  shot build");
+    }
     println!("  Add packages with:  shot add <package>");
     println!("  Install them with:  shot install");
 

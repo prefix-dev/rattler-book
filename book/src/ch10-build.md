@@ -1,16 +1,23 @@
 # Chapter 10: The `build` Command
 
-We've covered installing packages from existing channels.  Now let's close the
+We've covered installing packages from existing channels. Now let's close the
 loop: building a new package from source and publishing it so others can install
 it.
 
-Moving from consumer to producer makes moonshot self-sufficient for the Lua ecosystem. Up to now, we've only consumed packages that someone else built and uploaded. A package manager that can only consume depends on external tooling (like [conda-build] or [rattler-build]) to create new packages. By adding a build command, we can write a library, package it, host it on a local channel, and install it with the same tool.
+Up to now we've only consumed packages that someone else built and uploaded.
+By adding a build command, we can write a library, package it, host it on a
+local channel, and install it with the same tool.
+
+This is how pyproject.toml and Cargo.toml work: when you own the source, the
+build configuration lives alongside the project manifest. Separate recipe files
+(like conda-forge feedstocks) exist for packaging code you don't own. For
+moonshot, a single `moonshot.toml` handles both.
 
 ## Design
 
-`shot build` reads a `recipe.toml`, installs build-time dependencies into a
-temporary prefix, runs a Lua build script, packs the result into a `.conda`
-archive, and indexes the output directory as a local channel.
+`shot build` reads the `[build]` section from `moonshot.toml`, installs
+dependencies into a temporary prefix, runs a Lua build script, packs the result
+into a `.conda` archive, and indexes the output directory as a local channel.
 
 ```console
 $ shot build
@@ -24,154 +31,71 @@ Building moonshine 0.3.0 (build lua_0)
   channel → /home/user/moonshine/output
 ```
 
-You can pass `--recipe` (path to recipe.toml, defaults to `./recipe.toml`)
-and `--output-dir` (defaults to `./output/`).
+You can pass `--output-dir` to control where the built `.conda` file lands
+(defaults to `./output/`).
 
-## Configuration: `recipe.toml`
+Remember `shot init`? With `--library`, it scaffolds a buildable project:
+
+```console
+$ shot init moonshine --library
+✔ Created `moonshot.toml` for project "moonshine"
+  Build a package with:  shot build
+  Add packages with:  shot add <package>
+  Install them with:  shot install
+```
+
+That creates a `moonshot.toml` with a `[build]` section already filled in:
 
 ```toml
-# recipe.toml
-[package]
+[project]
 name    = "moonshine"
-version = "0.3.0"
-license = "MIT"
+version = "0.1.0"
+channels = ["conda-forge"]
 
-[source]
-path = "."
-
-[channels]
-list = ["conda-forge"]
-
-[requirements]
-run   = ["lua >=5.4"]
-build = ["lua >=5.4"]
+[dependencies]
+lua = ">=5.4"
 
 [build]
 script = "build.lua"
 noarch = true
+build_number = 0
 ```
 
-The recipe lives in your project directory alongside your source code.
+The `[build]` section is what distinguishes a buildable package from a
+consume-only project. Without it, `shot build` refuses to run. The `[project]`
+fields `version`, `license`, and `description` are optional for consume-only
+projects but `version` is required when `[build]` is present.
 
-The Rust struct mirrors this structure. Here is the full `src/recipe.rs`
-assembled from the pieces we walk through below:
+`[dependencies]` serves double duty: `shot install` installs them into your
+environment, and `shot build` bakes them into the package as runtime
+requirements.
 
-``` {.rust file=src/recipe.rs}
-<<recipe-imports>>
+!!! note "Dev dependencies"
 
-<<recipe-filename-const>>
+    In a real-world tool you'd want a `[dev-dependencies]` section for packages
+    needed during development (test runners, linters) but that shouldn't ship in
+    the final package. Moonshot skips this for simplicity, but the pattern is
+    the same as Cargo's or npm's dev dependencies.
 
-<<recipe-structs>>
+The Rust struct that maps to the `[build]` section lives in `manifest.rs`
+alongside `Manifest` and `ProjectMetadata` (which we defined in
+[Chapter 3](ch03-init.md)). This block appends to the `manifest-structs`
+block from that chapter:
 
-<<recipe-impl>>
-```
-
-#### Imports
-
-``` {.rust #recipe-imports}
-use std::path::{Path, PathBuf};
-
-use miette::{Context, IntoDiagnostic};
-use serde::{Deserialize, Serialize};
-```
-
-#### The recipe filename
-
-``` {.rust #recipe-filename-const}
-/// File name we look for in the current directory.
-pub const RECIPE_FILENAME: &str = "recipe.toml";
-```
-
-A single constant for the filename keeps it consistent across all commands,
-the same approach used for `MANIFEST_FILENAME` in `manifest.rs`.
-
-#### Structs
-
-``` {.rust #recipe-structs}
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Recipe {
-    pub package: PackageMeta,
-
-    #[serde(default)]
-    pub source: SourceSpec,
-
-    #[serde(default)]
-    pub channels: ChannelSpec,
-
-    #[serde(default)]
-    pub requirements: Requirements,
-
-    #[serde(default)]
-    pub build: BuildConfig,
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct PackageMeta {
-    /// Lowercase, hyphens allowed.
-    pub name: String,
-
-    /// Semantic version string, e.g. `"1.2.3"`.
-    pub version: String,
-
-    /// Increment on rebuilds of the same version.
-    #[serde(default)]
-    pub build_number: u64,
-
-    /// SPDX license identifier, e.g. `"MIT"`.
-    pub license: Option<String>,
-
-    pub description: Option<String>,
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-#[serde(deny_unknown_fields)]
-pub struct SourceSpec {
-    /// Absolute or relative to the recipe. Defaults to `"."`.
-    #[serde(default = "dot")]
-    pub path: String,
-}
-
-fn dot() -> String {
-    ".".to_string()
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChannelSpec {
-    /// Channel list, in priority order.  Defaults to `["conda-forge"]`.
-    #[serde(default = "default_channels")]
-    pub list: Vec<String>,
-}
-
-fn default_channels() -> Vec<String> {
-    vec!["conda-forge".to_string()]
-}
-
-impl Default for ChannelSpec {
-    fn default() -> Self {
-        Self {
-            list: default_channels(),
-        }
-    }
-}
-
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
-pub struct Requirements {
-    #[serde(default)]
-    pub build: Vec<String>,
-
-    #[serde(default)]
-    pub run: Vec<String>,
-}
-
+``` {.rust #manifest-structs}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildConfig {
-    /// Defaults to `"build.lua"`.
+    /// Defaults to "build.lua".
     #[serde(default = "default_script")]
     pub script: String,
 
     /// `true` for pure Lua packages (the default).
     #[serde(default = "default_noarch")]
     pub noarch: bool,
+
+    /// Increment on rebuilds of the same version.
+    #[serde(default)]
+    pub build_number: u64,
 }
 
 fn default_script() -> String {
@@ -187,85 +111,7 @@ impl Default for BuildConfig {
         Self {
             script: default_script(),
             noarch: default_noarch(),
-        }
-    }
-}
-```
-
-Each struct maps to a TOML section: `Recipe` is the top level, `PackageMeta`
-is `[package]`, `SourceSpec` is `[source]`, and so on. A few points about the
-schema:
-
-- Package names must be lowercase with hyphens allowed (no spaces, no uppercase).
-- `build_number` is a monotonically-increasing integer. Increment it when you
-  rebuild the same version with different settings (patched deps, different
-  compiler flags). The solver treats a higher build number as "more recent."
-- Source paths can be absolute or relative to the recipe file. The default
-  `"."` means the directory containing `recipe.toml`.
-
-The `#[serde(default)]` annotations make the `[source]`, `[channels]`,
-`[requirements]`, and `[build]` sections optional.
-
-#### Methods
-
-The methods on `Recipe` handle loading from disk and computing filenames for
-the output package:
-
-``` {.rust #recipe-impl}
-impl Recipe {
-    /// Read a `recipe.toml` from a directory.
-    #[allow(dead_code)]
-    pub fn find_in_dir(dir: &Path) -> miette::Result<(PathBuf, Self)> {
-        let path = dir.join(RECIPE_FILENAME);
-        if !path.exists() {
-            miette::bail!(
-                "No `{RECIPE_FILENAME}` found in `{}`. \
-                 Create one to build a package.",
-                dir.display()
-            );
-        }
-        let recipe = Self::from_path(&path)?;
-        Ok((path, recipe))
-    }
-
-    /// Parse a `recipe.toml` at the given path.
-    pub fn from_path(path: &Path) -> miette::Result<Self> {
-        let content = std::fs::read_to_string(path)
-            .into_diagnostic()
-            .with_context(|| format!("reading recipe at `{}`", path.display()))?;
-
-        toml::from_str(&content)
-            .into_diagnostic()
-            .with_context(|| format!("parsing recipe at `{}`", path.display()))
-    }
-
-    /// The build string encoded in the package filename, e.g. `"lua_0"`.
-    pub fn build_string(&self) -> String {
-        format!("lua_{}", self.package.build_number)
-    }
-
-    /// The canonical filename of the output package (without directory).
-    ///
-    /// e.g. `"moonshine-0.3.0-lua_0.conda"`
-    pub fn package_filename(&self) -> String {
-        format!(
-            "{}-{}-{}.conda",
-            self.package.name,
-            self.package.version,
-            self.build_string()
-        )
-    }
-
-    /// The subdirectory where the package should live in a channel.
-    ///
-    /// Noarch packages go in `noarch/`; platform-specific packages go in
-    /// e.g. `linux-64/`.
-    #[allow(dead_code)]
-    pub fn subdir(&self) -> &'static str {
-        if self.build.noarch {
-            "noarch"
-        } else {
-            rattler_conda_types::Platform::current().as_str()
+            build_number: 0,
         }
     }
 }
@@ -275,12 +121,18 @@ impl Recipe {
 
 ### Build isolation
 
-This two-prefix design gives us build isolation. Tools in `build_prefix`
-(compilers, interpreters, build utilities) are available during the build but
-never leak into the final package. Without this separation, a build tool could
-accidentally end up as a runtime dependency, making the package larger and less
-portable. It's the same principle behind Debian's Build-Depends vs Depends, and
-it's a key requirement for reproducible builds.
+`shot build` creates two temporary prefixes:
+
+- **build_prefix**: where dependencies (like the Lua interpreter) get installed.
+  Tools here are available during the build but never leak into the final
+  package.
+- **install_prefix**: the "fake root" where the build script installs files.
+  Everything in here ends up in the package.
+
+This separation prevents build tools from accidentally becoming runtime
+dependencies, making the package larger and less portable. It's the same
+principle behind Debian's Build-Depends vs Depends, and it's a requirement for
+reproducible builds.
 
 ### The `.conda` format
 
@@ -306,23 +158,298 @@ per-platform.
 
 ## Implementation
 
+We built `install_from_manifest` in [Chapter 7](ch07-install.md) for
+`shot install`. Now we reuse it to install build dependencies into a temporary
+prefix. That's one of the payoffs of keeping build configuration in the
+manifest.
+
+First, a few helper methods on `Manifest` that derive filenames and paths
+from the metadata. These append to the `manifest-impl` block from
+[Chapter 3](ch03-init.md):
+
+``` {.rust #manifest-build-helpers}
+/// The build string encoded in the package filename, e.g. `"lua_0"`.
+pub fn build_string(&self) -> String {
+    let build_number = self.build.as_ref().map_or(0, |b| b.build_number);
+    format!("lua_{}", build_number)
+}
+
+/// The canonical filename of the output package (without directory).
+///
+/// e.g. `"moonshine-0.3.0-lua_0.conda"`
+pub fn package_filename(&self) -> miette::Result<String> {
+    let version = self.project.version.as_deref().ok_or_else(|| {
+        miette::miette!("No `version` in [project]. A version is required to build a package.")
+    })?;
+    Ok(format!(
+        "{}-{}-{}.conda",
+        self.project.name,
+        version,
+        self.build_string()
+    ))
+}
+
+/// The subdirectory where the package should live in a channel.
+///
+/// Noarch packages go in `noarch/`; platform-specific packages go in
+/// e.g. `linux-64/`.
+pub fn subdir(&self) -> &'static str {
+    match &self.build {
+        Some(b) if b.noarch => "noarch",
+        _ => rattler_conda_types::Platform::current().as_str(),
+    }
+}
+```
+
+### The build command
+
+Here is the full file skeleton for `src/commands/build.rs`, with each section
+defined as we encounter it:
+
+``` {.rust file=src/commands/build.rs}
+<<build-imports>>
+
+<<build-args>>
+
+<<build-execute>>
+
+<<build-prelude-const>>
+
+<<build-run-script>>
+
+<<build-write-metadata>>
+
+<<build-collect-paths>>
+
+<<build-sha256>>
+
+<<build-pack-conda>>
+
+<<build-find-lua>>
+```
+
+#### Imports
+
+``` {.rust #build-imports}
+use std::env;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use std::path::{Path, PathBuf};
+use std::str::FromStr;
+
+use clap::Parser;
+use miette::{Context, IntoDiagnostic};
+use rattler_conda_types::compression_level::CompressionLevel;
+use rattler_conda_types::package::{IndexJson, PackageFile, PathType, PathsEntry, PathsJson};
+use rattler_conda_types::{NoArchType, PackageName, VersionWithSource};
+use rattler_index::{index_fs, IndexFsConfig};
+use rattler_package_streaming::write::write_conda_package;
+use sha2::{Digest, Sha256};
+use walkdir::WalkDir;
+
+use crate::commands::install::install_from_manifest;
+use crate::manifest::{Manifest, MANIFEST_FILENAME};
+```
+
+#### CLI arguments
+
+``` {.rust #build-args}
+#[derive(Debug, Parser)]
+pub struct Args {
+    /// Directory where the built `.conda` file is written.
+    ///
+    /// Defaults to `./output/`.
+    #[clap(long, default_value = "output")]
+    pub output_dir: PathBuf,
+}
+```
+
+#### The `execute` function
+
+The build has five stages: parse the manifest, set up working directories,
+install dependencies, run the build script, and pack the result.
+
+``` {.rust #build-execute}
+pub async fn execute(args: Args) -> miette::Result<()> {
+    <<parse-manifest>>
+    <<setup-dirs>>
+    <<install-deps>>
+    <<run-script-call>>
+    <<pack-and-index>>
+}
+```
+
+##### Parsing the manifest
+
+We read `moonshot.toml` from the current directory and check that it has a
+`[build]` section:
+
+``` {.rust #parse-manifest}
+let cwd = env::current_dir().into_diagnostic()?;
+
+let (_manifest_path, manifest) = Manifest::find_in_dir(&cwd)?;
+
+let build_config = manifest.build.as_ref().ok_or_else(|| {
+    miette::miette!(
+        "No [build] section in `{MANIFEST_FILENAME}`. \
+         Add one to make this project buildable, or run \
+         `shot init --library` to start a new library project."
+    )
+})?;
+
+let version = manifest.project.version.as_deref().ok_or_else(|| {
+    miette::miette!(
+        "No `version` in [project]. \
+         A version is required to build a package."
+    )
+})?;
+
+println!(
+    "Building {} {} (build {})",
+    console::style(&manifest.project.name).cyan(),
+    version,
+    manifest.build_string(),
+);
+```
+
+##### Setting up working directories
+
+We create a temporary directory with two subdirectories: `build_prefix` for
+build-time dependencies and `install_prefix` as the fake root where the build
+script installs files. The source directory is simply the current directory.
+
+``` {.rust #setup-dirs}
+let work_dir = tempfile::tempdir()
+    .into_diagnostic()
+    .context("creating temporary build directory")?;
+
+let build_prefix = work_dir.path().join("build_prefix");
+let install_prefix = work_dir.path().join("install_prefix");
+std::fs::create_dir_all(&build_prefix)
+    .into_diagnostic()
+    .context("creating build_prefix")?;
+std::fs::create_dir_all(&install_prefix)
+    .into_diagnostic()
+    .context("creating install_prefix")?;
+
+let src_dir = std::path::absolute(&cwd)
+    .into_diagnostic()
+    .context("resolving SRC_DIR")?;
+```
+
+##### Installing build dependencies
+
+We reuse `install_from_manifest` (the same function `shot install` calls) to
+install the project's dependencies into the build prefix. This gives us the Lua
+interpreter and any libraries the build script needs.
+
+``` {.rust #install-deps}
+if !manifest.dependencies.is_empty() {
+    println!(
+        "  {} Installing {} build dependencies…",
+        console::style("→").blue(),
+        manifest.dependencies.len()
+    );
+    install_from_manifest(&manifest, build_prefix.clone()).await?;
+}
+```
+
+##### Running the build script
+
+We verify the build script exists, find the Lua interpreter in the build
+prefix, and call `run_build_script`.
+
+``` {.rust #run-script-call}
+let script_path = cwd.join(&build_config.script);
+if !script_path.exists() {
+    miette::bail!(
+        "Build script `{}` not found (expected at `{}`)",
+        build_config.script,
+        script_path.display()
+    );
+}
+
+let lua_bin = find_lua(&build_prefix)?;
+
+println!(
+    "  {} Running build script `{}`",
+    console::style("→").blue(),
+    build_config.script
+);
+
+run_build_script(
+    &lua_bin,
+    &script_path,
+    &install_prefix,
+    &src_dir,
+    &build_prefix,
+    &manifest,
+)
+.await?;
+```
+
+##### Packing and indexing
+
+We write package metadata, pack the `.conda` archive, and index the output
+channel so other tools can use it.
+
+``` {.rust #pack-and-index}
+write_package_metadata(&install_prefix, &manifest).context("writing package metadata")?;
+
+let output_dir = std::path::absolute(&args.output_dir)
+    .into_diagnostic()
+    .context("resolving output directory")?;
+
+let subdir_dir = output_dir.join(manifest.subdir());
+std::fs::create_dir_all(&subdir_dir)
+    .into_diagnostic()
+    .context("creating output subdir")?;
+
+let filename = manifest.package_filename()?;
+let output_path = subdir_dir.join(&filename);
+
+pack_conda(&install_prefix, &output_path, &manifest)?;
+```
+
+``` {.rust #pack-and-index}
+println!(
+    "  {} Indexing channel at {}",
+    console::style("→").blue(),
+    output_dir.display()
+);
+index_fs(IndexFsConfig {
+    channel: output_dir.clone(),
+    target_platform: None, // discover all subdirs automatically
+    repodata_patch: None,
+    write_zst: true,
+    write_shards: true,
+    force: false, // incremental (only index new packages)
+    max_parallel: 4,
+    multi_progress: None,
+})
+.await
+.map_err(|e| miette::miette!("{e:#}"))
+.context("indexing output channel")?;
+
+println!(
+    "{} Built {}",
+    console::style("✔").green(),
+    console::style(&filename).cyan()
+);
+println!("  package → {}", output_path.display());
+println!("  channel → {}", output_dir.display());
+
+Ok(())
+```
+
 ### The build script prelude
 
 Writing a build script that manually uses `os.execute("cp ...")` works but is
-tedious.  So we embed a Lua prelude that provides helper functions.
+tedious. So we embed a Lua prelude that provides helper functions. The prelude
+runs before every build script, setting up globals and helpers that the script
+can use.
 
-The prelude defines helpers like `install_lua(pattern)`,
-`install_bin(path)`, `install_share(path, pkg_name)` and sets globals like
-`PREFIX`, `SRC_DIR`, etc.  A minimal build script then looks like:
-
-```lua
--- build.lua
-install_lua("src/*.lua")
-install_bin("scripts/myapp")
-```
-
-Here is the complete `src/build_prelude.lua`, assembled from the named sections
-that follow:
+Here is the complete `src/build_prelude.lua`:
 
 ``` {.lua file=src/build_prelude.lua}
 <<prelude-header>>
@@ -338,9 +465,8 @@ that follow:
 <<prelude-done>>
 ```
 
-The prelude opens with a documentation comment that lists every global and
-function available to build scripts. This block is the only documentation a
-recipe author needs to consult when writing a `build.lua`.
+The prelude starts with documentation listing every global and function
+available to build scripts:
 
 ``` {.lua #prelude-header}
 -- moonshot build prelude
@@ -354,8 +480,8 @@ recipe author needs to consult when writing a `build.lua`.
 --   PREFIX        Where the package should be installed
 --   SRC_DIR       Root of your source tree
 --   BUILD_PREFIX  Where build-time dependencies live (e.g. lua itself)
---   PKG_NAME      Package name from recipe.toml
---   PKG_VERSION   Package version from recipe.toml
+--   PKG_NAME      Package name from moonshot.toml
+--   PKG_VERSION   Package version from moonshot.toml
 --   PKG_BUILD_NUM Build number (integer)
 --
 -- Available functions
@@ -374,9 +500,9 @@ recipe author needs to consult when writing a `build.lua`.
 --   log(msg)                  prints "[moonshot] msg" to stderr
 ```
 
-The Rust side sets these environment variables before launching the Lua
-interpreter (`run_build_script` in `build.rs`). The prelude reads them once
-and fails fast if any are missing.
+The Rust side sets environment variables before launching the Lua interpreter
+(`run_build_script` below). The prelude reads them once and fails fast if any
+are missing:
 
 ``` {.lua #prelude-globals}
 -- ── Globals ───────────────────────────────────────────────────────────────────
@@ -419,9 +545,8 @@ local function q(path)
 end
 ```
 
-These functions are available to every build script. They cover the most common
-file-system operations: joining paths, creating directories, copying, moving,
-testing existence, and logging.
+The public API starts with general file-system operations (`mkdir`, `cp`, `mv`,
+`exists`, `log`):
 
 ``` {.lua #prelude-public-api}
 -- ── Public API ────────────────────────────────────────────────────────────────
@@ -486,9 +611,10 @@ function log(msg)
 end
 ```
 
-The install helpers build on `shell`, `q`, and `path_join` to give build
-scripts a declarative vocabulary. Each function copies files into the right
-subdirectory of `PREFIX` so the package layout matches what conda expects.
+The install helpers build on these to give build scripts a declarative
+vocabulary. `install_lua` is the one you'll use most: it copies Lua modules
+into the standard package path so `require()` finds them. `install_bin` handles
+executables.
 
 ``` {.lua #prelude-install-helpers}
 -- ── Install helpers ───────────────────────────────────────────────────────────
@@ -568,294 +694,12 @@ function install_share(src, name)
 end
 ```
 
-Finally, the prelude logs a short banner so the build output shows which
-package is being built and where files will land.
-
 ``` {.lua #prelude-done}
 -- ── Done ──────────────────────────────────────────────────────────────────────
 
 log(string.format("Building %s %s (build %d)", PKG_NAME, PKG_VERSION, PKG_BUILD_NUM))
 log(string.format("PREFIX    = %s", PREFIX))
 log(string.format("SRC_DIR   = %s", SRC_DIR))
-```
-
-### The build command
-
-Here is the full file skeleton for `src/commands/build.rs`, with each section
-defined as we encounter it:
-
-``` {.rust file=src/commands/build.rs}
-<<build-imports>>
-
-<<build-args>>
-
-<<build-execute>>
-
-<<build-prelude-const>>
-
-<<build-run-script>>
-
-<<build-write-metadata>>
-
-<<build-collect-paths>>
-
-<<build-sha256>>
-
-<<build-pack-conda>>
-
-<<build-find-lua>>
-```
-
-#### Imports
-
-``` {.rust #build-imports}
-use std::env;
-use std::fs::File;
-use std::io::{BufReader, BufWriter};
-use std::path::{Path, PathBuf};
-use std::str::FromStr;
-
-use clap::Parser;
-use miette::{Context, IntoDiagnostic};
-use rattler_conda_types::compression_level::CompressionLevel;
-use rattler_conda_types::package::{IndexJson, PackageFile, PathType, PathsEntry, PathsJson};
-use rattler_conda_types::{NoArchType, PackageName, VersionWithSource};
-use rattler_index::{index_fs, IndexFsConfig};
-use rattler_package_streaming::write::write_conda_package;
-use sha2::{Digest, Sha256};
-use walkdir::WalkDir;
-
-use crate::commands::install::install_from_manifest;
-use crate::manifest::{Manifest, ProjectMetadata};
-use crate::recipe::{Recipe, RECIPE_FILENAME};
-```
-
-#### CLI arguments
-
-``` {.rust #build-args}
-#[derive(Debug, Parser)]
-pub struct Args {
-    /// Path to `recipe.toml`.  Defaults to `./recipe.toml`.
-    #[clap(long)]
-    pub recipe: Option<PathBuf>,
-
-    /// Directory where the built `.conda` file is written.
-    ///
-    /// Defaults to `./output/`.
-    #[clap(long, default_value = "output")]
-    pub output_dir: PathBuf,
-}
-```
-
-#### The `execute` function
-
-Our `execute` function orchestrates the entire build. Its skeleton shows the
-five stages at a glance:
-
-``` {.rust #build-execute}
-pub async fn execute(args: Args) -> miette::Result<()> {
-    <<parse-recipe>>
-    <<setup-dirs>>
-    <<install-deps>>
-    <<run-script-call>>
-    <<pack-and-index>>
-}
-```
-
-##### Parsing the recipe
-
-First we locate the recipe file (defaulting to `recipe.toml` in the current
-directory), parse it, and print a build banner.
-
-``` {.rust #parse-recipe}
-let cwd = env::current_dir().into_diagnostic()?;
-
-let recipe_path = args
-    .recipe
-    .clone()
-    .unwrap_or_else(|| cwd.join(RECIPE_FILENAME));
-
-let recipe = Recipe::from_path(&recipe_path)?;
-let recipe_dir = recipe_path.parent().unwrap_or(&cwd).to_path_buf();
-
-println!(
-    "Building {} {} (build {})",
-    console::style(&recipe.package.name).cyan(),
-    recipe.package.version,
-    recipe.build_string(),
-);
-```
-
-##### Setting up working directories
-
-Next we create a temporary directory with two subdirectories:
-
-- **`build_prefix`**: where build-time dependencies are installed. The Lua
-  interpreter lives here. These never appear in the final package.
-- **`install_prefix`**: the "fake root" where the build script installs files.
-  Everything in here ends up in the package.
-
-The temporary directory is automatically cleaned up when `work_dir` goes out
-of scope. We also resolve the source directory from the recipe, making relative
-paths absolute.
-
-``` {.rust #setup-dirs}
-let work_dir = tempfile::tempdir()
-    .into_diagnostic()
-    .context("creating temporary build directory")?;
-
-let build_prefix = work_dir.path().join("build_prefix");
-let install_prefix = work_dir.path().join("install_prefix");
-std::fs::create_dir_all(&build_prefix)
-    .into_diagnostic()
-    .context("creating build_prefix")?;
-std::fs::create_dir_all(&install_prefix)
-    .into_diagnostic()
-    .context("creating install_prefix")?;
-
-// Resolve the source directory.
-let src_dir = {
-    let p = PathBuf::from(&recipe.source.path);
-    if p.is_absolute() {
-        p
-    } else {
-        recipe_dir.join(&recipe.source.path)
-    }
-};
-let src_dir = std::path::absolute(src_dir)
-    .into_diagnostic()
-    .context("resolving SRC_DIR")?;
-```
-
-##### Installing build dependencies
-
-We construct a temporary manifest from the recipe's build requirements and
-reuse `install_from_manifest` (the same function `shot install` uses) to
-install them into the build prefix. We always add Lua as a build dependency
-since the build script needs it.
-
-``` {.rust #install-deps}
-let mut build_deps = recipe.requirements.build.clone();
-// Always ensure lua is available in the build environment.
-if !build_deps.iter().any(|d| d.starts_with("lua")) {
-    build_deps.push("lua >=5.1".to_string());
-}
-
-if !build_deps.is_empty() {
-    println!(
-        "  {} Installing {} build dependencies…",
-        console::style("→").blue(),
-        build_deps.len()
-    );
-    let build_manifest = Manifest {
-        project: ProjectMetadata {
-            name: format!("{}-build-env", recipe.package.name),
-            channels: recipe.channels.list.clone(),
-        },
-        dependencies: build_deps
-            .iter()
-            .map(|s| {
-                // Split "name version" into (name, spec) pair
-                let mut parts = s.splitn(2, ' ');
-                let name = parts.next().unwrap_or(s).to_string();
-                let spec = parts.next().unwrap_or("*").to_string();
-                (name, spec)
-            })
-            .collect(),
-    };
-    install_from_manifest(&build_manifest, build_prefix.clone()).await?;
-}
-```
-
-##### Running the build script
-
-Next we verify the build script exists, find the Lua interpreter in the
-build prefix, and call `run_build_script` (defined below).
-
-``` {.rust #run-script-call}
-let script_path = recipe_dir.join(&recipe.build.script);
-if !script_path.exists() {
-    miette::bail!(
-        "Build script `{}` not found (expected at `{}`)",
-        recipe.build.script,
-        script_path.display()
-    );
-}
-
-let lua_bin = find_lua(&build_prefix)?;
-
-println!(
-    "  {} Running build script `{}`",
-    console::style("→").blue(),
-    recipe.build.script
-);
-
-run_build_script(
-    &lua_bin,
-    &script_path,
-    &install_prefix,
-    &src_dir,
-    &build_prefix,
-    &recipe,
-)
-.await?;
-```
-
-##### Packing and indexing
-
-Finally we write package metadata, pack the `.conda` archive, and index the
-output channel so other tools can use it as a local channel.
-
-``` {.rust #pack-and-index}
-write_package_metadata(&install_prefix, &recipe).context("writing package metadata")?;
-
-let output_dir = std::path::absolute(&args.output_dir)
-    .into_diagnostic()
-    .context("resolving output directory")?;
-
-let subdir_dir = output_dir.join(recipe.subdir());
-std::fs::create_dir_all(&subdir_dir)
-    .into_diagnostic()
-    .context("creating output subdir")?;
-
-let filename = recipe.package_filename();
-let output_path = subdir_dir.join(&filename);
-
-pack_conda(&install_prefix, &output_path, &recipe)?;
-```
-
-The indexing step uses `index_fs` from `rattler_index` to generate
-`repodata.json` for the output directory, making it a valid local channel.
-
-``` {.rust #pack-and-index}
-println!(
-    "  {} Indexing channel at {}",
-    console::style("→").blue(),
-    output_dir.display()
-);
-index_fs(IndexFsConfig {
-    channel: output_dir.clone(),
-    target_platform: None, // discover all subdirs automatically
-    repodata_patch: None,
-    write_zst: true,
-    write_shards: true,
-    force: false, // incremental (only index new packages)
-    max_parallel: 4,
-    multi_progress: None,
-})
-.await
-.map_err(|e| miette::miette!("{e:#}"))
-.context("indexing output channel")?;
-
-println!(
-    "{} Built {}",
-    console::style("✔").green(),
-    console::style(&filename).cyan()
-);
-println!("  package → {}", output_path.display());
-println!("  channel → {}", output_dir.display());
-
-Ok(())
 ```
 
 #### Build prelude constant
@@ -866,10 +710,9 @@ const BUILD_PRELUDE: &str = include_str!("../build_prelude.lua");
 
 #### Running the build script
 
-We locate the Lua interpreter in the build prefix and run your build script
-through a wrapper that loads the prelude first.  We use a wrapper file rather
-than `-e '...'` so that error messages show correct line numbers and the real
-filename instead of `<string>`.
+We locate the Lua interpreter in the build prefix and run the build script
+through a wrapper that loads the prelude first. We use a wrapper file rather
+than `-e '...'` so that error messages show correct line numbers.
 
 The build script can use any tool installed in `build_prefix/bin` because we
 prepend it to `PATH`.
@@ -881,16 +724,12 @@ async fn run_build_script(
     install_prefix: &Path,
     src_dir: &Path,
     build_prefix: &Path,
-    recipe: &Recipe,
+    manifest: &Manifest,
 ) -> miette::Result<()> {
     <<create-wrapper>>
     <<exec-lua>>
 }
 ```
-
-First we create a temporary wrapper script that loads the build prelude (helper
-functions) before your actual build script. Using `dofile()` rather than
-`-e '...'` preserves correct line numbers in error messages.
 
 ``` {.rust #create-wrapper}
 let wrapper_dir = tempfile::tempdir()
@@ -914,10 +753,6 @@ std::fs::write(&wrapper_path, &wrapper_src)
     .context("writing build wrapper")?;
 ```
 
-Next we prepend the build prefix's `bin` directory to `PATH` so the script can
-call any installed build tools (luarocks, make, etc.), then launch Lua with
-the conda-style environment variables that build scripts expect.
-
 ``` {.rust #exec-lua}
 // Prepend build_prefix bin directories to PATH so the script can call
 // any installed build tools (luarocks, make, etc.).
@@ -937,14 +772,22 @@ let new_path = if cfg!(windows) {
     )
 };
 
+let build_config = manifest
+    .build
+    .as_ref()
+    .expect("[build] section validated in execute()");
+
 let status = tokio::process::Command::new(lua_bin)
     .arg(&wrapper_path)
     .env("PREFIX", install_prefix)
     .env("SRC_DIR", src_dir)
     .env("BUILD_PREFIX", build_prefix)
-    .env("PKG_NAME", &recipe.package.name)
-    .env("PKG_VERSION", &recipe.package.version)
-    .env("PKG_BUILD_NUM", recipe.package.build_number.to_string())
+    .env("PKG_NAME", &manifest.project.name)
+    .env(
+        "PKG_VERSION",
+        manifest.project.version.as_deref().unwrap_or("0.0.0"),
+    )
+    .env("PKG_BUILD_NUM", build_config.build_number.to_string())
     .env("PATH", &new_path)
     .status()
     .await
@@ -960,26 +803,24 @@ if !status.success() {
 Ok(())
 ```
 
+### Packaging
+
+Once the build script finishes, we turn the install prefix into a `.conda`
+archive. This involves writing metadata files, collecting file hashes, packing
+the archive, and indexing the output channel.
+
 #### Writing package metadata
 
-Every conda package contains an `info/` directory with metadata.  We need two
-files: `index.json` and `paths.json`.  The solver reads `IndexJson` from
-`conda-meta/*.json` after installation to track what's present in the
-environment.
-
-We populate an `IndexJson` struct from the recipe metadata, then walk the
-install prefix to build `paths.json`:
+Every conda package contains an `info/` directory with metadata. We need two
+files: `index.json` (which the solver reads to understand the package) and
+`paths.json` (which lists every file with its checksum).
 
 ``` {.rust #build-write-metadata}
-fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Result<()> {
+fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette::Result<()> {
     <<create-index-json>>
     <<write-meta-files>>
 }
 ```
-
-We start by creating the `info/` directory and building an `IndexJson` struct
-from the recipe metadata. The `noarch` and `subdir` fields depend on whether
-the recipe is marked as architecture-independent.
 
 ``` {.rust #create-index-json}
 let info_dir = install_prefix.join("info");
@@ -987,36 +828,53 @@ std::fs::create_dir_all(&info_dir)
     .into_diagnostic()
     .context("creating info/ directory")?;
 
-let noarch = if recipe.build.noarch {
+let build_config = manifest
+    .build
+    .as_ref()
+    .expect("[build] section validated in execute()");
+
+let noarch = if build_config.noarch {
     NoArchType::generic()
 } else {
     NoArchType::default()
 };
 
-let subdir = if recipe.build.noarch {
+let subdir = if build_config.noarch {
     Some("noarch".to_string())
 } else {
     Some(rattler_conda_types::Platform::current().to_string())
 };
 
+let version_str = manifest.project.version.as_deref().unwrap_or("0.0.0");
+
 let index = IndexJson {
-    name: PackageName::from_str(&recipe.package.name)
+    name: PackageName::from_str(&manifest.project.name)
         .into_diagnostic()
-        .with_context(|| format!("invalid package name `{}`", recipe.package.name))?,
-    version: VersionWithSource::from_str(&recipe.package.version)
+        .with_context(|| format!("invalid package name `{}`", manifest.project.name))?,
+    version: VersionWithSource::from_str(version_str)
         .into_diagnostic()
-        .with_context(|| format!("invalid version `{}`", recipe.package.version))?,
-    build: recipe.build_string(),
-    build_number: recipe.package.build_number,
+        .with_context(|| format!("invalid version `{}`", version_str))?,
+    build: manifest.build_string(),
+    build_number: build_config.build_number,
     subdir,
     arch: None,
     platform: None,
     noarch,
-    depends: recipe.requirements.run.clone(),
+    depends: manifest
+        .dependencies
+        .iter()
+        .map(|(name, spec)| {
+            if spec == "*" {
+                name.clone()
+            } else {
+                format!("{name} {spec}")
+            }
+        })
+        .collect(),
     constrains: vec![],
     experimental_extra_depends: Default::default(),
     features: None,
-    license: recipe.package.license.clone(),
+    license: manifest.project.license.clone(),
     license_family: None,
     purls: None,
     python_site_packages_path: None,
@@ -1026,10 +884,6 @@ let index = IndexJson {
     ),
 };
 ```
-
-Finally we serialize and write both `index.json` and `paths.json`. The paths
-manifest is built by walking the install prefix (see `collect_paths_json`
-below).
 
 ``` {.rust #write-meta-files}
 let index_path = install_prefix.join(IndexJson::package_path());
@@ -1053,10 +907,10 @@ std::fs::write(&paths_path, paths_json)
 Ok(())
 ```
 
-#### Collecting paths
+#### Collecting paths and hashing
 
-We walk the install prefix, hash every file, and record each path in a
-`PathsJson` manifest.
+We walk the install prefix, hash every file with SHA-256, and record each path
+in a `PathsJson` manifest:
 
 ``` {.rust #build-collect-paths}
 fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
@@ -1095,11 +949,6 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
 }
 ```
 
-#### SHA-256 hashing
-
-The SHA-256 hash is computed with the `sha2` crate.  We read the file in 64 KiB
-chunks to avoid loading the entire file into memory.
-
 ``` {.rust #build-sha256}
 fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u64)> {
     use std::io::Read;
@@ -1125,19 +974,15 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
 #### Packing into `.conda`
 
 We pass the install prefix and its file list to `write_conda_package`, which
-produces the final archive.
-
-`rattler_package_streaming::write::write_conda_package` does all the work:
-
-1. Separates `info/` files from payload files.
-2. Compresses each group into a `.tar.zst` archive.
-3. Wraps both archives and a `metadata.json` into an uncompressed ZIP.
-
-The `.conda` format is designed so that tools can `mmap` the outer ZIP directory
-and jump directly to the inner archive they need.
+separates `info/` files from payload files, compresses each group into a
+`.tar.zst`, and wraps both into an uncompressed ZIP:
 
 ``` {.rust #build-pack-conda}
-fn pack_conda(install_prefix: &Path, output_path: &Path, recipe: &Recipe) -> miette::Result<()> {
+fn pack_conda(
+    install_prefix: &Path,
+    output_path: &Path,
+    manifest: &Manifest,
+) -> miette::Result<()> {
     // Collect all files relative to the install prefix.
     let files: Vec<PathBuf> = WalkDir::new(install_prefix)
         .into_iter()
@@ -1168,9 +1013,9 @@ fn pack_conda(install_prefix: &Path, output_path: &Path, recipe: &Recipe) -> mie
 
     let out_name = format!(
         "{}-{}-{}",
-        recipe.package.name,
-        recipe.package.version,
-        recipe.build_string()
+        manifest.project.name,
+        manifest.project.version.as_deref().unwrap_or("0.0.0"),
+        manifest.build_string()
     );
 
     let now = chrono::Utc::now();
@@ -1224,7 +1069,7 @@ fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
         .collect();
     miette::bail!(
         "No Lua interpreter found in `{}`. \
-         Add `lua` to `[requirements] build` in your recipe.",
+         Add `lua` to [dependencies] in moonshot.toml.",
         searched.join("`, `")
     )
 }
@@ -1233,14 +1078,14 @@ fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
 #### Indexing the channel
 
 After packing, the output directory isn't yet a valid conda channel. It has
-packages but no `repodata.json`.  The `index_fs` call inside `execute` scans
+packages but no `repodata.json`. The `index_fs` call inside `execute` scans
 the directory, reads every `.conda` file's `info/index.json`, and writes:
 
 - `output/noarch/repodata.json`, the plain JSON catalog
 - `output/noarch/repodata.json.zst`, a compressed version
 - `output/noarch/repodata_shards.msgpack.zst`, the sharded format
 
-Once indexed, the output directory can be used as a channel directly:
+Once indexed, the output directory can be used as a channel:
 
 ```toml
 # Another project's moonshot.toml
@@ -1260,16 +1105,92 @@ moonshine = ">=0.3"
     features that we skip in moonshot, but they are the difference between a local
     build tool and a real distribution system.
 
+## Try it
+
+Let's build a package and install it in a separate project to see the full
+loop in action.
+
+First, create a library project and write a small Lua module:
+
+```console
+$ mkdir moonshine && cd moonshine
+$ shot init moonshine --library
+✔ Created `moonshot.toml` for project "moonshine"
+```
+
+Write a Lua module that exports a single function:
+
+```lua
+-- src/moonshine.lua
+local M = {}
+
+function M.greet(name)
+    return string.format("Hello, %s!", name)
+end
+
+return M
+```
+
+And a build script that installs it:
+
+```lua
+-- build.lua
+install_lua("src/*.lua")
+```
+
+Build the package:
+
+```console
+$ shot build
+Building moonshine 0.1.0 (build lua_0)
+  → Installing 1 build dependencies…
+  → Running build script `build.lua`
+  → Packing 3 files…
+  → Indexing channel at /home/user/moonshine/output
+✔ Built moonshine-0.1.0-lua_0.conda
+  package → /home/user/moonshine/output/noarch/moonshine-0.1.0-lua_0.conda
+  channel → /home/user/moonshine/output
+```
+
+Now create a separate project that uses the package you just built:
+
+```console
+$ cd .. && mkdir demo && cd demo
+$ shot init demo
+```
+
+Edit `moonshot.toml` to add the local channel and moonshine as a dependency:
+
+```toml
+[project]
+name = "demo"
+channels = ["../moonshine/output", "conda-forge"]
+
+[dependencies]
+lua = ">=5.4"
+moonshine = "*"
+```
+
+Install and run:
+
+```console
+$ shot install
+$ shot run lua -e "local m = require('moonshine'); print(m.greet('world'))"
+Hello, world!
+```
+
+That's the full loop. The `.conda` file you built is the same format that
+conda-forge uses to distribute tens of thousands of packages.
+
 ## Summary
 
-- A `recipe.toml` describes how to build a package.
-- Build deps are installed into a temporary prefix; run deps go into `info/index.json`.
+- The `[build]` section in `moonshot.toml` turns a project into a buildable
+  package.
+- Dependencies are installed into a temporary build prefix, keeping build tools
+  separate from the final package.
 - `paths.json` lists every file with its SHA-256 hash.
 - `write_conda_package` produces the `.conda` archive format.
 - `rattler_index` turns the output directory into a valid conda channel.
 
-With `shot build` working, our package manager is feature-complete!  In Part II
-we'll dive deeper into the underlying mechanisms.
-
-[conda-build]: https://docs.conda.io/projects/conda-build/
-[rattler-build]: https://github.com/prefix-dev/rattler-build
+With `shot build` working, our package manager is feature-complete! In Part II
+we'll look deeper into the mechanisms we've been using.

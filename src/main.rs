@@ -8,7 +8,6 @@ mod commands;
 mod lock;
 mod manifest;
 mod progress;
-mod recipe;
 mod resolve;
 // ~/~ end
 
@@ -48,7 +47,7 @@ enum Command {
     /// Run a command inside the activated environment.
     Run(commands::run::Args),
 
-    /// Build a Lua package from a recipe.toml.
+    /// Build a .conda package from the current project.
     Build(commands::build::Args),
 }
 // ~/~ end

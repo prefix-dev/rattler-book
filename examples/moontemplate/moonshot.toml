@@ -1,0 +1,13 @@
+[project]
+name        = "moontemplate"
+version     = "0.1.0"
+license     = "MIT"
+description = "Mustache-style template engine with sections, partials, escaping"
+channels    = ["conda-forge"]
+
+[dependencies]
+lua = ">=5.4"
+
+[build]
+script = "build.lua"
+noarch = true

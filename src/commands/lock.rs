@@ -27,17 +27,13 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let lock_path = cwd.join(LOCK_FILENAME);
 
     if !args.force && is_lock_fresh(&lock_path, &manifest_path) {
-        println!(
-            "{} Lock is already up to date",
-            console::style("✔").green()
-        );
+        println!("{} Lock is already up to date", console::style("✔").green());
         return Ok(());
     }
 
     let platform = Platform::current();
     let existing = read_locked_packages(&lock_path, platform);
-    let (solution, channels, platform) =
-        resolve_from_manifest(&manifest, existing).await?;
+    let (solution, channels, platform) = resolve_from_manifest(&manifest, existing).await?;
 
     write_lock_file(&lock_path, &channels, platform, &solution)?;
 

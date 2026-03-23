@@ -11,8 +11,8 @@
 --   PREFIX        Where the package should be installed
 --   SRC_DIR       Root of your source tree
 --   BUILD_PREFIX  Where build-time dependencies live (e.g. lua itself)
---   PKG_NAME      Package name from recipe.toml
---   PKG_VERSION   Package version from recipe.toml
+--   PKG_NAME      Package name from moonshot.toml
+--   PKG_VERSION   Package version from moonshot.toml
 --   PKG_BUILD_NUM Build number (integer)
 --
 -- Available functions

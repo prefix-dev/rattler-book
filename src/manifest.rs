@@ -19,6 +19,10 @@ pub struct Manifest {
 
     #[serde(default)]
     pub dependencies: HashMap<String, String>,
+
+    /// Present only for buildable packages.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub build: Option<BuildConfig>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -27,10 +31,56 @@ pub struct ProjectMetadata {
 
     #[serde(default = "default_channels")]
     pub channels: Vec<String>,
+
+    /// Package version (required when [build] is present).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub version: Option<String>,
+
+    /// SPDX license identifier, e.g. "MIT".
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub license: Option<String>,
+
+    /// One-line package description.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
 }
 
 fn default_channels() -> Vec<String> {
     vec!["conda-forge".to_string()]
+}
+// ~/~ end
+// ~/~ begin <<book/src/ch10-build.md#manifest-structs>>[0]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BuildConfig {
+    /// Defaults to "build.lua".
+    #[serde(default = "default_script")]
+    pub script: String,
+
+    /// `true` for pure Lua packages (the default).
+    #[serde(default = "default_noarch")]
+    pub noarch: bool,
+
+    /// Increment on rebuilds of the same version.
+    #[serde(default)]
+    pub build_number: u64,
+}
+
+fn default_script() -> String {
+    "build.lua".to_string()
+}
+
+fn default_noarch() -> bool {
+    true
+}
+
+impl Default for BuildConfig {
+    fn default() -> Self {
+        Self {
+            script: default_script(),
+            noarch: default_noarch(),
+            build_number: 0,
+        }
+    }
 }
 // ~/~ end
 
@@ -72,6 +122,40 @@ impl Manifest {
         }
         let manifest = Self::from_path(&path)?;
         Ok((path, manifest))
+    }
+    // ~/~ end
+
+    // ~/~ begin <<book/src/ch10-build.md#manifest-build-helpers>>[init]
+    /// The build string encoded in the package filename, e.g. `"lua_0"`.
+    pub fn build_string(&self) -> String {
+        let build_number = self.build.as_ref().map_or(0, |b| b.build_number);
+        format!("lua_{}", build_number)
+    }
+    
+    /// The canonical filename of the output package (without directory).
+    ///
+    /// e.g. `"moonshine-0.3.0-lua_0.conda"`
+    pub fn package_filename(&self) -> miette::Result<String> {
+        let version = self.project.version.as_deref().ok_or_else(|| {
+            miette::miette!("No `version` in [project]. A version is required to build a package.")
+        })?;
+        Ok(format!(
+            "{}-{}-{}.conda",
+            self.project.name,
+            version,
+            self.build_string()
+        ))
+    }
+    
+    /// The subdirectory where the package should live in a channel.
+    ///
+    /// Noarch packages go in `noarch/`; platform-specific packages go in
+    /// e.g. `linux-64/`.
+    pub fn subdir(&self) -> &'static str {
+        match &self.build {
+            Some(b) if b.noarch => "noarch",
+            _ => rattler_conda_types::Platform::current().as_str(),
+        }
     }
     // ~/~ end
 }

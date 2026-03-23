@@ -14,11 +14,18 @@
 #   shot run lua bin/hello-moon.lua json
 
 [project]
-name     = "hello-moon"
-channels = ["conda-forge", "../channel"]   # ../channel = locally built packages
+name        = "hello-moon"
+version     = "0.1.0"
+license     = "MIT"
+description = "Demo app: searches a package DB using moonjson, mooncolor, moontemplate"
+channels    = ["conda-forge", "../channel"]   # ../channel = locally built packages
 
 [dependencies]
 lua          = ">=5.4"
 moonjson     = "*"
 mooncolor    = "*"
 moontemplate = "*"
+
+[build]
+script = "build.lua"
+noarch = true

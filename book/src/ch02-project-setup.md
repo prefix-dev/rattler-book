@@ -139,7 +139,6 @@ Here is how the project is structured:
       <li class="file"><span class="name">main.rs</span> <span class="comment">CLI wiring, Tokio runtime</span></li>
       <li class="file"><span class="name">lock.rs</span> <span class="comment">moonshot.lock reader/writer</span></li>
       <li class="file"><span class="name">manifest.rs</span> <span class="comment">moonshot.toml parser</span></li>
-      <li class="file"><span class="name">recipe.rs</span> <span class="comment">recipe.toml parser</span></li>
       <li class="file"><span class="name">progress.rs</span> <span class="comment">spinner helpers</span></li>
       <li class="file"><span class="name">resolve.rs</span> <span class="comment">shared dependency resolver</span></li>
       <li class="dir"><span class="name">commands/</span>
@@ -216,7 +215,6 @@ mod commands;
 mod lock;
 mod manifest;
 mod progress;
-mod recipe;
 mod resolve;
 ```
 
@@ -262,7 +260,7 @@ enum Command {
     /// Run a command inside the activated environment.
     Run(commands::run::Args),
 
-    /// Build a Lua package from a recipe.toml.
+    /// Build a .conda package from the current project.
     Build(commands::build::Args),
 }
 ```

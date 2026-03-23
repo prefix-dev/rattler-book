@@ -17,17 +17,12 @@ use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 
 use crate::commands::install::install_from_manifest;
-use crate::manifest::{Manifest, ProjectMetadata};
-use crate::recipe::{Recipe, RECIPE_FILENAME};
+use crate::manifest::{Manifest, MANIFEST_FILENAME};
 // ~/~ end
 
 // ~/~ begin <<book/src/ch10-build.md#build-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
-    /// Path to `recipe.toml`.  Defaults to `./recipe.toml`.
-    #[clap(long)]
-    pub recipe: Option<PathBuf>,
-
     /// Directory where the built `.conda` file is written.
     ///
     /// Defaults to `./output/`.
@@ -38,22 +33,31 @@ pub struct Args {
 
 // ~/~ begin <<book/src/ch10-build.md#build-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
-    // ~/~ begin <<book/src/ch10-build.md#parse-recipe>>[init]
+    // ~/~ begin <<book/src/ch10-build.md#parse-manifest>>[init]
     let cwd = env::current_dir().into_diagnostic()?;
     
-    let recipe_path = args
-        .recipe
-        .clone()
-        .unwrap_or_else(|| cwd.join(RECIPE_FILENAME));
+    let (_manifest_path, manifest) = Manifest::find_in_dir(&cwd)?;
     
-    let recipe = Recipe::from_path(&recipe_path)?;
-    let recipe_dir = recipe_path.parent().unwrap_or(&cwd).to_path_buf();
+    let build_config = manifest.build.as_ref().ok_or_else(|| {
+        miette::miette!(
+            "No [build] section in `{MANIFEST_FILENAME}`. \
+             Add one to make this project buildable, or run \
+             `shot init --library` to start a new library project."
+        )
+    })?;
+    
+    let version = manifest.project.version.as_deref().ok_or_else(|| {
+        miette::miette!(
+            "No `version` in [project]. \
+             A version is required to build a package."
+        )
+    })?;
     
     println!(
         "Building {} {} (build {})",
-        console::style(&recipe.package.name).cyan(),
-        recipe.package.version,
-        recipe.build_string(),
+        console::style(&manifest.project.name).cyan(),
+        version,
+        manifest.build_string(),
     );
     // ~/~ end
     // ~/~ begin <<book/src/ch10-build.md#setup-dirs>>[init]
@@ -70,57 +74,26 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .into_diagnostic()
         .context("creating install_prefix")?;
     
-    // Resolve the source directory.
-    let src_dir = {
-        let p = PathBuf::from(&recipe.source.path);
-        if p.is_absolute() {
-            p
-        } else {
-            recipe_dir.join(&recipe.source.path)
-        }
-    };
-    let src_dir = std::path::absolute(src_dir)
+    let src_dir = std::path::absolute(&cwd)
         .into_diagnostic()
         .context("resolving SRC_DIR")?;
     // ~/~ end
     // ~/~ begin <<book/src/ch10-build.md#install-deps>>[init]
-    let mut build_deps = recipe.requirements.build.clone();
-    // Always ensure lua is available in the build environment.
-    if !build_deps.iter().any(|d| d.starts_with("lua")) {
-        build_deps.push("lua >=5.1".to_string());
-    }
-    
-    if !build_deps.is_empty() {
+    if !manifest.dependencies.is_empty() {
         println!(
             "  {} Installing {} build dependencies…",
             console::style("→").blue(),
-            build_deps.len()
+            manifest.dependencies.len()
         );
-        let build_manifest = Manifest {
-            project: ProjectMetadata {
-                name: format!("{}-build-env", recipe.package.name),
-                channels: recipe.channels.list.clone(),
-            },
-            dependencies: build_deps
-                .iter()
-                .map(|s| {
-                    // Split "name version" into (name, spec) pair
-                    let mut parts = s.splitn(2, ' ');
-                    let name = parts.next().unwrap_or(s).to_string();
-                    let spec = parts.next().unwrap_or("*").to_string();
-                    (name, spec)
-                })
-                .collect(),
-        };
-        install_from_manifest(&build_manifest, build_prefix.clone()).await?;
+        install_from_manifest(&manifest, build_prefix.clone()).await?;
     }
     // ~/~ end
     // ~/~ begin <<book/src/ch10-build.md#run-script-call>>[init]
-    let script_path = recipe_dir.join(&recipe.build.script);
+    let script_path = cwd.join(&build_config.script);
     if !script_path.exists() {
         miette::bail!(
             "Build script `{}` not found (expected at `{}`)",
-            recipe.build.script,
+            build_config.script,
             script_path.display()
         );
     }
@@ -130,7 +103,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     println!(
         "  {} Running build script `{}`",
         console::style("→").blue(),
-        recipe.build.script
+        build_config.script
     );
     
     run_build_script(
@@ -139,26 +112,26 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         &install_prefix,
         &src_dir,
         &build_prefix,
-        &recipe,
+        &manifest,
     )
     .await?;
     // ~/~ end
     // ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[init]
-    write_package_metadata(&install_prefix, &recipe).context("writing package metadata")?;
+    write_package_metadata(&install_prefix, &manifest).context("writing package metadata")?;
     
     let output_dir = std::path::absolute(&args.output_dir)
         .into_diagnostic()
         .context("resolving output directory")?;
     
-    let subdir_dir = output_dir.join(recipe.subdir());
+    let subdir_dir = output_dir.join(manifest.subdir());
     std::fs::create_dir_all(&subdir_dir)
         .into_diagnostic()
         .context("creating output subdir")?;
     
-    let filename = recipe.package_filename();
+    let filename = manifest.package_filename()?;
     let output_path = subdir_dir.join(&filename);
     
-    pack_conda(&install_prefix, &output_path, &recipe)?;
+    pack_conda(&install_prefix, &output_path, &manifest)?;
     // ~/~ end
     // ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[1]
     println!(
@@ -204,7 +177,7 @@ async fn run_build_script(
     install_prefix: &Path,
     src_dir: &Path,
     build_prefix: &Path,
-    recipe: &Recipe,
+    manifest: &Manifest,
 ) -> miette::Result<()> {
     // ~/~ begin <<book/src/ch10-build.md#create-wrapper>>[init]
     let wrapper_dir = tempfile::tempdir()
@@ -246,14 +219,22 @@ async fn run_build_script(
         )
     };
     
+    let build_config = manifest
+        .build
+        .as_ref()
+        .expect("[build] section validated in execute()");
+    
     let status = tokio::process::Command::new(lua_bin)
         .arg(&wrapper_path)
         .env("PREFIX", install_prefix)
         .env("SRC_DIR", src_dir)
         .env("BUILD_PREFIX", build_prefix)
-        .env("PKG_NAME", &recipe.package.name)
-        .env("PKG_VERSION", &recipe.package.version)
-        .env("PKG_BUILD_NUM", recipe.package.build_number.to_string())
+        .env("PKG_NAME", &manifest.project.name)
+        .env(
+            "PKG_VERSION",
+            manifest.project.version.as_deref().unwrap_or("0.0.0"),
+        )
+        .env("PKG_BUILD_NUM", build_config.build_number.to_string())
         .env("PATH", &new_path)
         .status()
         .await
@@ -272,43 +253,60 @@ async fn run_build_script(
 // ~/~ end
 
 // ~/~ begin <<book/src/ch10-build.md#build-write-metadata>>[init]
-fn write_package_metadata(install_prefix: &Path, recipe: &Recipe) -> miette::Result<()> {
+fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette::Result<()> {
     // ~/~ begin <<book/src/ch10-build.md#create-index-json>>[init]
     let info_dir = install_prefix.join("info");
     std::fs::create_dir_all(&info_dir)
         .into_diagnostic()
         .context("creating info/ directory")?;
     
-    let noarch = if recipe.build.noarch {
+    let build_config = manifest
+        .build
+        .as_ref()
+        .expect("[build] section validated in execute()");
+    
+    let noarch = if build_config.noarch {
         NoArchType::generic()
     } else {
         NoArchType::default()
     };
     
-    let subdir = if recipe.build.noarch {
+    let subdir = if build_config.noarch {
         Some("noarch".to_string())
     } else {
         Some(rattler_conda_types::Platform::current().to_string())
     };
     
+    let version_str = manifest.project.version.as_deref().unwrap_or("0.0.0");
+    
     let index = IndexJson {
-        name: PackageName::from_str(&recipe.package.name)
+        name: PackageName::from_str(&manifest.project.name)
             .into_diagnostic()
-            .with_context(|| format!("invalid package name `{}`", recipe.package.name))?,
-        version: VersionWithSource::from_str(&recipe.package.version)
+            .with_context(|| format!("invalid package name `{}`", manifest.project.name))?,
+        version: VersionWithSource::from_str(version_str)
             .into_diagnostic()
-            .with_context(|| format!("invalid version `{}`", recipe.package.version))?,
-        build: recipe.build_string(),
-        build_number: recipe.package.build_number,
+            .with_context(|| format!("invalid version `{}`", version_str))?,
+        build: manifest.build_string(),
+        build_number: build_config.build_number,
         subdir,
         arch: None,
         platform: None,
         noarch,
-        depends: recipe.requirements.run.clone(),
+        depends: manifest
+            .dependencies
+            .iter()
+            .map(|(name, spec)| {
+                if spec == "*" {
+                    name.clone()
+                } else {
+                    format!("{name} {spec}")
+                }
+            })
+            .collect(),
         constrains: vec![],
         experimental_extra_depends: Default::default(),
         features: None,
-        license: recipe.package.license.clone(),
+        license: manifest.project.license.clone(),
         license_family: None,
         purls: None,
         python_site_packages_path: None,
@@ -402,7 +400,11 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
 // ~/~ end
 
 // ~/~ begin <<book/src/ch10-build.md#build-pack-conda>>[init]
-fn pack_conda(install_prefix: &Path, output_path: &Path, recipe: &Recipe) -> miette::Result<()> {
+fn pack_conda(
+    install_prefix: &Path,
+    output_path: &Path,
+    manifest: &Manifest,
+) -> miette::Result<()> {
     // Collect all files relative to the install prefix.
     let files: Vec<PathBuf> = WalkDir::new(install_prefix)
         .into_iter()
@@ -433,9 +435,9 @@ fn pack_conda(install_prefix: &Path, output_path: &Path, recipe: &Recipe) -> mie
 
     let out_name = format!(
         "{}-{}-{}",
-        recipe.package.name,
-        recipe.package.version,
-        recipe.build_string()
+        manifest.project.name,
+        manifest.project.version.as_deref().unwrap_or("0.0.0"),
+        manifest.build_string()
     );
 
     let now = chrono::Utc::now();
@@ -487,7 +489,7 @@ fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
         .collect();
     miette::bail!(
         "No Lua interpreter found in `{}`. \
-         Add `lua` to `[requirements] build` in your recipe.",
+         Add `lua` to [dependencies] in moonshot.toml.",
         searched.join("`, `")
     )
 }

@@ -117,7 +117,11 @@ pub async fn resolve_from_manifest(
     let repo_data: Vec<RepoData> = with_spinner(
         "Fetching repodata",
         gateway
-            .query(channels.clone(), [platform, Platform::NoArch], specs.clone())
+            .query(
+                channels.clone(),
+                [platform, Platform::NoArch],
+                specs.clone(),
+            )
             .recursive(true),
     )
     .await
@@ -149,11 +153,10 @@ pub async fn resolve_from_manifest(
     };
     
     let start_solve = Instant::now();
-    let solution =
-        with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
-            .into_diagnostic()
-            .context("solving dependencies")?
-            .records;
+    let solution = with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
+        .into_diagnostic()
+        .context("solving dependencies")?
+        .records;
     
     println!(
         "  Solved {} packages in {:.1}s",

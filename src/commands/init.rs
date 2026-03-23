@@ -4,7 +4,7 @@ use std::collections::HashMap;
 use clap::Parser;
 use miette::IntoDiagnostic;
 
-use crate::manifest::{Manifest, ProjectMetadata, MANIFEST_FILENAME};
+use crate::manifest::{BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME};
 
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -14,6 +14,10 @@ pub struct Args {
     /// Conda channels to search (can be repeated).
     #[clap(short, long, default_value = "conda-forge")]
     pub channel: Vec<String>,
+
+    /// Scaffold a buildable library (adds [build] section and version).
+    #[clap(long)]
+    pub library: bool,
 }
 
 pub async fn execute(args: Args) -> miette::Result<()> {
@@ -42,8 +46,20 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         project: ProjectMetadata {
             name: name.clone(),
             channels: args.channel,
+            version: if args.library {
+                Some("0.1.0".to_string())
+            } else {
+                None
+            },
+            license: None,
+            description: None,
         },
         dependencies: HashMap::from([("lua".to_string(), ">=5.4".to_string())]),
+        build: if args.library {
+            Some(BuildConfig::default())
+        } else {
+            None
+        },
     };
 
     manifest.write(&manifest_path)?;
@@ -52,6 +68,9 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         "{} Created `{MANIFEST_FILENAME}` for project \"{name}\"",
         console::style("✔").green()
     );
+    if args.library {
+        println!("  Build a package with:  shot build");
+    }
     println!("  Add packages with:  shot add <package>");
     println!("  Install them with:  shot install");
 
