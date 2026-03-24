@@ -144,7 +144,6 @@
    --------------------------------------------------------------------------- */
 [data-md-color-scheme="slate"] {
   --rb-bg: #202020;
-  --rb-bg-light: #262626;
   --rb-text: #ddd;
   --rb-text-lighter: #bbb;
   --rb-heading: #eee;
@@ -288,6 +287,17 @@
   display: none !important;
 }
 
+
+/* ===========================================================================
+   Text selection — Gruvbox tint
+   =========================================================================== */
+::selection {
+  background: color-mix(in srgb, var(--rb-gruvbox-yellow) 30%, transparent);
+}
+[data-md-color-scheme="slate"] ::selection {
+  background: color-mix(in srgb, var(--rb-gruvbox-aqua) 30%, transparent);
+}
+
 /* ===========================================================================
    Body text
    =========================================================================== */
@@ -377,6 +387,7 @@
   font-size: var(--rb-code-size);
   padding: 0.15em 0.35em;
   border-radius: 3px;
+  border: 1px solid var(--rb-code-border);
 }
 
 .highlight {
@@ -405,6 +416,7 @@
   font-size: var(--rb-code-size);
   background: none;
   padding: 0;
+  border: none;
 }
 
 /* ===========================================================================
@@ -480,6 +492,18 @@
 
 .md-footer-nav__title {
   font-style: italic;
+}
+
+[data-md-color-scheme="default"] .md-footer-meta {
+  background: var(--rb-gruvbox-bg-hard) !important;
+  color: var(--rb-gruvbox-fg);
+}
+
+.md-footer__link {
+  color: var(--rb-glass-text);
+}
+.md-footer__link:hover {
+  color: var(--rb-glass-text-active);
 }
 
 /* Back to top — liquid glass */
@@ -831,6 +855,7 @@
 [data-md-color-scheme="default"] .highlight {
   border: 1px solid var(--rb-code-border);
   background: var(--rb-code-bg);
+  box-shadow: var(--rb-code-shadow);
 }
 
 [data-md-color-scheme="default"] .highlight .filename {
@@ -917,7 +942,7 @@
    =========================================================================== */
 .file-tree {
   --ft-line: var(--rb-table-border);
-  --ft-icon-dir: #e8a854;
+  --ft-icon-dir: var(--rb-gruvbox-yellow);
   --ft-icon-file: var(--rb-text-lighter);
   --ft-comment: var(--rb-blockquote-text);
   border: 1px solid var(--rb-code-border);
@@ -971,7 +996,7 @@
 
 /* Directory icon — flat folder */
 .file-tree li.dir > span::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23e8a854'%3E%3Cpath d='M2 4.5A1.5 1.5 0 013.5 3h3.29a1.5 1.5 0 011.06.44l1.3 1.3a.5.5 0 00.35.14h4a1.5 1.5 0 011.5 1.5v.62H3.5A1.5 1.5 0 002 5.88V4.5z'/%3E%3Cpath d='M3.5 7A1.5 1.5 0 002 8.5v5A1.5 1.5 0 003.5 15h11a1.5 1.5 0 001.5-1.5v-6A1.5 1.5 0 0014.5 6h-4a.5.5 0 01-.35-.15l-1.3-1.3A1.5 1.5 0 007.79 4H3.5A1.5 1.5 0 002 5.5V7h1.5z'/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%23d79921'%3E%3Cpath d='M2 4.5A1.5 1.5 0 013.5 3h3.29a1.5 1.5 0 011.06.44l1.3 1.3a.5.5 0 00.35.14h4a1.5 1.5 0 011.5 1.5v.62H3.5A1.5 1.5 0 002 5.88V4.5z'/%3E%3Cpath d='M3.5 7A1.5 1.5 0 002 8.5v5A1.5 1.5 0 003.5 15h11a1.5 1.5 0 001.5-1.5v-6A1.5 1.5 0 0014.5 6h-4a.5.5 0 01-.35-.15l-1.3-1.3A1.5 1.5 0 007.79 4H3.5A1.5 1.5 0 002 5.5V7h1.5z'/%3E%3C/svg%3E");
 }
 
 /* File icon — flat document */
