@@ -86,41 +86,54 @@ let spec: MatchSpec = MatchSpec::from_str("lua >=5.4", opts)?;
 
 `rattler_repodata_gateway::Gateway` is the main type for fetching repodata. It
 manages the on-disk repodata cache, a package cache, the HTTP client, and
-per-channel configuration (sparse vs sharded format).
+per-channel configuration.
 
-### The sparse `repodata` trick
+### Why querying is fast: sharded repodata
 
-Why is querying the gateway fast even on the enormous conda-forge channel?
-
-The naive approach fetches all of `repodata.json` and loads it into RAM.  For
-conda-forge that file is ~300 MB.  That's slow on the first run and wasteful when
+The naive approach fetches all of `repodata.json` and loads it into RAM. For
+conda-forge that file is ~300 MB. That's slow on the first run and wasteful when
 you only need packages starting with `lua`.
 
 !!! info "Why sharding exists"
 
-    The sparse and sharded formats exist because conda-forge outgrew the
-    full-file approach. With over 200,000 packages, the full `repodata.json`
-    exceeds 300 MB. Downloading and parsing that on every install was the single
-    biggest latency bottleneck for conda users. Sharding shifts work to the
-    server (pre-splitting repodata by package name) to save the client from
-    downloading data it will never read.
+    The full-file approach stopped scaling when conda-forge passed 200,000
+    packages. Downloading and parsing 300 MB on every install was the single
+    biggest latency bottleneck for conda users. [CEP-16][cep-16] solves this
+    by splitting repodata into per-package shards so the client never
+    downloads data it will never read.
 
-The sparse approach works differently:
+[CEP-16][cep-16] (sharded repodata) replaces the monolithic file with a
+**content-addressed, per-package** scheme:
 
-1. Download a compact **name index** that maps package names to the byte ranges
-   in the full repodata where their records live.
-2. When you ask for `lua >=5.4`, fetch *only the byte ranges* for `lua` packages
-   from the full file.
-3. Cache those ranges separately.
-4. When transitive deps ask for `libgcc-ng`, fetch only those ranges.
+1. The server publishes a compact **shard index**
+   (`repodata_shards.msgpack.zst`, ~670 KB for conda-forge linux-64). It maps
+   each package name to the SHA-256 hash of that package's shard file.
+2. When you ask for `lua >=5.4`, the client fetches *only the shard for `lua`*
+   at `<shards_base_url>/<sha256>.msgpack.zst`.
+3. Each shard contains the full metadata (versions, builds, dependencies) for
+   that one package name, encoded as zstd-compressed msgpack.
+4. The client reads the shard's dependency lists, discovers transitive
+   dependencies (like `libgcc-ng`), and fetches those shards in turn.
 
-This reduces both download size and parse time.  The sharded format goes further:
-the index is split into small `shard` files, one per package name, so you only
-download the shards you need.
+Because shard URLs are derived from content hashes, the server can serve them
+with `Cache-Control: immutable`. An unchanged package keeps the same URL, so
+the client never re-downloads shards it already has.
 
-rattler supports all three formats (plain JSON, sparse, sharded) transparently.
-Setting `sharded_enabled: true` tells it to prefer the sharded format when
-available.
+[cep-16]: https://conda.org/learn/ceps/cep-0016/
+
+!!! note "Other formats"
+
+    Besides CEP-16 sharding, rattler also supports downloading the full
+    `repodata.json` (plain, `.zst`, or `.bz2` compressed) and [JLAP]
+    incremental patches for updating a cached copy. When a full file is
+    loaded, rattler parses it lazily (internally called "sparse" loading) so
+    that only the records you actually query are deserialized.
+
+[JLAP]: https://conda.org/learn/ceps/cep-0014/
+
+Setting `sharded_enabled: true` on the Gateway tells it to prefer the sharded
+format when a channel supports it. Both [prefix.dev](https://prefix.dev) and
+[anaconda.org](https://anaconda.org) serve sharded repodata for conda-forge.
 
 !!! note "Deep dive"
 
@@ -133,8 +146,9 @@ rattler caches repodata on disk so it doesn't re-download on every run.
 
 `rattler::default_cache_dir()` returns the OS-appropriate location:
 
-- Linux/macOS: `~/.rattler/`
-- Windows: `%APPDATA%\rattler\`
+- Linux: `~/.cache/rattler/cache`
+- macOS: `~/Library/Caches/rattler/cache`
+- Windows: `%LOCALAPPDATA%\rattler\cache`
 
 By sharing this cache with pixi and rattler-build, packages are downloaded only
 once across all tools.
@@ -465,9 +479,11 @@ luafilesystem                  1.8.0
 
 - Repodata is a channel's package catalog; it can be enormous.
 - MatchSpecs describe what packages to look for.
-- The `Gateway` fetches repodata using sparse or sharded formats.
+- The `Gateway` fetches repodata using CEP-16 sharded format when available,
+  falling back to full JSON or JLAP patches.
 - The `search` command queries with `.recursive(false)` since it only needs
   direct matches.
 
-In the next chapter we build on this foundation to implement `shot lock`,
-which adds solving to the repodata pipeline and records the result.
+In the next chapter we implement `shot add`, which edits the manifest.
+Then in [Chapter 6](ch06-lock.md) we build `shot lock`, which adds solving
+to the repodata pipeline and records the result.

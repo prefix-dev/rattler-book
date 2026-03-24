@@ -15,16 +15,19 @@ and post-release tags.
 
 **Requirements.** A requirement (also called a constraint, dependency, or spec)
 expresses "I need library X, version >= 2.0". The format varies by ecosystem:
-npm uses semver ranges, pip uses [PEP 440], and conda uses **MatchSpecs** like
+npm uses semver ranges, pip uses [PEP 508], and conda uses **MatchSpecs** like
 `lua >=5.4`.
 
 **Package artifacts.** A package is a distributable unit: a tarball, wheel, .conda
 archive, crate, or .deb. It contains the code, metadata (name, version,
 dependencies), and sometimes pre-compiled binaries.
 
-**An index.** The package manager needs somewhere to look up what's available.
-npm has the npm registry, pip has [PyPI], cargo has [crates.io]. conda has
-**channels**, each of which publishes a catalog called **repodata**.
+**An index.** The package manager needs somewhere to look up what's available:
+
+- npm: the npm registry at `registry.npmjs.org`
+- pip: [PyPI] at `pypi.org/simple/`
+- cargo: [crates.io] at `index.crates.io`
+- conda: **channels**, e.g. `conda.anaconda.org/conda-forge/`, each publishing a per-platform catalog called **repodata**
 
 You'll find these four concepts in every ecosystem. The differences lie in how
 each system implements them and what trade-offs it makes.
@@ -97,7 +100,7 @@ constraint, so we need a real solver.
 
 In practice, real package ecosystems have enough structure that modern SAT
 heuristics solve them quickly, in most cases.  We'll use rattler's solver implementation, which is backed by
-[resolvo], a pure-Rust SAT solver written by the prefix team.
+[resolvo], a pure-Rust SAT solver written by the prefix.dev team.
 
 [vsat]: https://research.swtch.com/version-sat
 [3-SAT]: https://en.wikipedia.org/wiki/Boolean_satisfiability_problem#3-satisfiability
@@ -106,7 +109,7 @@ heuristics solve them quickly, in most cases.  We'll use rattler's solver implem
 [pip]: https://pip.pypa.io
 [cargo-book]: https://doc.rust-lang.org/cargo/
 [semver]: https://semver.org
-[PEP 440]: https://peps.python.org/pep-0440/
+[PEP 508]: https://peps.python.org/pep-0508/
 [PyPI]: https://pypi.org
 [crates.io]: https://crates.io
 [Nix]: https://nixos.org
@@ -146,12 +149,13 @@ Each command in moonshot touches a different part of the pipeline:
 | `init` | Create a project manifest | (none, just writes a file) |
 | `search` | Query a channel for packages | Discovery |
 | `install` | Fetch, solve, and install | Discovery, Solving, Installation |
+| `lock` | Resolve dependencies and write the lock file | Discovery, Solving |
 | `add` | Add a dependency to the manifest | (none, edits manifest) |
 | `shell` | Activate the environment | (post-installation) |
 | `run` | Run a command inside the environment | (post-installation) |
 | `build` | Create a new `.conda` package | (package creation) |
 
-We'll implement each of these commands (plus a supporting lock file module) in its own chapter in Part I.
+We'll implement each of these commands in its own chapter in Part I.
 
 ## The conda file format
 
@@ -181,7 +185,6 @@ We'll see both of these inner archives in detail when we build the `shot build` 
 
 We're keeping `moonshot` intentionally minimal.  It does not:
 
-- **Generate lock files.** A real package manager needs them for reproducible installs, but they add file-format design, merge-conflict handling, and a separate resolution step. We build the lock file module in [Chapter 6](ch06-lock.md) using the `rattler_lock` crate, and wire it into `shot install` in [Chapter 7](ch07-install.md).
 - **Upload to a public channel.** Publishing requires authentication, signing, and a trust model. We build packages locally and index them as a local channel instead.
 - **Handle C extensions.** Supporting compiled extensions means invoking a C compiler, linking against the right libraries, and producing platform-specific artifacts. Our build command targets pure Lua only.
 

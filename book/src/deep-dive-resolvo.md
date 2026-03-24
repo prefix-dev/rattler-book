@@ -74,7 +74,7 @@ search.  This can prune large sections of the search space.
 ## `resolvo`'s design
 
 [resolvo] is a pure-Rust CDCL solver designed specifically for package
-dependency solving.  It was developed by the pixi team for use in conda-style
+dependency solving.  It was developed by the prefix.dev team for use in conda-style
 dependency resolution.
 
 [resolvo]: https://github.com/mamba-org/resolvo
@@ -207,9 +207,10 @@ For large environments (hundreds of packages), it can take a few seconds, which
 is why we show a spinner.
 
 Repodata loading is usually the bottleneck, rather than the SAT solving itself:
-fetching and parsing package metadata. This is why the Gateway's sparse/sharded
-format is so important.  It avoids loading millions of records for the vast
-majority of conda-forge packages that aren't relevant to your request.
+fetching and parsing package metadata. This is why the Gateway's sharded
+repodata format ([CEP-16](https://conda.org/learn/ceps/cep-0016/)) is so
+important. It avoids loading millions of records for the vast majority of
+conda-forge packages that aren't relevant to your request.
 
 ## `libsolv`: the alternative backend
 
@@ -217,7 +218,7 @@ rattler also ships a binding to [libsolv], a C library used by older conda tools
 (conda, [mamba]).  You can select it via feature flags:
 
 ```toml
-rattler_solve = { version = "0.28", features = ["resolvo", "libsolv_c"] }
+rattler_solve = { version = "5.0.0", features = ["resolvo", "libsolv_c"] }
 ```
 
 `resolvo` is the default and recommended backend.  It's faster, produces better

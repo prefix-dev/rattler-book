@@ -79,10 +79,12 @@ pub enum VirtualPackage {
 
 Each variant is detected differently:
 
-- **Linux/Osx/Win**: probe the OS via `std::env::consts::OS`
-- **LibC**: parse `/proc/version` or run `ldd --version`
-- **Cuda**: read `/proc/driver/nvidia/version` or the CUDA driver API
-- **Archspec**: use CPU feature flags from `cpuid` (x86) or `/proc/cpuinfo`
+- **Linux**: version from `uname()` syscall
+- **Osx**: version from `SystemVersion.plist`
+- **Win**: version from the `winver` crate
+- **LibC**: dynamically load `libc.so.6` and call `gnu_get_libc_version()`, falling back to `ldd --version`
+- **Cuda**: dynamically load the NVML or libcuda library and call `cuDriverGetVersion`, falling back to `nvidia-smi`
+- **Archspec**: use `archspec::cpu::host()`, which reads CPUID on x86 and equivalent registers on ARM
 
 `VirtualPackageOverrides` lets you override the detected values, useful for
 testing or cross-compilation scenarios:

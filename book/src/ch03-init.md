@@ -52,7 +52,7 @@ to version constraints.  Version specs follow the conda MatchSpec mini-language:
 | `"5.4.*"`     | any 5.4.x release                 |
 | `">=5.4,<6"`  | 5.4 series, exclusive upper bound |
 
-A manifest records your intent: which packages you want and from which channels. It's distinct from a lock file, which records the exact versions the solver chose, including transitive dependencies. The manifest says "I want `lua >=5.4`"; a lock file says "install `lua 5.4.7 build h5eee18b_0` from conda-forge, plus these 12 transitive dependencies at these exact versions." We implement only the manifest in moonshot, but understanding the distinction matters for any package manager design.
+A manifest records your intent: which packages you want and from which channels. It's distinct from a lock file, which records the exact versions the solver chose, including transitive dependencies. The manifest says "I want `lua >=5.4`"; a lock file says "install `lua 5.4.7 build h5eee18b_0` from conda-forge, plus these 12 transitive dependencies at these exact versions." We implement both in moonshot: the manifest here and the lock file in [Chapter 6](ch06-lock.md).
 
 ## Concepts
 
