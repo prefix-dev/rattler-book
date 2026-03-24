@@ -94,7 +94,7 @@ let overrides = VirtualPackageOverrides {
 };
 ```
 
-## Archspec in Rust
+## `archspec` in Rust
 
 [Archspec] is a microarchitecture specification system.  It maps CPU models to
 capability levels:

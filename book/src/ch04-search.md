@@ -1,6 +1,6 @@
 # Chapter 4: The `search` Command
 
-Before we can install anything, we need to know what's out there. This chapter
+<span class="newthought">Before we can install</span> anything, we need to know what's out there. This chapter
 introduces repodata, channels, and the rattler Gateway by building a standalone
 command that lets you search for packages by name.
 
@@ -22,7 +22,7 @@ both the current platform and `noarch`.
 
 ## Concepts
 
-### What is repodata?
+### What is `repodata`?
 
 Every conda channel serves a file called `repodata.json` for each supported
 platform.  The file lists every available package with its metadata:
@@ -60,7 +60,7 @@ for different platforms.
 `ChannelConfig` provides the base URL for named channels, by default
 `https://conda.anaconda.org/`.  You can override it with a local mirror.
 
-### MatchSpecs: describing what you want
+### `MatchSpec`s: describing what you want
 
 conda calls a package requirement a **MatchSpec**:
 
@@ -82,13 +82,13 @@ let opts = ParseMatchSpecOptions::default();
 let spec: MatchSpec = MatchSpec::from_str("lua >=5.4", opts)?;
 ```
 
-### The Gateway
+### The `Gateway`
 
 `rattler_repodata_gateway::Gateway` is the main type for fetching repodata. It
 manages the on-disk repodata cache, a package cache, the HTTP client, and
 per-channel configuration (sparse vs sharded format).
 
-### The sparse repodata trick
+### The sparse `repodata` trick
 
 Why is querying the gateway fast even on the enormous conda-forge channel?
 
@@ -303,7 +303,7 @@ client. See the section above for the full implementation.
 let client = build_authenticated_client()?;
 ```
 
-#### Gateway
+#### `Gateway`
 
 The Gateway builder takes the cache directory, HTTP client, and channel
 configuration. Setting `sharded_enabled: true` tells it to prefer the fast

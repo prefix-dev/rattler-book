@@ -1,6 +1,6 @@
 # Chapter 3: The `init` Command
 
-Every moonshot project starts with `shot init`. This command creates
+<span class="newthought">Every moonshot project</span> starts with `shot init`. This command creates
 `moonshot.toml`, the manifest that describes which packages you want and
 from which channels to fetch them.
 

@@ -6,6 +6,7 @@ site_dir: book
 
 theme:
   name: material
+  custom_dir: overrides
   logo: assets/pixi-logo.svg
   favicon: assets/pixi-logo.svg
   palette:
@@ -36,25 +37,26 @@ theme:
     - toc.integrate
 
 nav:
-  - Introduction: index.md
+  - Cover: index.md
+  - Introduction: introduction.md
   - Building a Package Manager:
     - 1. What Is a Package Manager?: ch01-what-is-a-package-manager.md
     - 2. Setting Up the Project: ch02-project-setup.md
-    - 3. The init Command: ch03-init.md
-    - 4. The search Command: ch04-search.md
-    - 5. The add Command: ch05-add.md
-    - 6. The lock Command: ch06-lock.md
-    - 7. The install Command: ch07-install.md
-    - 8. Shell Hooks: ch08-shell-hook.md
-    - 9. The run Command: ch09-run.md
-    - 10. The build Command: ch10-build.md
+    - "3. The `init` Command": ch03-init.md
+    - "4. The `search` Command": ch04-search.md
+    - "5. The `add` Command": ch05-add.md
+    - "6. The `lock` Command": ch06-lock.md
+    - "7. The `install` Command": ch07-install.md
+    - "8. The `shell` Command": ch08-shell-hook.md
+    - "9. The `run` Command": ch09-run.md
+    - "10. The `build` Command": ch10-build.md
   - Rattler and Conda Deep Dives:
     - The conda Package Format: deep-dive-package-format.md
     - Virtual Packages: deep-dive-virtual-packages.md
     - The Networking Stack: deep-dive-networking.md
-    - The resolvo SAT Solver: deep-dive-resolvo.md
+    - "The `resolvo` SAT Solver": deep-dive-resolvo.md
     - The Build Script API: deep-dive-build-script-api.md
-    - Overview of the rattler crates: deep-dive-crate-ecosystem.md
+    - "Overview of the `rattler` crates": deep-dive-crate-ecosystem.md
 
 extra_css:
   - stylesheets/extra.css
@@ -64,7 +66,6 @@ plugins:
   - entangled
   - redirects:
       redirect_maps:
-        'introduction.md': 'index.md'
         'ch06-install.md': 'ch07-install.md'
         'ch07-the-lock-file.md': 'ch06-lock.md'
         'ch08-shell.md': 'ch08-shell-hook.md'

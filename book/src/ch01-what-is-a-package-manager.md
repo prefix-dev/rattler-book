@@ -1,6 +1,6 @@
 # Chapter 1: What Is a Package Manager?
 
-Before writing a single line of Rust, let's agree on what a package manager does
+<span class="newthought">Before writing</span> a single line of Rust, let's agree on what a package manager does
 and how the concepts map to the conda ecosystem we're building on.
 
 ## Universal concepts
@@ -79,11 +79,15 @@ versions should be installed?
 
 This is the **dependency solving** problem.  When a package manager enforces
 that only one version of each package can be installed at a time, the problem is
-NP-complete.  Russ Cox [proves this][vsat] by reducing [3-SAT] to package
-version selection: each boolean variable becomes a package with two versions,
-each clause becomes a package whose versions depend on the corresponding
-literals, and a root package depends on all clause packages.  If the root is
-installable, the formula is satisfiable.
+NP-complete.
+
+!!! note "Why is this NP-complete?"
+
+    Russ Cox [proves this][vsat] by reducing [3-SAT] to package
+    version selection: each boolean variable becomes a package with two versions,
+    each clause becomes a package whose versions depend on the corresponding
+    literals, and a root package depends on all clause packages.  If the root is
+    installable, the formula is satisfiable.
 
 Not every package manager hits this complexity.  If you allow multiple versions
 of the same package to coexist (as [Nix] and [Go modules] do), you can install

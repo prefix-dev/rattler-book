@@ -1,4 +1,4 @@
-# Deep Dive: The rattler Networking Stack
+# Deep Dive: The `rattler` Networking Stack
 
 When you ran `shot search lua` in [Chapter 4](ch04-search.md), the command
 printed results in under a second. Behind the scenes, several HTTP requests
@@ -9,7 +9,7 @@ credentials and translated OCI URLs.
 
 This chapter explains how that stack is assembled and how each piece works.
 
-## reqwest: the HTTP client
+## `reqwest`: the HTTP client
 
 [reqwest] is the dominant async HTTP client in the Rust ecosystem.  It builds on
 [hyper] (a low-level HTTP library) and provides a friendly high-level API.

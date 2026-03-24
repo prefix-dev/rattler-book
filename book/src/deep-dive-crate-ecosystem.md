@@ -1,4 +1,4 @@
-# Overview of the rattler crates
+# Overview of the `rattler` crates
 
 rattler is split into roughly 28 Rust crates. This chapter will list all of them,
 shows how they depend on each other, and traces how the project grew over time.

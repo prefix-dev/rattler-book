@@ -1,4 +1,4 @@
-# Deep Dive: The resolvo SAT Solver
+# Deep Dive: The `resolvo` SAT Solver
 
 In [Chapter 6](ch06-lock.md) we ran `shot lock` and the solver found a
 compatible set of packages in under a second. We also saw what happens when it
@@ -71,7 +71,7 @@ Learned clause: NOT (web-server_2_0 AND legacy-plugin)
 The learned clause is added to the formula and persists for the rest of the
 search.  This can prune large sections of the search space.
 
-## resolvo's design
+## `resolvo`'s design
 
 [resolvo] is a pure-Rust CDCL solver designed specifically for package
 dependency solving.  It was developed by the pixi team for use in conda-style
@@ -211,7 +211,7 @@ fetching and parsing package metadata. This is why the Gateway's sparse/sharded
 format is so important.  It avoids loading millions of records for the vast
 majority of conda-forge packages that aren't relevant to your request.
 
-## libsolv: the alternative backend
+## `libsolv`: the alternative backend
 
 rattler also ships a binding to [libsolv], a C library used by older conda tools
 (conda, [mamba]).  You can select it via feature flags:

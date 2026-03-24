@@ -1,6 +1,6 @@
 # Chapter 10: The `build` Command
 
-We've covered installing packages from existing channels. Now let's close the
+<span class="newthought">We've covered</span> installing packages from existing channels. Now let's close the
 loop: building a new package from source and publishing it so others can install
 it.
 
@@ -148,7 +148,7 @@ structure.
     `info/index.json`, `info/paths.json`, and the outer ZIP structure, see
     [Deep Dive: The conda Package Format](deep-dive-package-format.md).
 
-### noarch packages
+### `noarch` packages
 
 When `noarch` is true (as it is for pure-Lua packages), the package is built
 once and works on all platforms, stored under the `noarch/` subdirectory. When

@@ -1,6 +1,6 @@
 # Chapter 7: The `install` Command
 
-Now we get to the heart of moonshot: the install command. It reads the manifest,
+<span class="newthought">Now we get to the heart</span> of moonshot: the install command. It reads the manifest,
 checks the lock file, resolves if needed, and installs packages into a local
 prefix. The lock file (produced by [Chapter 6](ch06-lock.md)'s `shot lock`) is
 our source of truth: if it's fresh, `shot install` replays it without touching

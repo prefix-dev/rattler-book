@@ -1,6 +1,6 @@
 # Chapter 2: Setting Up the Project
 
-In this chapter we create the Rust project, add our dependencies, and build the
+<span class="newthought">In this chapter</span> we create the Rust project, add our dependencies, and build the
 CLI skeleton with [Clap].  By the end of the chapter `shot --help` works, even
 though none of the commands do anything yet.
 

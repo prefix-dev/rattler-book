@@ -1,6 +1,6 @@
 # Chapter 8: The `shell` Command
 
-After installing packages into `.env/`, you need to be able to *use* them.
+<span class="newthought">After installing</span> packages into `.env/`, you need to be able to *use* them.
 That means getting `lua`, `luarocks`, and any other installed binaries onto
 your `PATH`, and setting any environment variables that packages declare.
 

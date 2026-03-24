@@ -1,6 +1,6 @@
 # Chapter 6: The `lock` Command
 
-The manifest declares what you want; now we need to figure out exactly
+<span class="newthought">The manifest declares</span> what you want; now we need to figure out exactly
 which packages satisfy those requirements. The lock command resolves
 your dependencies into exact packages and records the solution. Later
 commands (like `shot install`) consume the lock file instead of
