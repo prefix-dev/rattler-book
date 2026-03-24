@@ -33,6 +33,11 @@ each system implements them and what trade-offs it makes.
 
 Every install operation walks through a pipeline of three steps:
 
+```mermaid
+graph LR
+    A["1. Discovery\n(repodata)"] --> B["2. Solving\n(SAT solver)"] --> C["3. Installation\n(cache + link)"]
+```
+
 ### 1. Discovery: what exists?
 
 Someone has written a library called `moonshine`.  You want to use it.  How does

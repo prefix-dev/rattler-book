@@ -9,18 +9,21 @@ from which channels to fetch them.
 `shot init` creates a new manifest in the current directory:
 
 ```console
-$ shot init hello-lua
-✔ Created `moonshot.toml` for project "hello-lua"
+$ shot init lumen-app
+✔ Created `moonshot.toml` for project "lumen-app"
   Add packages with:  shot add <package>
   Install them with:  shot install
 $ cat moonshot.toml
 [project]
-name = "hello-lua"
+name = "lumen-app"
 channels = ["conda-forge"]
 
 [dependencies]
 lua = ">=5.4"
 ```
+
+We'll use this project throughout the book. In Chapter 10 we'll build an image
+processing library and install it here.
 
 The command accepts an optional project name (defaults to the current directory
 name) and one or more `--channel` flags. Pass `--library` to scaffold a
@@ -336,18 +339,24 @@ file, CI, etc.).
 At this point you can build and run the first command:
 
 ```console
-$ pixi run shot init hello-lua
-✔ Created `moonshot.toml` for project "hello-lua"
+$ pixi run shot init lumen-app
+✔ Created `moonshot.toml` for project "lumen-app"
   Add packages with:  shot add <package>
   Install them with:  shot install
 $ cat moonshot.toml
 [project]
-name = "hello-lua"
+name = "lumen-app"
 channels = ["conda-forge"]
 
 [dependencies]
 lua = ">=5.4"
 ```
+
+<!-- TODO: Exercises
+- Try running `shot init` in a directory that already has a moonshot.toml. What error do you get?
+- Run `shot init --library my-lib` and compare the generated manifest to a plain `shot init`. What's different?
+- Change the default channel to a URL that doesn't exist. Does `shot init` validate it?
+-->
 
 ## Summary
 

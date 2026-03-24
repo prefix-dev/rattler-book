@@ -4,6 +4,7 @@ use clap::Parser;
 use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 
+mod client;
 mod commands;
 mod lock;
 mod manifest;

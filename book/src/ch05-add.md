@@ -113,6 +113,11 @@ lua = ">=5.4"
 luarocks = "*"
 ```
 
+<!-- TODO: Exercises
+- Run `shot add lua` twice. Does the version constraint change? Why or why not?
+- Try `shot add "lua >=99.0"` (a version that doesn't exist). Does `add` catch it or does the error surface later?
+-->
+
 ## Summary
 
 - `add` modifies the manifest only; run `shot install` to apply changes.

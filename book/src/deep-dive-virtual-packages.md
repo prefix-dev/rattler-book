@@ -1,8 +1,15 @@
 # Deep Dive: Virtual Packages and Archspec
 
-Virtual packages solve a real problem in the conda ecosystem: how do you express
-that a package requires a minimum glibc version, or a CUDA GPU, without trying
-to install those things?
+When we ran the solver in [Chapter 6](ch06-lock.md), one of the first things it
+did was call `VirtualPackage::detect()`. On a typical Linux machine this
+produces something like `__linux`, `__glibc =2.38`, and
+`__archspec =1 x86_64_v3`. On macOS you'd see `__osx =14.4` and
+`__archspec =1 arm`. The solver uses these to filter out packages that are
+incompatible with your hardware.
+
+Virtual packages solve a real problem: how do you express that a package
+requires a minimum glibc version, or a CUDA GPU, without trying to install
+those things?
 
 ## The problem
 

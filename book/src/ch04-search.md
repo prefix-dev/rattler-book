@@ -151,12 +151,49 @@ once across all tools.
 rattler uses `reqwest` for HTTP.  We build a client with authentication and OCI
 support.
 
-The `.no_gzip()` call disables reqwest's automatic gzip decompression. This is a format-level decision: repodata files are already served as `.json.zst` or `.json.bz2` by the channel, and rattler handles that decompression itself. If we let reqwest also decompress, we'd either double-decompress or interfere with rattler's streaming parser.
+## Implementation
 
-#### `reqwest_middleware` and the middleware pattern
+### `src/client.rs`: shared HTTP client
+
+Several commands need an HTTP client with authentication and OCI support.
+We put this setup in its own module so we can reuse it in the search, lock,
+and install commands without repeating the same boilerplate.
+
+``` {.rust file=src/client.rs}
+use std::sync::Arc;
+
+use miette::{Context, IntoDiagnostic};
+use rattler_networking::AuthenticationMiddleware;
+
+/// Build an HTTP client with authentication and OCI middleware.
+///
+/// The returned client handles:
+/// - Token/keyring authentication for private channels
+/// - `oci://` URL translation for container-registry channels
+/// - Disabled automatic gzip (repodata ships pre-compressed)
+pub fn build_authenticated_client() -> miette::Result<reqwest_middleware::ClientWithMiddleware> {
+    let raw_client = reqwest::Client::builder()
+        .no_gzip()
+        .build()
+        .expect("failed to build HTTP client");
+
+    let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
+        .with_arc(Arc::new(
+            AuthenticationMiddleware::from_env_and_defaults()
+                .into_diagnostic()
+                .context("setting up auth middleware")?,
+        ))
+        .with(rattler_networking::OciMiddleware::new(raw_client))
+        .build();
+
+    Ok(client)
+}
+```
+
+The `.no_gzip()` call disables reqwest's automatic gzip decompression. Repodata files are already served as `.json.zst` or `.json.bz2` by the channel, and rattler handles that decompression itself. If we let reqwest also decompress, we'd either double-decompress or interfere with rattler's streaming parser.
 
 `reqwest_middleware` wraps `reqwest::Client` to allow pluggable middleware.
-Middleware intercepts every request and response, allowing:
+Each middleware intercepts every request and response:
 
 - **AuthenticationMiddleware**: injects tokens from the rattler keyring or
   `.condarc`
@@ -165,8 +202,6 @@ Middleware intercepts every request and response, allowing:
 
 Web frameworks use the same pattern: a chain of handlers, each calling
 `next.run(request)` to pass to the next one.
-
-## Implementation
 
 ### `src/commands/search.rs`
 
@@ -185,16 +220,15 @@ This file is new. It implements the search command:
 ``` {.rust #search-imports}
 use std::collections::HashMap;
 use std::env;
-use std::sync::Arc;
 
 use clap::Parser;
 use miette::{Context, IntoDiagnostic};
 use rattler::package_cache::PackageCache;
 use rattler_cache::{PACKAGE_CACHE_DIR, REPODATA_CACHE_DIR};
 use rattler_conda_types::{Channel, ChannelConfig, MatchSpec, ParseMatchSpecOptions, Platform};
-use rattler_networking::AuthenticationMiddleware;
 use rattler_repodata_gateway::{Gateway, RepoData, SourceConfig};
 
+use crate::client::build_authenticated_client;
 use crate::progress::with_spinner;
 ```
 
@@ -262,25 +296,11 @@ rattler_cache::ensure_cache_dir(&cache_dir)
 
 #### HTTP client
 
-We build a `reqwest` client with `.no_gzip()` (repodata is already compressed,
-and rattler handles decompression itself), then wrap it in `reqwest_middleware`
-with `AuthenticationMiddleware` (for tokens and keyrings) and `OciMiddleware`
-(for `oci://` channel URLs).
+We call the shared helper from `src/client.rs` to build an authenticated HTTP
+client. See the section above for the full implementation.
 
 ``` {.rust #search-http-client}
-let raw_client = reqwest::Client::builder()
-    .no_gzip()
-    .build()
-    .expect("failed to build HTTP client");
-
-let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
-    .with_arc(Arc::new(
-        AuthenticationMiddleware::from_env_and_defaults()
-            .into_diagnostic()
-            .context("setting up auth middleware")?,
-    ))
-    .with(rattler_networking::OciMiddleware::new(raw_client))
-    .build();
+let client = build_authenticated_client()?;
 ```
 
 #### Gateway
@@ -434,6 +454,12 @@ luafilesystem                  1.8.0
 
 4 package(s) found.
 ```
+
+<!-- TODO: Exercises
+- Run `shot search python` and count the results. How does this compare to `shot search lua`?
+- Try `shot search "lua >=5.4"` with a version constraint. Does the output change?
+- Run with `--channel bioconda` instead of conda-forge. What packages show up?
+-->
 
 ## Summary
 

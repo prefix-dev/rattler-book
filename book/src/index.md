@@ -2,11 +2,36 @@
 
 This book teaches you how to build a package manager.
 
-It installs, caches, solves version conflicts, and activates environments on
-Windows, macOS, and Linux.  We build it on top of **[rattler]**, a library that
-implements the [conda] package specification in pure Rust.  By the end you will
-have a working CLI tool and a thorough understanding of every decision that went
-into it.
+Here is what the finished tool looks like. We write `lumen`, a Lua image
+library that wraps ImageMagick, build it into a distributable package, install
+it in a separate project, and use it:
+
+```console
+$ shot init lumen --library
+$ cat lumen.lua
+local M = {}
+function M.thumbnail(input, size)
+    local output = input:gsub("(%..+)$", "_thumb%1")
+    os.execute(string.format("magick %s -thumbnail %dx%d %s", input, size, size, output))
+    return output
+end
+return M
+
+$ shot build
+✔ Built lumen-0.1.0-lua_0.conda
+
+$ mkdir lumen-app && cd lumen-app
+$ shot init lumen-app
+$ shot add lumen imagemagick
+$ shot install
+$ shot run lua -e "require('lumen').thumbnail('photo.jpg', 128)"
+```
+
+By the end of this book, you will have built the tool that just did that.
+`lumen` is a Lua library you wrote. ImageMagick is a C library with dozens of
+native dependencies. Both were installed, linked, and activated by your package
+manager, built on top of **[rattler]**, a library that implements the [conda]
+package specification in pure Rust.
 
 [conda]: https://docs.conda.io/projects/conda/en/stable/
 

@@ -4,9 +4,10 @@ We've covered installing packages from existing channels. Now let's close the
 loop: building a new package from source and publishing it so others can install
 it.
 
-Up to now we've only consumed packages that someone else built and uploaded.
-By adding a build command, we can write a library, package it, host it on a
-local channel, and install it with the same tool.
+Up to now, lumen-app has only consumed packages that someone else built.
+By adding a build command, we can write our own library (`lumen`, a Lua image
+toolkit that wraps ImageMagick), package it, host it on a local channel, and
+install it into lumen-app with the same tool.
 
 This is how pyproject.toml and Cargo.toml work: when you own the source, the
 build configuration lives alongside the project manifest. Separate recipe files
@@ -446,8 +447,12 @@ Ok(())
 
 Writing a build script that manually uses `os.execute("cp ...")` works but is
 tedious. So we embed a Lua prelude that provides helper functions. The prelude
-runs before every build script, setting up globals and helpers that the script
-can use.
+runs before every build script, setting up globals (`PREFIX`, `SRC_DIR`,
+`BUILD_PREFIX`, `PKG_NAME`, `PKG_VERSION`, `PKG_BUILD_NUM`) and providing
+file-system helpers (`mkdir`, `cp`, `install_lua`, `install_bin`, and more).
+
+For a detailed walkthrough of each function, see
+[Deep Dive: The Build Script API](deep-dive-build-script-api.md).
 
 Here is the complete `src/build_prelude.lua`:
 
@@ -464,9 +469,6 @@ Here is the complete `src/build_prelude.lua`:
 
 <<prelude-done>>
 ```
-
-The prelude starts with documentation listing every global and function
-available to build scripts:
 
 ``` {.lua #prelude-header}
 -- moonshot build prelude
@@ -500,10 +502,6 @@ available to build scripts:
 --   log(msg)                  prints "[moonshot] msg" to stderr
 ```
 
-The Rust side sets environment variables before launching the Lua interpreter
-(`run_build_script` below). The prelude reads them once and fails fast if any
-are missing:
-
 ``` {.lua #prelude-globals}
 -- ── Globals ───────────────────────────────────────────────────────────────────
 
@@ -514,10 +512,6 @@ PKG_NAME      = os.getenv("PKG_NAME")      or error("PKG_NAME not set")
 PKG_VERSION   = os.getenv("PKG_VERSION")   or error("PKG_VERSION not set")
 PKG_BUILD_NUM = tonumber(os.getenv("PKG_BUILD_NUM") or "0")
 ```
-
-Two small utilities that the rest of the prelude depends on. `shell` runs a
-command and raises an error on failure; `q` quotes a path so that spaces and
-special characters survive the shell.
 
 ``` {.lua #prelude-internal-helpers}
 -- ── Internal helpers ──────────────────────────────────────────────────────────
@@ -544,9 +538,6 @@ local function q(path)
     end
 end
 ```
-
-The public API starts with general file-system operations (`mkdir`, `cp`, `mv`,
-`exists`, `log`):
 
 ``` {.lua #prelude-public-api}
 -- ── Public API ────────────────────────────────────────────────────────────────
@@ -610,11 +601,6 @@ function log(msg)
     io.stderr:write("[moonshot] " .. tostring(msg) .. "\n")
 end
 ```
-
-The install helpers build on these to give build scripts a declarative
-vocabulary. `install_lua` is the one you'll use most: it copies Lua modules
-into the standard package path so `require()` finds them. `install_bin` handles
-executables.
 
 ``` {.lua #prelude-install-helpers}
 -- ── Install helpers ───────────────────────────────────────────────────────────
@@ -688,7 +674,7 @@ end
 --- Install files into `PREFIX/share/<name>/`.
 ---
 --- Example:
----   install_share("docs/", "moonshine")
+---   install_share("docs/", "lumen")
 function install_share(src, name)
     install(src, path_join("share", name))
 end
@@ -1107,25 +1093,60 @@ moonshine = ">=0.3"
 
 ## Try it
 
-Let's build a package and install it in a separate project to see the full
-loop in action.
+Let's build a package and install it in lumen-app to see the full loop in
+action. We'll create `lumen`, a Lua image toolkit that wraps ImageMagick.
 
-First, create a library project and write a small Lua module:
+First, create a library project:
 
 ```console
-$ mkdir moonshine && cd moonshine
-$ shot init moonshine --library
-✔ Created `moonshot.toml` for project "moonshine"
+$ mkdir lumen && cd lumen
+$ shot init lumen --library
+✔ Created `moonshot.toml` for project "lumen"
 ```
 
-Write a Lua module that exports a single function:
+Edit `moonshot.toml` to add imagemagick as a dependency. Anyone who installs
+lumen will get imagemagick automatically:
+
+```toml
+[project]
+name = "lumen"
+version = "0.1.0"
+channels = ["conda-forge"]
+
+[dependencies]
+lua = ">=5.4"
+imagemagick = "*"
+
+[build]
+script = "build.lua"
+noarch = true
+```
+
+Write a Lua module that wraps the `magick` command-line tool. ImageMagick is
+a C library with dozens of native dependencies (libpng, libtiff, zlib, and
+more). conda-forge provides all of them pre-built; our Lua code just shells
+out to `magick`:
 
 ```lua
--- src/moonshine.lua
+-- lumen.lua
 local M = {}
 
-function M.greet(name)
-    return string.format("Hello, %s!", name)
+function M.thumbnail(input, size)
+    size = size or 128
+    local output = input:gsub("(%..+)$", "_thumb%1")
+    local cmd = string.format("magick %s -thumbnail %dx%d %s",
+        input, size, size, output)
+    local ok = os.execute(cmd)
+    if not ok then error("magick failed -- is imagemagick installed?") end
+    return output
+end
+
+function M.grayscale(input)
+    local output = input:gsub("(%..+)$", "_gray%1")
+    local cmd = string.format("magick %s -colorspace Gray %s", input, output)
+    local ok = os.execute(cmd)
+    if not ok then error("magick failed -- is imagemagick installed?") end
+    return output
 end
 
 return M
@@ -1135,52 +1156,62 @@ And a build script that installs it:
 
 ```lua
 -- build.lua
-install_lua("src/*.lua")
+install_lua("lumen.lua")
 ```
 
 Build the package:
 
 ```console
 $ shot build
-Building moonshine 0.1.0 (build lua_0)
-  → Installing 1 build dependencies…
+Building lumen 0.1.0 (build lua_0)
+  → Installing 2 build dependencies…
   → Running build script `build.lua`
   → Packing 3 files…
-  → Indexing channel at /home/user/moonshine/output
-✔ Built moonshine-0.1.0-lua_0.conda
-  package → /home/user/moonshine/output/noarch/moonshine-0.1.0-lua_0.conda
-  channel → /home/user/moonshine/output
+  → Indexing channel at /home/user/lumen/output
+✔ Built lumen-0.1.0-lua_0.conda
+  package → /home/user/lumen/output/noarch/lumen-0.1.0-lua_0.conda
+  channel → /home/user/lumen/output
 ```
 
-Now create a separate project that uses the package you just built:
+Now go back to lumen-app (the project we created in [Chapter 3](ch03-init.md))
+and add lumen as a dependency using the local channel:
 
 ```console
-$ cd .. && mkdir demo && cd demo
-$ shot init demo
+$ cd ../lumen-app
 ```
 
-Edit `moonshot.toml` to add the local channel and moonshine as a dependency:
+Edit `moonshot.toml`:
 
 ```toml
 [project]
-name = "demo"
-channels = ["../moonshine/output", "conda-forge"]
+name = "lumen-app"
+channels = ["../lumen/output", "conda-forge"]
 
 [dependencies]
 lua = ">=5.4"
-moonshine = "*"
+lumen = "*"
 ```
 
 Install and run:
 
 ```console
 $ shot install
-$ shot run lua -e "local m = require('moonshine'); print(m.greet('world'))"
-Hello, world!
+$ shot run lua -e "require('lumen').thumbnail('photo.jpg', 128)"
 ```
+
+That creates `photo_thumb.jpg`, a 128-pixel thumbnail. ImageMagick and all its
+native dependencies were installed by the package manager because lumen declared
+them in its manifest.
 
 That's the full loop. The `.conda` file you built is the same format that
 conda-forge uses to distribute tens of thousands of packages.
+
+<!-- TODO: Exercises
+- Inspect the output .conda file with `unzip -l output/noarch/lumen-0.1.0-lua_0.conda`. What files are inside?
+- Extract info-*.tar.zst and look at info/index.json. What dependencies does it list?
+- Try building without imagemagick in [dependencies]. Does the build succeed? Does installation of lumen in another project still work?
+- Create a second library that depends on lumen. Can you chain local channels?
+-->
 
 ## Summary
 

@@ -203,7 +203,7 @@ end
 --- Install files into `PREFIX/share/<name>/`.
 ---
 --- Example:
----   install_share("docs/", "moonshine")
+---   install_share("docs/", "lumen")
 function install_share(src, name)
     install(src, path_join("share", name))
 end

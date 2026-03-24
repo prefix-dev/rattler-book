@@ -137,6 +137,7 @@ Here is how the project is structured:
   <li class="dir"><span class="name">src/</span>
     <ul>
       <li class="file"><span class="name">main.rs</span> <span class="comment">CLI wiring, Tokio runtime</span></li>
+      <li class="file"><span class="name">client.rs</span> <span class="comment">shared HTTP client setup</span></li>
       <li class="file"><span class="name">lock.rs</span> <span class="comment">moonshot.lock reader/writer</span></li>
       <li class="file"><span class="name">manifest.rs</span> <span class="comment">moonshot.toml parser</span></li>
       <li class="file"><span class="name">progress.rs</span> <span class="comment">spinner helpers</span></li>
@@ -211,6 +212,7 @@ use clap::Parser;
 use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 
+mod client;
 mod commands;
 mod lock;
 mod manifest;

@@ -1,8 +1,14 @@
 # Deep Dive: The resolvo SAT Solver
 
-The dependency solver is the most mathematically interesting component of a
-package manager.  In this chapter we explore how resolvo works, from the
-connection to SAT to the specific optimizations that make it fast in practice.
+In [Chapter 6](ch06-lock.md) we ran `shot lock` and the solver found a
+compatible set of packages in under a second. We also saw what happens when it
+fails: requesting both `lua` and `luajit` produced a conflict explanation
+tracing the incompatibility back to your manifest.
+
+How does the solver explore thousands of package versions so quickly? And how
+does it produce those targeted error messages instead of just "no solution"?
+This chapter walks through the algorithms, from the connection to SAT to the
+specific optimizations that make resolvo fast in practice.
 
 ## Dependency solving as SAT
 

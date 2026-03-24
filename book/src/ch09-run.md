@@ -5,7 +5,7 @@
 ## Design
 
 ```bash
-shot run lua -e 'print("hello from conda")'
+shot run lua -e 'print("hello from lumen-app")'
 shot run luarocks install inspect
 ```
 
@@ -192,6 +192,12 @@ to exit anyway, that's fine.
 Why not `return Err(...)`?  There's no meaningful error to report. The child
 ran successfully but indicated failure via its exit code.  Returning an error
 would cause `miette` to print a message, cluttering the output.
+
+<!-- TODO: Exercises
+- Run `shot run env | grep CONDA` to see what activation variables are set.
+- Try `shot run lua -e 'print(package.path)'` to see the Lua module search path. Does it include `.env/share/lua/5.4/`?
+- Run `shot run false` (a command that exits with code 1). What exit code does `shot` return?
+-->
 
 ## Summary
 

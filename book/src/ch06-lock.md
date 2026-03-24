@@ -221,7 +221,6 @@ detect virtual packages, and run the solver.
 ``` {.rust #resolve-imports}
 use std::collections::HashMap;
 use std::env;
-use std::sync::Arc;
 use std::time::Instant;
 
 use miette::{Context, IntoDiagnostic};
@@ -231,10 +230,10 @@ use rattler_conda_types::{
     Channel, ChannelConfig, GenericVirtualPackage, MatchSpec, ParseMatchSpecOptions, Platform,
     RepoDataRecord,
 };
-use rattler_networking::AuthenticationMiddleware;
 use rattler_repodata_gateway::{Gateway, RepoData, SourceConfig};
 use rattler_solve::{resolvo, SolverImpl, SolverTask};
 
+use crate::client::build_authenticated_client;
 use crate::lock::read_lock_file;
 use crate::manifest::Manifest;
 use crate::progress::with_spinner;
@@ -315,8 +314,7 @@ let specs: Vec<MatchSpec> = manifest
 
 ##### Setting up the HTTP client
 
-The HTTP client and authentication middleware follow the same pattern from
-[Chapter 4](ch04-search.md). See that chapter for a detailed walkthrough.
+We reuse the shared HTTP client helper from [Chapter 4](ch04-search.md).
 
 ``` {.rust #setup-client}
 let cache_dir = rattler::default_cache_dir()
@@ -324,19 +322,7 @@ let cache_dir = rattler::default_cache_dir()
 rattler_cache::ensure_cache_dir(&cache_dir)
     .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
 
-let raw_client = reqwest::Client::builder()
-    .no_gzip()
-    .build()
-    .expect("failed to build HTTP client");
-
-let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
-    .with_arc(Arc::new(
-        AuthenticationMiddleware::from_env_and_defaults()
-            .into_diagnostic()
-            .context("setting up auth middleware")?,
-    ))
-    .with(rattler_networking::OciMiddleware::new(raw_client))
-    .build();
+let client = build_authenticated_client()?;
 ```
 
 ##### Fetching repodata
@@ -786,6 +772,57 @@ Running it again without changing the manifest:
 $ shot lock
 ✔ Lock is already up to date
 ```
+
+## When the solver says no
+
+Not every set of dependencies has a solution. Suppose you write this manifest:
+
+```toml
+[dependencies]
+lua = ">=5.4,<5.5"
+luajit = "*"
+```
+
+`lua` and `luajit` are different implementations of the Lua language. They
+provide different packages and can't coexist. The solver detects that
+their constraints are incompatible:
+
+```console
+$ shot lock
+⠋ Fetching repodata
+  1523 repodata records loaded
+⠋ Solving
+Error:
+  × solving dependencies
+  ╰─▶ The following packages are incompatible:
+        - lua >=5.4,<5.5 can be satisfied by lua 5.4.7
+        - luajit * can be satisfied by luajit 2.1
+        - lua 5.4.7 conflicts with luajit 2.1 because they
+          both provide the lua runtime
+```
+
+The error traces the chain of incompatibilities from your direct requests back
+to the conflict. To read it: start from the bottom. The conflict tells you
+*why* no solution exists. The lines above show which of your dependencies led
+there.
+
+Fixing it usually means relaxing one constraint or removing a dependency. In
+this case, pick either `lua` or `luajit`, not both. For harder cases where
+transitive dependencies conflict, the error message shows which intermediate
+packages are involved so you know where to look.
+
+resolvo generates these explanations by tracing its conflict graph, the same
+CDCL machinery described in
+[Deep Dive: The resolvo SAT Solver](deep-dive-resolvo.md). The explanation
+isn't just "no solution"; it's the minimal set of constraints that cannot be
+satisfied together.
+
+<!-- TODO: Exercises
+- Edit moonshot.toml to add a conflicting dependency (e.g., two packages that need different lua versions). What does the solver report?
+- Open moonshot.lock and find the SHA-256 hash for the lua package. What is it used for?
+- Delete moonshot.lock and run `shot lock`. Compare the output to a run where the lock already exists.
+- Touch moonshot.toml (without changing it) and run `shot lock`. Does it re-solve?
+-->
 
 ## Summary
 

@@ -53,6 +53,7 @@ nav:
     - Virtual Packages: deep-dive-virtual-packages.md
     - The Networking Stack: deep-dive-networking.md
     - The resolvo SAT Solver: deep-dive-resolvo.md
+    - The Build Script API: deep-dive-build-script-api.md
     - Overview of the rattler crates: deep-dive-crate-ecosystem.md
 
 extra_css:

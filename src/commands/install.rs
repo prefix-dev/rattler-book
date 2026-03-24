@@ -1,7 +1,6 @@
 // ~/~ begin <<book/src/ch07-install.md#src/commands/install.rs>>[init]
 // ~/~ begin <<book/src/ch07-install.md#install-imports>>[init]
 use std::env;
-use std::sync::Arc;
 use std::time::Instant;
 
 use clap::Parser;
@@ -10,8 +9,8 @@ use rattler::install::{IndicatifReporter, Installer};
 use rattler_conda_types::{
     MatchSpec, ParseMatchSpecOptions, Platform, PrefixRecord, RepoDataRecord,
 };
-use rattler_networking::AuthenticationMiddleware;
 
+use crate::client::build_authenticated_client;
 use crate::lock::{is_lock_fresh, read_lock_file, write_lock_file, LOCK_FILENAME};
 use crate::manifest::Manifest;
 use crate::resolve::{read_locked_packages, resolve_from_manifest};
@@ -103,19 +102,7 @@ async fn run_installer(
         .collect::<miette::Result<_>>()?;
     // ~/~ end
     // ~/~ begin <<book/src/ch07-install.md#install-client>>[init]
-    let raw_client = reqwest::Client::builder()
-        .no_gzip()
-        .build()
-        .expect("failed to build HTTP client");
-    
-    let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
-        .with_arc(Arc::new(
-            AuthenticationMiddleware::from_env_and_defaults()
-                .into_diagnostic()
-                .context("setting up auth middleware")?,
-        ))
-        .with(rattler_networking::OciMiddleware::new(raw_client))
-        .build();
+    let client = build_authenticated_client()?;
     // ~/~ end
     // ~/~ begin <<book/src/ch07-install.md#run-install>>[init]
     let installed_packages =

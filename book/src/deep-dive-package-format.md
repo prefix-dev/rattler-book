@@ -1,8 +1,27 @@
 # Deep Dive: The conda Package Format
 
-This chapter is a precise reference for what's inside a conda package.  You
-don't need to read it to build `moonshot`, but if you're debugging a packaging
-problem or writing tooling that reads package archives, you'll want it.
+In [Chapter 10](ch10-build.md) we ran `shot build` and produced
+`lumen-0.1.0-lua_0.conda`. What's inside that file? Let's crack it open:
+
+```console
+$ unzip -l output/noarch/lumen-0.1.0-lua_0.conda
+Archive:  lumen-0.1.0-lua_0.conda
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+       33  2024-03-15 12:00   metadata.json
+     1024  2024-03-15 12:00   pkg-lumen-0.1.0-lua_0.tar.zst
+      512  2024-03-15 12:00   info-lumen-0.1.0-lua_0.tar.zst
+```
+
+Three files: a tiny JSON sentinel, and two zstd-compressed tar archives. The
+`info-` archive contains package metadata (name, version, dependencies, file
+hashes). The `pkg-` archive contains the actual files that get installed into
+your environment. This separation means tools like the solver can read metadata
+without ever downloading the payload.
+
+This chapter is a precise reference for the full format. You don't need it to
+build moonshot, but if you're debugging a packaging problem or writing tooling
+that reads package archives, you'll want it.
 
 ## The two formats
 

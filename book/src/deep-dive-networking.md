@@ -1,8 +1,13 @@
 # Deep Dive: The rattler Networking Stack
 
-rattler uses `reqwest` as its HTTP client, extended with a middleware layer for
-authentication, OCI registries, S3/GCS storage, and mirrors.  This chapter
-explains how the stack is assembled and how each piece works.
+When you ran `shot search lua` in [Chapter 4](ch04-search.md), the command
+printed results in under a second. Behind the scenes, several HTTP requests
+fired: the Gateway fetched a shard index from conda-forge, downloaded the
+shards for `lua` and related packages, and cached everything locally. Each
+request passed through a middleware chain that injected authentication
+credentials and translated OCI URLs.
+
+This chapter explains how that stack is assembled and how each piece works.
 
 ## reqwest: the HTTP client
 

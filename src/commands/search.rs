@@ -2,16 +2,15 @@
 // ~/~ begin <<book/src/ch04-search.md#search-imports>>[init]
 use std::collections::HashMap;
 use std::env;
-use std::sync::Arc;
 
 use clap::Parser;
 use miette::{Context, IntoDiagnostic};
 use rattler::package_cache::PackageCache;
 use rattler_cache::{PACKAGE_CACHE_DIR, REPODATA_CACHE_DIR};
 use rattler_conda_types::{Channel, ChannelConfig, MatchSpec, ParseMatchSpecOptions, Platform};
-use rattler_networking::AuthenticationMiddleware;
 use rattler_repodata_gateway::{Gateway, RepoData, SourceConfig};
 
+use crate::client::build_authenticated_client;
 use crate::progress::with_spinner;
 // ~/~ end
 
@@ -52,19 +51,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     // ~/~ end
 
     // ~/~ begin <<book/src/ch04-search.md#search-http-client>>[init]
-    let raw_client = reqwest::Client::builder()
-        .no_gzip()
-        .build()
-        .expect("failed to build HTTP client");
-    
-    let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
-        .with_arc(Arc::new(
-            AuthenticationMiddleware::from_env_and_defaults()
-                .into_diagnostic()
-                .context("setting up auth middleware")?,
-        ))
-        .with(rattler_networking::OciMiddleware::new(raw_client))
-        .build();
+    let client = build_authenticated_client()?;
     // ~/~ end
 
     // ~/~ begin <<book/src/ch04-search.md#search-gateway>>[init]

@@ -206,6 +206,12 @@ PATH.
     polished tool could alias these variables, but you would lose the ecosystem
     compatibility.
 
+<!-- TODO: Exercises
+- Run `shot shell` and inspect the output. What environment variables does it set?
+- Try `shot shell --shell fish` (or bash, zsh). How does the output syntax differ?
+- After `eval $(shot shell)`, run `which lua`. Where does it point?
+-->
+
 ## Summary
 
 - Shell activation generates a script that the user evaluates to modify their

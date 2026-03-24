@@ -46,6 +46,20 @@ are defined in [Chapter 2](ch02-project-setup.md).
 
 ## Concepts: Installation
 
+Here is the full pipeline that `shot install` runs:
+
+```mermaid
+graph TD
+    Start["shot install"] --> CheckLock{Lock fresh?}
+    CheckLock -->|yes| ReadLock["Read lock file"]
+    CheckLock -->|no| FetchRepo["Fetch repodata"]
+    FetchRepo --> Solve["Run solver"]
+    Solve --> WriteLock["Write lock file"]
+    WriteLock --> ReadLock
+    ReadLock --> Download["Download packages\nto cache"]
+    Download --> Link["Link into prefix"]
+```
+
 ### The package cache
 
 Every package is first extracted into a *central cache* shared across all
@@ -122,7 +136,6 @@ Here is the full file skeleton, with each section defined as we encounter it:
 
 ``` {.rust #install-imports}
 use std::env;
-use std::sync::Arc;
 use std::time::Instant;
 
 use clap::Parser;
@@ -131,8 +144,8 @@ use rattler::install::{IndicatifReporter, Installer};
 use rattler_conda_types::{
     MatchSpec, ParseMatchSpecOptions, Platform, PrefixRecord, RepoDataRecord,
 };
-use rattler_networking::AuthenticationMiddleware;
 
+use crate::client::build_authenticated_client;
 use crate::lock::{is_lock_fresh, read_lock_file, write_lock_file, LOCK_FILENAME};
 use crate::manifest::Manifest;
 use crate::resolve::{read_locked_packages, resolve_from_manifest};
@@ -269,23 +282,10 @@ let specs: Vec<MatchSpec> = manifest
     .collect::<miette::Result<_>>()?;
 ```
 
-The HTTP client follows the same pattern as [Chapter 4](ch04-search.md) and
-[Chapter 6](ch06-lock.md): `reqwest` with authentication middleware.
+The HTTP client reuses the shared helper from [Chapter 4](ch04-search.md).
 
 ``` {.rust #install-client}
-let raw_client = reqwest::Client::builder()
-    .no_gzip()
-    .build()
-    .expect("failed to build HTTP client");
-
-let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
-    .with_arc(Arc::new(
-        AuthenticationMiddleware::from_env_and_defaults()
-            .into_diagnostic()
-            .context("setting up auth middleware")?,
-    ))
-    .with(rattler_networking::OciMiddleware::new(raw_client))
-    .build();
+let client = build_authenticated_client()?;
 ```
 
 Finally we scan the prefix for already-installed packages, build a minimal
@@ -362,6 +362,17 @@ $ shot install
   Activate with:  eval $(shot shell)
 ```
 
+Try it right away:
+
+```console
+$ shot run lua -e 'print(_VERSION)'
+Lua 5.4
+```
+
+The Lua interpreter was fetched from conda-forge, unpacked, cached, and linked
+into `.env/bin/`. We can run it without activating the shell because `shot run`
+sets up the environment automatically (we'll build that in [Chapter 9](ch09-run.md)).
+
 ### What gets installed where
 
 After `shot install`, the prefix looks like this:
@@ -405,6 +416,13 @@ After `shot install`, the prefix looks like this:
 The `conda-meta/` directory is rattler's installation database.  Each JSON
 file records the package name, version, build, all installed files, and their
 hashes. You can inspect these to see exactly what's in your environment.
+
+<!-- TODO: Exercises
+- Run `shot install` twice. What does the second run print? Why?
+- Inspect `.env/conda-meta/lua-*.json`. Find the `requested_spec` field. What does it say?
+- Delete `.env/` and run `shot install` again. Does it re-download or use the cache?
+- Try `shot install --prefix /tmp/test-env`. What happens?
+-->
 
 ## Summary
 
