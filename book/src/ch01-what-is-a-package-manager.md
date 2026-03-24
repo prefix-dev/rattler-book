@@ -15,8 +15,10 @@ and post-release tags.
 
 **Requirements.** A requirement (also called a constraint, dependency, or spec)
 expresses "I need library X, version >= 2.0". The format varies by ecosystem:
-npm uses semver ranges, pip uses [PEP 508], and conda uses **MatchSpecs** like
-`lua >=5.4`.
+npm uses semver ranges, pip uses [PEP 508], and conda uses [**MatchSpecs**][cep-29]
+like `lua >=5.4`.
+
+[cep-29]: https://conda.org/learn/ceps/cep-0029/
 
 **Package artifacts.** A package is a distributable unit: a tarball, wheel, .conda
 archive, crate, or .deb. It contains the code, metadata (name, version,

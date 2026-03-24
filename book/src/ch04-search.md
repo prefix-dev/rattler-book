@@ -71,7 +71,15 @@ lua-json =1.3.*
 ```
 
 A MatchSpec can specify a package name (required), a version constraint
-(optional), a build string (optional), a channel (optional), and more.
+(optional), a build string (optional), a channel (optional), and more. The
+full syntax is defined in [CEP-29]. A few things worth knowing:
+
+- `pkg =1.8` (with `=`) is **fuzzy** -- it matches any `1.8.*` release.
+- `pkg 1.8` (with a space) is **exact** -- it matches only version `1.8`.
+- Bracket syntax lets you filter on any record field: `lua[build_number='>0']`.
+- You can pin a channel: `conda-forge::lua >=5.4`.
+
+[CEP-29]: https://conda.org/learn/ceps/cep-0029/
 
 rattler parses MatchSpecs into a typed struct:
 
