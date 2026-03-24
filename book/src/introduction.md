@@ -2,36 +2,30 @@
 
 <span class="newthought">This book</span> teaches you how to build a package manager.
 
-Here is what the finished tool looks like. We write `lumen`, a Lua image
-library that wraps ImageMagick, build it into a distributable package, install
-it in a separate project, and use it:
+Here is what using the finished tool will look like:
 
 ```console
-$ shot init lumen --library
-$ cat lumen.lua
-local M = {}
-function M.thumbnail(input, size)
-    local output = input:gsub("(%..+)$", "_thumb%1")
-    os.execute(string.format("magick %s -thumbnail %dx%d %s", input, size, size, output))
-    return output
-end
-return M
-
-$ shot build
-✔ Built lumen-0.1.0-lua_0.conda
-
-$ mkdir lumen-app && cd lumen-app
-$ shot init lumen-app
+$ shot init my-app --channel conda-forge --channel ../channel
 $ shot add lumen imagemagick
 $ shot install
+✔ Installed 12 packages
+
 $ shot run lua -e "require('lumen').thumbnail('photo.jpg', 128)"
 ```
 
-By the end of this book, you will have built the tool that just did that.
-`lumen` is a Lua library you wrote. ImageMagick is a C library with dozens of
-native dependencies. Both were installed, linked, and activated by your package
-manager, built on top of **[rattler]**, a library that implements the [conda]
-package specification in pure Rust.
+`lumen` is a Lua library we wrote ourselves. ImageMagick is a C library with
+dozens of native dependencies. Both were solved, installed, and activated by
+our package manager. Where did `lumen` come from? We built it with moonshot's
+other headline command:
+
+```console
+$ shot build --output-dir ../channel
+✔ Built lumen-0.1.0-lua_0.conda
+```
+
+By the end of this book, you will have built the tool that did all of that, on
+top of **[rattler]**, a library that implements the [conda] package
+specification in pure Rust.
 
 [conda]: https://docs.conda.io/projects/conda/en/stable/
 
@@ -48,9 +42,9 @@ You don't need to know anything about conda, packaging, or the Lua programming
 language.  We use [Lua] as the target language because it's small and
 self-contained, but the techniques generalize to any ecosystem.
 
-## What we build
+## What we will build
 
-`moonshot`, a minimal Lua package manager.  It can:
+`moonshot`, a minimal Lua package manager. By the final chapter it will be able to:
 
 ```console
 $ shot init my-app          # scaffold a new project
@@ -61,66 +55,65 @@ $ shot run lua script.lua   # run inside the environment
 $ shot build                # build a distributable package
 ```
 
-The final source is in the `src/` directory alongside this book.
+The final source will live in the `src/` directory alongside this book.
 
 ## How this book is organized
 
-**Part I** builds `moonshot` from scratch. Each chapter implements one command
-from start to finish: design how the command works, then configuration changes,
+**Part I** will build `moonshot` from scratch. Each chapter will implement one
+command from start to finish: first the design, then configuration changes,
 then concepts, then implementation.
 
-**Part II** dives deeper into the rattler library itself: the package format,
-the SAT solver, the networking stack.  These chapters stand alone; you can read
-them in any order.
+**Part II** will dive deeper into the rattler library itself: the package
+format, the SAT solver, the networking stack. These chapters stand alone; you
+can read them in any order.
 
 ## Literate programming
 
-This book uses [Entangled], a literate programming tool.  The code blocks in
-each chapter are the actual source code.  Entangled extracts them from the
+This book uses [Entangled], a literate programming tool. The code blocks in
+each chapter are the actual source code. Entangled extracts them from the
 Markdown into real files that compile and run.
 
-Code blocks that produce a file look like this:
+Code blocks that produce a file carry a `file=` attribute. Here is a small
+program we will use to show how it works:
 
-~~~markdown
-``` {.rust file=src/main.rs}
-fn main() { }
-```
-~~~
-
-The `file=` attribute tells Entangled where to write the code.
-
-Files rarely appear as a single block.  Instead, you name smaller pieces with
-`#name` and pull them into a file block using `<<name>>`:
-
-~~~markdown
-``` {.rust file=src/main.rs}
-<<imports>>
+``` {.rust file=examples/intro/hello.rs}
+<<intro-imports>>
 
 fn main() {
-    <<body>>
+    <<intro-prompt-greet>>
 }
 ```
-~~~
 
-Each named piece is defined separately, so the surrounding prose can explain it
-in context:
+The `<<intro-prompt-greet>>` placeholder refers to a named block. When the same
+name appears on multiple code blocks, Entangled appends them in order. This
+lets us explain each piece separately while they end up as one continuous block
+in the tangled output.
 
-~~~markdown
-``` {.rust #imports}
-use std::io;
+The imports bring in `std::io` for reading from stdin:
+
+``` {.rust #intro-imports}
+use std::io::{self, Write};
 ```
-~~~
 
-~~~markdown
-``` {.rust #body}
-println!("hello");
+First we print a prompt and flush stdout so it appears before we block on input:
+
+``` {.rust #intro-prompt-greet}
+print!("what is your name? ");
+io::stdout().flush().unwrap();
 ```
-~~~
 
-Entangled stitches these together: every `<<imports>>` reference is replaced by
-the contents of the `#imports` block.  This lets the book introduce code in the
-order that makes sense for reading, while the tangled output follows the order
-the compiler expects.
+Then we read a line and print a greeting:
+
+``` {.rust #intro-prompt-greet}
+let mut name = String::new();
+io::stdin().read_line(&mut name).unwrap();
+println!("hello, {}!", name.trim());
+```
+
+Entangled stitches these together: every `<<intro-imports>>` reference is
+replaced by the contents of the `#intro-imports` block. This lets the book
+introduce code in the order that makes sense for reading, while the tangled
+output follows the order the compiler expects.
 
 You can tangle all files with:
 
