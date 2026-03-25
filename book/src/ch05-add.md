@@ -182,10 +182,56 @@ lua = ">=5.4"
 luarocks = "*"
 ```
 
-<!-- TODO: Exercises
-- Run `shot add lua` twice. Does the version constraint change? Why or why not?
-- Try `shot add "lua >=99.0"` (a version that doesn't exist). Does `add` catch it or does the error surface later?
--->
+## Exercises
+
+!!! exercise-easy "Validate Specs Before Adding"
+
+    Currently `shot add` writes the package string directly to the manifest without checking if it is a valid spec. Add validation that parses each user-provided spec through `MatchSpec::from_str` before writing. If any spec is malformed, abort without modifying the manifest.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    `MatchSpec::from_str(spec_str, ParseMatchSpecOptions::default())` parses and validates a spec string. Modify `src/commands/add.rs` and add a validation loop before the write loop. See `Manifest::match_specs()` in `src/manifest.rs` for the pattern.
+    </details>
+
+    Acceptance criteria
+    :   - `shot add lua` succeeds (valid name)
+        - `shot add "lua >=5.4"` succeeds (valid name + version)
+        - `shot add "!!!invalid"` fails with a parse error, manifest unchanged
+        - If adding multiple packages and one fails, none are added
+
+!!! exercise-intermediate "Validate Package Exists in Channel Before Adding"
+
+    Make `shot add` query the repodata gateway by default to verify each package exists in the configured channels before adding it. If a package is not found, refuse to add it. Construct a `Session`, query with the parsed `MatchSpec`, and check that at least one matching record comes back. Add `--offline` to skip the check for users without network access.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Create a `Session::new(project)` to get gateway access. Note: `Session::new` consumes the `Project`, so you may need to call `Project::discover()` again afterward for the manifest write. Use `Gateway::query(channels, [Platform::current(), Platform::NoArch], [spec]).recursive(false)` and check if the returned repodata has any records. Follow the gateway pattern in `src/commands/search.rs`. Modify `src/commands/add.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot add lua` queries conda-forge and succeeds (lua exists)
+        - `shot add nonexistent-package-xyz` fails with "Package not found in channels: ..."
+        - `shot add --offline lua` skips the gateway check and adds without validation
+        - The manifest's configured channels are used for the query
+
+!!! exercise-hard "Platform-Specific Dependencies"
+
+    Implement `shot add --platform linux-64 lua` which adds the dependency to a platform-specific table `[platform-dependencies.linux-64]` instead of the global `[dependencies]`. This requires extending the `Manifest` struct with a `platform_dependencies: HashMap<String, HashMap<String, String>>` field, parsing the target platform with `Platform::from_str`, and optionally validating via the gateway for that specific platform.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    `rattler_conda_types::Platform::from_str("linux-64")` parses and validates platform strings. Use `Gateway::query(channels, [target_platform, Platform::NoArch], specs)` for platform-specific queries. Modify `src/manifest.rs` to add a `platform_dependencies` field with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the serde rename from the recurring patterns note. Modify `src/commands/add.rs` to add a `--platform` flag and route to the correct table.
+    </details>
+
+    Acceptance criteria
+    :   - `shot add --platform linux-64 lua` writes to `[platform-dependencies.linux-64]`
+        - `shot add --platform linux-64` validates the package exists for linux-64 specifically (gateway is on by default)
+        - Without `--platform`, behavior is unchanged (adds to `[dependencies]`)
+        - Invalid platform strings produce a clear error
+        - Multiple `--platform` flags add to each platform section
 
 ## Summary
 

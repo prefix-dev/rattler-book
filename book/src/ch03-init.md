@@ -409,12 +409,6 @@ channels = ["conda-forge"]
 lua = ">=5.4"
 ```
 
-<!-- TODO: Exercises
-- Try running `shot init` in a directory that already has a moonshot.toml. What error do you get?
-- Run `shot init --library my-lib` and compare the generated manifest to a plain `shot init`. What's different?
-- Change the default channel to a URL that doesn't exist. Does `shot init` validate it?
--->
-
 ## Summary
 
 - `Manifest` is a plain Rust struct derived from `Serialize`/`Deserialize`.
@@ -426,6 +420,68 @@ lua = ">=5.4"
 [miette]: https://docs.rs/miette
 [console]: https://crates.io/crates/console
 [rattler_conda_types]: https://crates.io/crates/rattler_conda_types
+
+## Exercises
+
+!!! exercise-easy "Add a `requires-lua` Field"
+
+    Add a top-level `requires-lua` field to `moonshot.toml` (similar to `requires-python` in pyproject.toml). This field is more ergonomic than putting the Lua constraint in `[dependencies]` because it expresses the Lua version as a project-level requirement, not a regular dependency. Parse and validate it through `MatchSpec::from_str`. The `shot init` command gets a `--lua-version` flag to set it.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    The `requires-lua` value is a version constraint (e.g., `">=5.1,<5.5"`), not a full match spec. To validate with `MatchSpec::from_str`, prepend the package name: `MatchSpec::from_str(&format!("lua {spec}"), ParseMatchSpecOptions::default())`.
+
+    Use `#[serde(rename = "requires-lua")]` on the Rust field so the TOML key uses a hyphen.
+
+    Modify `src/manifest.rs` (add field to `ProjectMetadata`) and `src/commands/init.rs` (add CLI flag, update the `ProjectMetadata` struct literal). See `Manifest::match_specs()` in `src/manifest.rs` for the parsing pattern.
+    </details>
+
+    Acceptance criteria
+    :   - `shot init --lua-version ">=5.1,<5.5"` writes `requires-lua = ">=5.1,<5.5"` to `[project]`
+        - `shot init --lua-version "!!!invalid"` fails with a parse error before creating any file
+        - Default (no flag) writes `requires-lua = ">=5.4"`
+        - `Manifest` struct has a `requires_lua: Option<String>` field that round-trips through TOML
+
+!!! exercise-intermediate "Detect and Record Virtual Packages"
+
+    At init time, detect the system's virtual packages using `VirtualPackage::detect()` and print them to stdout. Write a `[system]` section into the manifest with the detected values (e.g., `glibc = "2.31"` on Linux, `osx = "15.0"` on macOS). This gives users visibility into what their build host provides, which matters when the project later resolves dependencies (Ch6) or builds platform-specific packages (Ch10).
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Use `rattler_virtual_packages::VirtualPackage::detect(&VirtualPackageOverrides::default())`. Convert each `VirtualPackage` to `GenericVirtualPackage` which has `.name` (`PackageName`), `.version` (`Version`), and `.build_string` (`String`). Note: `__archspec` stores the architecture in `build_string`, not `version` (its version is always `1`).
+
+    Modify `src/manifest.rs` (add `system: HashMap<String, String>`) and `src/commands/init.rs`. See how `src/session.rs` already calls `VirtualPackage::detect` for the pattern.
+    </details>
+
+    Acceptance criteria
+    :   - `shot init` prints detected virtual packages (e.g., `Detected: __glibc=2.31, __archspec=1=x86_64`)
+        - Manifest contains `[system]` with key-value pairs for detected packages
+        - On macOS `__osx` is recorded; on Linux `__glibc` is recorded
+        - `[system]` is omitted from serialization when empty
+
+!!! exercise-hard "Init with Gateway Validation"
+
+    Add a `--validate` flag to `shot init` that queries the configured channels to verify the Lua version constraint is satisfiable before writing the manifest. This requires constructing an HTTP client, creating a `Gateway`, and querying for a `MatchSpec` matching the `requires-lua` value. If no matching Lua packages exist in the channel, abort with a clear error.
+
+    Dependencies: Exercise 3.1 (uses the `requires-lua` field).
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Build an HTTP client using the pattern in `src/client.rs`. Use `Gateway::builder().with_client(client).finish()` to create the gateway. Query with `Gateway::query(channels, [Platform::current(), Platform::NoArch], [matchspec])` to check availability. Follow the gateway query pattern in `src/commands/search.rs`.
+
+    Modify `src/commands/init.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot init --validate` succeeds when `lua >=5.4` exists on conda-forge
+        - `shot init --validate --lua-version ">=99.0"` fails with "No Lua packages matching >=99.0 found in channels"
+        - Without `--validate`, init works offline as before
+        - The channels from `--channel` flags (or the default) are used for the query
+
+**Recurring patterns in exercises.** Two patterns come up in many exercises throughout this book. (1) TOML conventions use hyphens (`requires-lua`), but Rust fields use underscores (`requires_lua`). Add `#[serde(rename = "requires-lua")]` to bridge the two whenever an exercise adds a hyphenated key to `moonshot.toml`. (2) When you add a field to `Manifest` or `ProjectMetadata`, the compiler will point you to every place that constructs the struct. The most common one is `src/commands/init.rs`. Later exercises will not always remind you of this; follow the compiler errors.
 
 In the next chapter we'll implement `shot search`, which queries a channel for
 available packages.

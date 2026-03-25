@@ -385,12 +385,55 @@ The `conda-meta/` directory is [rattler]'s installation database.  Each JSON
 file records the package name, version, build, all installed files, and their
 hashes. You can inspect these to see exactly what's in your environment.
 
-<!-- TODO: Exercises
-- Run `shot install` twice. What does the second run print? Why?
-- Inspect `.env/conda-meta/lua-*.json`. Find the `requested_spec` field. What does it say?
-- Delete `.env/` and run `shot install` again. Does it re-download or use the cache?
-- Try `shot install --prefix /tmp/test-env`. What happens?
--->
+## Exercises
+
+!!! exercise-easy "List Installed Packages"
+
+    Add a `shot list` command that reads the installed prefix and lists all packages. Use `PrefixRecord::collect_from_prefix` to discover installed packages, then display each one's name, version, and build string.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Use `PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix_path)` to get installed packages. Access package fields via `record.repodata_record.package_record` (`.name`, `.version`, `.build`). Create `src/commands/list.rs`, register in `src/commands/mod.rs` and `src/main.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot list` prints all installed packages sorted alphabetically
+        - If `.env/` does not exist, prints "No environment found. Run `shot install` first."
+        - Total count printed at the end
+
+!!! exercise-intermediate "Dry-Run Installation"
+
+    Add a `--dry-run` flag to `shot install` that resolves dependencies and shows what would be installed without actually downloading or linking anything. Compare the resolved packages against what is already in the prefix (via `PrefixRecord::collect_from_prefix`) and report what would be added, updated, or unchanged.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Resolve via `Session::ensure_resolved(force)` to get the solution. Use `PrefixRecord::collect_from_prefix(prefix)` to read what is already installed. Compare by `PackageName` between resolved and installed sets. `PackageRecord::size` (`Option<u64>`) gives the download size. Modify `src/commands/install.rs` and short-circuit before `install_packages`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot install --dry-run` shows packages that would be installed with their versions and sizes
+        - Already-installed packages are listed as "unchanged" or "update from X to Y"
+        - No files are downloaded or written to the prefix
+        - Exit code 0 on success
+
+!!! exercise-hard "Reinstall Command"
+
+    Implement `shot reinstall` that removes the existing environment prefix and re-installs everything from the lock file. This forces a clean install, useful when the prefix is corrupted or when switching platforms. Read the lock file, remove the prefix directory, then run the full install pipeline. Add a `--relock` flag that also re-resolves before installing.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Use `std::fs::remove_dir_all(prefix)` to clear the prefix. Use `read_lock_file(lock_path, platform)` from `src/lock.rs` to get locked packages. Call `Session::install_packages(&prefix, solution, platform)` to install and `Session::ensure_resolved(force)` with `force=true` for `--relock`. Create `src/commands/reinstall.rs` or add as a flag to `src/commands/install.rs`. Register in `src/main.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot reinstall` removes `.env/`, reads the lock file, and installs all locked packages fresh
+        - If no lock file exists, it resolves first then installs
+        - `shot reinstall --relock` forces re-resolution before installing
+        - Progress output shows the full install (downloading + linking)
+        - After reinstall, `shot list` shows the same packages as before
 
 ## Summary
 

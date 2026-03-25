@@ -1253,12 +1253,56 @@ them in its manifest.
 That's the full loop. The `.conda` file you built is the same format that
 conda-forge uses to distribute tens of thousands of packages.
 
-<!-- TODO: Exercises
-- Inspect the output .conda file with `unzip -l output/noarch/lumen-0.1.0-lua_0.conda`. What files are inside?
-- Extract info-*.tar.zst and look at info/index.json. What dependencies does it list?
-- Try building without imagemagick in [dependencies]. Does the build succeed? Does installation of lumen in another project still work?
-- Create a second library that depends on lumen. Can you chain local channels?
--->
+## Exercises
+
+!!! exercise-easy "Inspect Package Contents"
+
+    Add `shot build --inspect <file.conda>` that reads an existing `.conda` package and displays its metadata and file listing. Use `rattler_package_streaming` to read the archive, extract `info/index.json` for metadata and `info/paths.json` for the file list.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Use `rattler_package_streaming::seek::stream_conda_info(reader)` to stream the info section as a tar archive. `IndexJson` and `PathsJson` are in `rattler_conda_types::package`. Deserialize from JSON found in the tar entries. Modify `src/commands/build.rs` (add `--inspect` as an alternative execution path).
+    </details>
+
+    Acceptance criteria
+    :   - `shot build --inspect output/noarch/mypkg-0.1.0-lua_0.conda` prints name, version, build, dependencies
+        - A file listing shows all files with their sizes
+        - Invalid files produce clear errors
+
+!!! exercise-intermediate "Extended Package Metadata"
+
+    Include `license` and `description` from the manifest in the built package's `IndexJson`, and write an `about.json` file to the package's info directory. Add optional `home` and `dev_url` fields to the manifest's `[project]` section.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    `IndexJson::license` is already mapped in `src/commands/build.rs`. Add `home: Option<String>` and `dev_url: Option<String>` to `ProjectMetadata` in `src/manifest.rs`. Write `about.json` in the `write_package_metadata` section of `src/commands/build.rs`. Define a simple local struct for serialization rather than using rattler's `AboutJson` (which uses `Vec<Url>` for its fields). The `info/` directory is created around line 152 of `build.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - Built package's `info/index.json` has the `license` field populated
+        - An `info/about.json` file exists with description, license, home, dev_url
+        - Missing optional fields (e.g., `home` not set in the manifest) are absent from the JSON entirely, not serialized as `null`
+        - Verifiable by extracting the .conda
+
+!!! exercise-hard "Build Variants"
+
+    Implement `shot build --variant KEY=VALUE` that produces different packages from the same source with different configurations. Each variant combination gets a unique build string (e.g., `lua54_0` vs `lua51_0`). Variant keys are injected as environment variables during the build script and encoded in the build string and `IndexJson`. Building with `--variant lua=5.4` and `--variant lua=5.1` produces two separate `.conda` packages.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Modify `Manifest::build_string()` in `src/manifest.rs` to accept variant info. Variants encode into the build string by joining key-value pairs (sanitize: remove dots, e.g., `5.4` becomes `54`). Pass variants as env vars to the `LuaBuildBackend` via the `Command` environment. `write_conda_package` uses the build string for the filename. `index_fs` indexes everything in the output dir, so multiple packages work automatically. Modify `src/commands/build.rs`, `src/manifest.rs`, and `src/build_backend.rs` (add variants to `BuildContext`, inject `VARIANT_*` env vars).
+    </details>
+
+    Acceptance criteria
+    :   - `shot build --variant lua=5.4` produces a package with build string containing `lua54`
+        - `shot build --variant lua=5.1` produces a different package with `lua51` in the build string
+        - Multiple variants: `--variant lua=5.4 --variant opt=release` produces `lua54_optrelease_0` (keys sorted alphabetically, values concatenated)
+        - Variant keys are available as env vars during build (e.g., `VARIANT_LUA=5.4`)
+        - Both packages can coexist in the output directory with separate filenames
+        - `rattler_index::index_fs` indexes all variant packages correctly
 
 ## Summary
 

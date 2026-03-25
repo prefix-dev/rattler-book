@@ -135,8 +135,6 @@ the client never re-downloads shards it already has.
 <details class="margin-note" markdown>
 <summary>Other formats</summary>
 
-<<<<<<< conflict 2 of 2
-+++++++ ouryvlzm 980375a6 (rebase destination)
 Besides CEP-16 sharding, [rattler] also supports downloading the full
 `repodata.json` (plain, `.zst`, or `.bz2` compressed) and [JLAP]
 incremental patches for updating a cached copy. When a full file is
@@ -502,6 +500,55 @@ luafilesystem                  1.8.0
   falling back to full JSON or JLAP patches.
 - The `search` command queries with `.recursive(false)` since it only needs
   direct matches.
+
+## Exercises
+
+!!! exercise-easy "Show All Versions with Build Strings"
+
+    Currently `shot search` deduplicates results to show only the latest version per package name. Add a `--all-versions` flag that displays every version found in the repodata. For each version, show the `build` string from `PackageRecord`, giving users visibility into how packages are built.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    `PackageRecord::build` (String), `PackageRecord::version` (VersionWithSource, use `.to_string()`). Modify `src/commands/search.rs`, adjust the dedup/display logic.
+    </details>
+
+    Acceptance criteria
+    :   - `shot search lua --all-versions` shows multiple versions (e.g., 5.4.7, 5.4.6, 5.3.5) each with their build string
+        - Default behavior (without flag) is unchanged
+        - Output format: `lua    5.4.7    h5505292_0`
+
+!!! exercise-intermediate "Display Package Dependencies from Repodata"
+
+    Add a `--deps` flag to `shot search` that prints the dependency list for each matching package. Access `PackageRecord::depends` (a `Vec<String>` of dependency specs) and display each dependency on its own indented line. Parse each dependency back through `MatchSpec::from_str` to validate it and show the structured name + version constraint.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    `PackageRecord::depends` is `Vec<String>`, each entry is a conda dependency spec. `MatchSpec::from_str(dep_str, ParseMatchSpecOptions::default())` to parse. Modify `src/commands/search.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot search lua --deps` shows the latest version of `lua` with its dependencies listed below
+        - Each dependency is indented and shows name + constraint (e.g., `  libgcc-ng >=12`)
+        - All dependency strings parse through `MatchSpec::from_str` without error
+        - Packages with no dependencies show `(no dependencies)`
+
+!!! exercise-hard "Compare Package Versions"
+
+    Implement `shot search <package> --diff <version1> <version2>` that compares two versions of the same package side by side. Query the gateway for both versions, then diff their `PackageRecord` fields: dependencies added/removed/changed, build string, size, and timestamp.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Add `--diff` as a clap arg taking two version strings (`num_args = 2`). The package name comes from the existing `query` positional arg, so the invocation is `shot search lua --diff 5.4.6 5.4.7`. Query the gateway twice: `MatchSpec::from_str("lua ==5.4.6", ...)` and `MatchSpec::from_str("lua ==5.4.7", ...)`. `PackageRecord` fields to compare: `build`, `depends` (`Vec<String>`), `size` (`Option<u64>`), `timestamp` (`Option<TimestampMs>`, call `.datetime()` to get `DateTime<Utc>`). Parse each dependency string with `MatchSpec::from_str` to extract the name via `.name` (returns `PackageNameMatcher`, call `.as_exact()` for `Option<&PackageName>`). Build `HashMap<PackageName, String>` from each version's depends list, then diff the maps. Modify `src/commands/search.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot search lua --diff 5.4.6 5.4.7` shows differences between the two versions
+        - Dependencies diff shows added (+), removed (-), and changed (~) entries
+        - Build string, size, and timestamp differences are displayed
+        - If either version is not found, a clear error is shown
 
 In the next chapter we implement `shot add`, which edits the manifest.
 Then in [Chapter 6](ch06-lock.md) we build `shot lock`, which adds solving

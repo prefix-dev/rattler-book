@@ -170,11 +170,57 @@ Why not `return Err(...)`?  There's no meaningful error to report. The child
 ran successfully but indicated failure via its exit code.  Returning an error
 would cause `miette` to print a message, cluttering the output.
 
-<!-- TODO: Exercises
-- Run `shot run env | grep CONDA` to see what activation variables are set.
-- Try `shot run lua -e 'print(package.path)'` to see the Lua module search path. Does it include `.env/share/lua/5.4/`?
-- Run `shot run false` (a command that exits with code 1). What exit code does `shot` return?
--->
+## Exercises
+
+!!! exercise-easy "Lua REPL with Auto-Configured Paths"
+
+    Add `shot repl` that launches the Lua REPL in the activated environment with `LUA_PATH` and `LUA_CPATH` auto-configured to point to the correct directories in the prefix. This saves users from manually setting Lua's module search paths.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Use `Environment::activation_env()` for the base environment. Detect the Lua version by running `<prefix>/bin/lua -v` and parsing the output (e.g., `Lua 5.5.0`). Do not scan `<prefix>/share/lua/` as that directory may not exist in a bare lua install. Use `tokio::process::Command::new("lua").envs(&env).spawn()` to launch. Modify `src/commands/run.rs` or create `src/commands/repl.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot repl` launches `lua` (interactive) with the activated environment
+        - `LUA_PATH` includes `<prefix>/share/lua/<version>/?.lua` and `<prefix>/share/lua/<version>/?/init.lua`
+        - `LUA_CPATH` includes `<prefix>/lib/lua/<version>/?.so`
+        - The Lua version in the paths matches what is installed (detected from the prefix; the version is dynamic, e.g., 5.4 or 5.5)
+        - If `lua` is not installed, error message says "No Lua interpreter found. Run `shot install` first."
+
+!!! exercise-intermediate "Run with Extra Environment Variables"
+
+    Add `--env KEY=VALUE` flags to `shot run` that inject extra environment variables on top of the activation environment. These are applied after activation, so they can override activation-set values.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    `Environment::activation_env()` returns `HashMap<String, String>`. Just `.insert()` the extras after getting the activation env. Parse `KEY=VALUE` by splitting on the first `=`. Modify `src/commands/run.rs` (add `--env` flag to `Args`).
+    </details>
+
+    Acceptance criteria
+    :   - `shot run --env MY_VAR=hello lua -e "print(os.getenv('MY_VAR'))"` prints `hello`
+        - Multiple `--env` flags work: `--env A=1 --env B=2`
+        - Invalid format (no `=`) produces a clear error
+        - Extra vars override activation vars if they conflict
+
+!!! exercise-hard "Auto-Install Before Run"
+
+    Make `shot run` check lock freshness and prefix existence before executing. If the lock is stale or the prefix is missing/incomplete, automatically resolve and install. Check installed packages against the lock file using `PrefixRecord::collect_from_prefix` to detect if packages were manually deleted.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Use `Project::is_lock_fresh()` to check lock vs manifest mtime. Use `PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix)` for installed packages and `read_lock_file(lock_path, platform)` for expected packages. Use `Session::ensure_resolved()` + `Session::install_packages()` for the full pipeline. Modify `src/commands/run.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot run lua -v` on a fresh project (no `.env/`) automatically resolves, installs, then runs
+        - If the lock is fresh and prefix is complete, no resolve/install happens (fast path)
+        - If a package is deleted from `.env/`, staleness check detects it and re-installs
+        - `--no-auto-install` skips the check (errors if env is missing)
+        - Resolve/install output appears before the command output
 
 ## Summary
 

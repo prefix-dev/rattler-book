@@ -37,6 +37,18 @@ All exercise text follows AGENTS.md prose rules:
 - No filler adverbs, no elevated register ("use" not "utilize", etc.)
 - Plain, direct language
 
+### Recurring Patterns Note
+
+Place after the Chapter 3 exercises, since that's where students first hit both patterns. Later exercises can reference this instead of re-explaining.
+
+> **Recurring patterns in exercises**
+>
+> Two patterns come up in many exercises throughout this book:
+>
+> 1. **Serde rename for TOML keys.** TOML conventions use hyphens (`requires-lua`), but Rust fields use underscores (`requires_lua`). Add `#[serde(rename = "requires-lua")]` to bridge the two. You will need this whenever an exercise adds a hyphenated key to `moonshot.toml`.
+>
+> 2. **Updating struct construction sites.** When you add a field to `Manifest` or `ProjectMetadata`, the compiler will point you to every place that constructs the struct. The most common one is `src/commands/init.rs`. Later exercises will not always remind you of this; follow the compiler errors.
+
 ---
 
 ## Chapter 3 - Init
@@ -54,8 +66,9 @@ Add a top-level `requires-lua` field to `moonshot.toml` (similar to `requires-py
 - `Manifest` struct has a `requires_lua: Option<String>` field that round-trips through TOML
 
 **Hints:**
-- `rattler_conda_types::MatchSpec::from_str(spec, ParseMatchSpecOptions::default())` for validation
-- Modify `src/manifest.rs` (add field to `ProjectMetadata`) and `src/commands/init.rs` (add CLI flag)
+- The `requires-lua` value is a version constraint (e.g., `">=5.1,<5.5"`), not a full match spec. To validate with `MatchSpec::from_str`, prepend the package name: `MatchSpec::from_str(&format!("lua {spec}"), ParseMatchSpecOptions::default())`
+- Use `#[serde(rename = "requires-lua")]` on the Rust field so the TOML key uses a hyphen
+- Modify `src/manifest.rs` (add field to `ProjectMetadata`) and `src/commands/init.rs` (add CLI flag, update the `ProjectMetadata` struct literal)
 - Pattern: see `Manifest::match_specs()` in `src/manifest.rs`
 
 **Dependencies:** None
@@ -65,14 +78,14 @@ Add a top-level `requires-lua` field to `moonshot.toml` (similar to `requires-py
 At init time, detect the system's virtual packages using `VirtualPackage::detect()` and print them to stdout. Write a `[system]` section into the manifest with the detected values (e.g., `glibc = "2.31"` on Linux, `osx = "15.0"` on macOS). This gives users visibility into what their build host provides, which matters when the project later resolves dependencies (Ch6) or builds platform-specific packages (Ch10).
 
 **Acceptance criteria:**
-- `shot init` prints detected virtual packages (e.g., `Detected: __glibc=2.31, __archspec=x86_64`)
+- `shot init` prints detected virtual packages (e.g., `Detected: __glibc=2.31, __archspec=1=x86_64`)
 - Manifest contains `[system]` with key-value pairs for detected packages
 - On macOS `__osx` is recorded; on Linux `__glibc` is recorded
 - `[system]` is omitted from serialization when empty
 
 **Hints:**
 - `rattler_virtual_packages::VirtualPackage::detect(&VirtualPackageOverrides::default())`
-- Convert each `VirtualPackage` to `GenericVirtualPackage` which has `.name` (`PackageName`) and `.version` (`Version`)
+- Convert each `VirtualPackage` to `GenericVirtualPackage` which has `.name` (`PackageName`), `.version` (`Version`), and `.build_string` (`String`). Note: `__archspec` stores the architecture in `build_string`, not `version` (its version is always `1`)
 - Modify `src/manifest.rs` (add `system: HashMap<String, String>`) and `src/commands/init.rs`
 - Pattern: see how `src/session.rs` already calls `VirtualPackage::detect`
 
@@ -135,20 +148,31 @@ Add a `--deps` flag to `shot search` that prints the dependency list for each ma
 
 **Dependencies:** None
 
-### 4.3 Reverse Dependency Search (Hard)
+### 4.3 Compare Package Versions (Hard)
 
-Implement `shot search --rdeps <package>` that finds all packages in the channel which depend on the given package. This requires fetching the full repodata (not just matching a single spec), iterating over every `PackageRecord`, parsing each entry in `depends` via `MatchSpec::from_str`, and checking if the dependency name matches the target package. Display the results grouped by depending package name.
+Implement `shot search <package> --diff <version1> <version2>` that compares two versions of the same package side by side. Query the gateway for both versions, then diff their `PackageRecord` fields: dependencies added/removed/changed, build string, size, and timestamp.
 
 **Acceptance criteria:**
-- `shot search --rdeps lua` shows packages like `luarocks`, `busted`, etc. that have `lua` in their `depends`
-- Results show the depending package name, version, and the specific constraint on the target (e.g., `luarocks 3.11.1 depends on lua >=5.1`)
-- The gateway query uses a broad spec (e.g., `*`) to fetch all packages, then filters locally
-- Performance is acceptable (scanning tens of thousands of records should complete in seconds)
+- `shot search lua --diff 5.4.6 5.4.7` shows differences between the two versions
+- Dependencies diff shows added (+), removed (-), and changed (~) entries
+- Build string, size, and timestamp differences are displayed
+- If either version is not found, a clear error is shown
+- Output format:
+  ```
+  lua 5.4.6 vs 5.4.7
+    build:  h5505292_0 -> h5505292_1
+    size:   234 KB -> 241 KB
+    depends:
+      + libffi >=3.4
+      ~ libgcc-ng >=11 -> >=12
+  ```
 
 **Hints:**
-- Query the gateway with a wildcard or empty spec to get all repodata
-- `PackageRecord::depends` contains strings like `"lua >=5.1"`, parse with `MatchSpec::from_str`
-- `MatchSpec::name` gives the `Option<PackageName>` for matching against the target
+- Add `--diff` as a clap arg taking two version strings (`num_args = 2`). The package name comes from the existing `query` positional arg, so the invocation is `shot search lua --diff 5.4.6 5.4.7`
+- Query the gateway twice: `MatchSpec::from_str("lua ==5.4.6", ...)` and `MatchSpec::from_str("lua ==5.4.7", ...)`
+- `PackageRecord` fields to compare: `build`, `depends` (`Vec<String>`), `size` (`Option<u64>`), `timestamp` (`Option<TimestampMs>`, call `.datetime()` to get `DateTime<Utc>`)
+- Parse each dependency string with `MatchSpec::from_str` to extract the name via `.name` (returns `PackageNameMatcher`, call `.as_exact()` for `Option<&PackageName>`)
+- Build `HashMap<PackageName, String>` from each version's depends list, then diff the maps
 - Modify `src/commands/search.rs`
 
 **Dependencies:** None
@@ -187,7 +211,7 @@ Make `shot add` query the repodata gateway by default to verify each package exi
 - The manifest's configured channels are used for the query
 
 **Hints:**
-- Create a `Session::new(project)` to get gateway access
+- Create a `Session::new(project)` to get gateway access. Note: `Session::new` consumes the `Project`, so you may need to call `Project::discover()` again afterward for the manifest write
 - `Gateway::query(channels, [Platform::current(), Platform::NoArch], [spec]).recursive(false)`
 - Check if returned repodata has any records
 - Follow the gateway pattern in `src/commands/search.rs`
@@ -209,7 +233,7 @@ Implement `shot add --platform linux-64 lua` which adds the dependency to a plat
 **Hints:**
 - `rattler_conda_types::Platform::from_str("linux-64")` to parse and validate
 - `Gateway::query(channels, [target_platform, Platform::NoArch], specs)` for platform-specific query
-- Modify `src/manifest.rs` (add `platform_dependencies` field with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]`)
+- Modify `src/manifest.rs` (add `platform_dependencies` field with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the serde rename from the recurring patterns note)
 - Modify `src/commands/add.rs` (add `--platform` flag, route to correct table)
 
 **Dependencies:** None (implements its own manifest change)
@@ -253,7 +277,8 @@ When re-locking (lock file already exists), compare the old and new solutions an
 **Hints:**
 - `read_lock_file(lock_path, platform)` from `src/lock.rs` to read old solution
 - Build `HashMap<PackageName, VersionWithSource>` for old and new, then diff
-- `PackageName` implements `Eq + Hash`; `VersionWithSource` implements `Ord`
+- `PackageName` implements `Eq + Hash` but not `Display`; use `.as_normalized()` for printing
+- `VersionWithSource` implements `Ord`
 - Modify `src/commands/lock.rs`
 
 **Dependencies:** None
@@ -270,11 +295,11 @@ Add a `[virtual-packages]` table to `moonshot.toml` where users can override det
 - `shot lock` reads the table and applies overrides before solving
 
 **Hints:**
-- Add `virtual_packages: HashMap<String, String>` to `Manifest` with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]`
-- `GenericVirtualPackage { name: PackageName::from_str("__glibc"), version: Version::from_str("2.17"), build_string: "0".into() }`
+- Add `virtual_packages: HashMap<String, String>` to `Manifest` with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the serde rename from the recurring patterns note
+- `GenericVirtualPackage { name: PackageName::from_str("__glibc"), version: Version::from_str("2.17"), build_string: "0".to_string() }`
 - `VirtualPackage::detect(...)` for defaults, then replace matching names with manifest overrides
 - `SolverTask { virtual_packages, ... }` in `src/session.rs`
-- Modify `src/manifest.rs`, `src/session.rs` (add override parameter to `resolve()`), and `src/commands/lock.rs`
+- Modify `src/manifest.rs` and `src/session.rs` (add override parameter to `resolve()`)
 
 **Dependencies:** None
 
@@ -295,7 +320,7 @@ Add a `shot list` command that reads the installed prefix and lists all packages
 
 **Hints:**
 - `PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix_path)`
-- `PrefixRecord` derefs to `PackageRecord` (`.name`, `.version`, `.build`)
+- Access package fields via `record.repodata_record.package_record` (`.name`, `.version`, `.build`)
 - Create `src/commands/list.rs`, register in `src/commands/mod.rs` and `src/main.rs`
 
 **Dependencies:** None
@@ -314,7 +339,7 @@ Add a `--dry-run` flag to `shot install` that resolves dependencies and shows wh
 - Resolve via `Session::ensure_resolved(force)` to get the solution
 - `PrefixRecord::collect_from_prefix(prefix)` to read what's already installed
 - Compare by `PackageName` between resolved and installed sets
-- `PackageRecord::size` gives the download size
+- `PackageRecord::size` (`Option<u64>`) gives the download size
 - Modify `src/commands/install.rs`, short-circuit before `install_packages`
 
 **Dependencies:** None
@@ -334,7 +359,7 @@ Implement `shot reinstall` that removes the existing environment prefix and re-i
 **Hints:**
 - `std::fs::remove_dir_all(prefix)` to clear the prefix
 - `read_lock_file(lock_path, platform)` from `src/lock.rs` to get locked packages
-- `Session::install_packages(records)` to install
+- `Session::install_packages(&prefix, solution, platform)` to install
 - `Session::ensure_resolved(force)` with `force=true` for `--relock`
 - Create `src/commands/reinstall.rs` or add as a flag to `src/commands/install.rs`
 - Register in `src/main.rs`
@@ -367,16 +392,16 @@ Add a `--show-env` flag to `shot shell` that prints the environment variables ac
 
 ### 8.2 Generate Dotenv File from Activation (Intermediate)
 
-Add `shot shell --dotenv [path]` that writes the activation environment to a `.env` file in dotenv format. This lets other tools (Docker, systemd, IDE run configs) consume the environment without shell-specific activation. Use the `Activator` to compute the full environment, diff against the current env, and write only the changed variables.
+Add `shot shell --dotenv [path]` that writes the activation environment to a dotenv file. This lets other tools (Docker, systemd, IDE run configs) consume the environment without shell-specific activation. Use the `Activator` to compute the full environment, diff against the current env, and write only the changed variables.
 
 **Acceptance criteria:**
-- `shot shell --dotenv` writes `.env` in the project root
+- `shot shell --dotenv` writes `moonshot.env` in the project root (not `.env`, which is the conda prefix directory)
 - `shot shell --dotenv /tmp/my.env` writes to the specified path
 - File format: `KEY=VALUE` per line, values quoted if they contain spaces
 - Only activation-added/changed variables are included (not the full inherited environment)
 
 **Hints:**
-- `Environment::activation_env()` returns `HashMap<String, String>`
+- `Environment::activation_env()` returns `Result<HashMap<String, String>>` and is async, so `execute` must become async (update `src/main.rs` to add `.await`)
 - Compare with `std::env::vars()` to find the diff
 - Dotenv format: `KEY="value with spaces"` or `KEY=simple_value`
 - Modify `src/commands/shell.rs`
@@ -394,9 +419,10 @@ Implement `shot shell --stack /other/env` that generates an activation script la
 - A `MOONSHOT_STACK_DEPTH` env var tracks nesting level
 
 **Hints:**
-- `ActivationVariables { conda_prefix: Some(base_prefix), path: current_path_vec }` constructed from current state
-- `Activator::from_path(stacked_prefix, shell, platform)`
-- `activator.activation(vars)` passes the existing activation state
+- Build `ActivationVariables` with `conda_prefix: None` and include the base env's `bin/` paths in the `path` vec. Using `conda_prefix: Some(base_prefix)` would cause the activator to deactivate the base env
+- Use `rattler_shell::activation::prefix_path_entries` to get the path entries for the base prefix
+- `Activator::from_path(stacked_prefix, shell, platform)` and `activator.activation(vars)` to generate the stacked script
+- Set `PathModificationBehavior::Prepend` so the stacked env appears first on PATH
 - Modify `src/environment.rs` and `src/commands/shell.rs`
 
 **Dependencies:** None
@@ -413,14 +439,14 @@ Add `shot repl` that launches the Lua REPL in the activated environment with `LU
 
 **Acceptance criteria:**
 - `shot repl` launches `lua` (interactive) with the activated environment
-- `LUA_PATH` includes `<prefix>/share/lua/5.4/?.lua` and `<prefix>/share/lua/5.4/?/init.lua`
-- `LUA_CPATH` includes `<prefix>/lib/lua/5.4/?.so`
-- The Lua version in the paths matches what's installed (detected from the prefix)
+- `LUA_PATH` includes `<prefix>/share/lua/<version>/?.lua` and `<prefix>/share/lua/<version>/?/init.lua`
+- `LUA_CPATH` includes `<prefix>/lib/lua/<version>/?.so`
+- The Lua version in the paths matches what's installed (detected from the prefix; the version is dynamic, e.g., 5.4 or 5.5)
 - If `lua` is not installed, error message says "No Lua interpreter found. Run `shot install` first."
 
 **Hints:**
 - `Environment::activation_env()` for the base environment
-- Detect Lua version by checking `<prefix>/bin/lua -v` output or scanning `<prefix>/share/lua/`
+- Detect Lua version by running `<prefix>/bin/lua -v` and parsing the output (e.g., `Lua 5.5.0`). Do not scan `<prefix>/share/lua/` as that directory may not exist in a bare lua install
 - `tokio::process::Command::new("lua").envs(&env).spawn()` to launch
 - Modify `src/commands/run.rs` or create `src/commands/repl.rs`
 
@@ -499,7 +525,7 @@ Include `license` and `description` from the manifest in the built package's `In
 **Hints:**
 - `IndexJson::license` field already mapped in `src/commands/build.rs`
 - Add `home: Option<String>`, `dev_url: Option<String>` to `ProjectMetadata` in `src/manifest.rs`
-- Write `about.json` in the `write_package_metadata` section of `src/commands/build.rs`
+- Write `about.json` in the `write_package_metadata` section of `src/commands/build.rs`. Define a simple local struct for serialization rather than using rattler's `AboutJson` (which uses `Vec<Url>` for its fields)
 - The `info/` directory is created around line 152 of `build.rs`
 
 **Dependencies:** None
@@ -511,17 +537,17 @@ Implement `shot build --variant KEY=VALUE` that produces different packages from
 **Acceptance criteria:**
 - `shot build --variant lua=5.4` produces a package with build string containing `lua54`
 - `shot build --variant lua=5.1` produces a different package with `lua51` in the build string
-- Multiple variants: `--variant lua=5.4 --variant opt=release` produces `lua54_release_0`
+- Multiple variants: `--variant lua=5.4 --variant opt=release` produces `lua54_optrelease_0` (keys sorted alphabetically, values concatenated)
 - Variant keys are available as env vars during build (e.g., `VARIANT_LUA=5.4`)
 - Both packages can coexist in the output directory with separate filenames
 - `rattler_index::index_fs` indexes all variant packages correctly
 
 **Hints:**
 - Modify `Manifest::build_string()` in `src/manifest.rs` to accept variant info
-- Variants encode into the build string by joining key-value pairs (sanitize: replace `.` with `_`)
+- Variants encode into the build string by joining key-value pairs (sanitize: remove dots, e.g., `5.4` becomes `54`)
 - Pass variants as env vars to the `LuaBuildBackend` via the `Command` environment
 - `write_conda_package` uses the build string for the filename
 - `index_fs` indexes everything in the output dir, so multiple packages work automatically
-- Modify `src/commands/build.rs` and `src/manifest.rs`
+- Modify `src/commands/build.rs`, `src/manifest.rs`, and `src/build_backend.rs` (add variants to `BuildContext`, inject `VARIANT_*` env vars)
 
 **Dependencies:** None

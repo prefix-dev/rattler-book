@@ -900,12 +900,55 @@ CDCL machinery described in
 isn't just "no solution"; it's the minimal set of constraints that cannot be
 satisfied together.
 
-<!-- TODO: Exercises
-- Edit moonshot.toml to add a conflicting dependency (e.g., two packages that need different lua versions). What does the solver report?
-- Open moonshot.lock and find the SHA-256 hash for the lua package. What is it used for?
-- Delete moonshot.lock and run `shot lock`. Compare the output to a run where the lock already exists.
-- Touch moonshot.toml (without changing it) and run `shot lock`. Does it re-solve?
--->
+## Exercises
+
+!!! exercise-easy "Print Solve Solution Table"
+
+    After resolving, print a formatted table showing every package in the solution. For each `RepoDataRecord`, display: package name, version, build string, and subdir.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    `RepoDataRecord::package_record` contains `.name`, `.version`, `.build`, `.subdir`. Use `PackageName::as_normalized()` for display. Modify `src/commands/lock.rs` and add printing after `ensure_resolved`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot lock` prints an aligned table (name, version, build, subdir)
+        - Columns are aligned
+        - Count matches the "Solved N packages" message
+
+!!! exercise-intermediate "Lock File Diff"
+
+    When re-locking (lock file already exists), compare the old and new solutions and print a diff. Read the old lock file before resolving, then compare package names and versions between old and new. Show added (+), removed (-), and upgraded/downgraded (~) packages.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Use `read_lock_file(lock_path, platform)` from `src/lock.rs` to read the old solution. Build `HashMap<PackageName, VersionWithSource>` for old and new, then diff. `PackageName` implements `Eq + Hash` but not `Display`; use `.as_normalized()` for printing. `VersionWithSource` implements `Ord`. Modify `src/commands/lock.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - Adding a dependency then running `shot lock --force` shows `+ newpkg 1.0.0`
+        - Removing a dependency shows `- oldpkg 2.0.0`
+        - Version changes show `~ pkg 1.0.0 -> 1.1.0`
+        - No changes shows "Lock file unchanged"
+
+!!! exercise-hard "Virtual Package Overrides via Manifest"
+
+    Add a `[virtual-packages]` table to `moonshot.toml` where users can override detected virtual packages for solving. This lets users target older systems (e.g., `__glibc = "2.17"` for manylinux2014 compatibility). Parse the table, construct `GenericVirtualPackage` values, and inject them into the `SolverTask` instead of auto-detected ones.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Add `virtual_packages: HashMap<String, String>` to `Manifest` with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the serde rename from the recurring patterns note. Construct overrides with `GenericVirtualPackage { name: PackageName::from_str("__glibc"), version: Version::from_str("2.17"), build_string: "0".to_string() }`. Use `VirtualPackage::detect(...)` for defaults, then replace matching names with manifest overrides. Wire overrides into `SolverTask { virtual_packages, ... }` in `src/session.rs`. Modify `src/manifest.rs` and `src/session.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - Adding `[virtual-packages]` with `__glibc = "2.17"` to moonshot.toml makes the solver use glibc 2.17
+        - Multiple overrides in the table work: `__glibc = "2.17"` and `__cuda = "11.8"`
+        - Non-overridden virtual packages (e.g., `__unix`) are preserved from detection
+        - Invalid package names (missing `__` prefix) or unparseable versions produce clear errors
+        - `shot lock` reads the table and applies overrides before solving
 
 ## Summary
 

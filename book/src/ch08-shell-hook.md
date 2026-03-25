@@ -297,11 +297,55 @@ polished tool could alias these variables, but you would lose the ecosystem
 compatibility.
 </details>
 
-<!-- TODO: Exercises
-- Run `shot shell` and inspect the output. What environment variables does it set?
-- Try `shot shell --shell fish` (or bash, zsh). How does the output syntax differ?
-- After `eval $(shot shell)`, run `which lua`. Where does it point?
--->
+## Exercises
+
+!!! exercise-easy "Show Activation Environment Variables"
+
+    Add a `--show-env` flag to `shot shell` that prints the environment variables activation would set, instead of the activation script. Use `Environment::activation_env()` and compare against `std::env::vars()` to show only changed variables.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    `Environment::activation_env()` lives in `src/environment.rs`. Use `std::env::vars()` to get the current environment for comparison. You will need to modify `src/commands/shell.rs` to add the flag and call `activation_env` instead of `activate_script`. Note that `activation_env` is async, so the shell command's `execute` function may need to become async as well.
+    </details>
+
+    Acceptance criteria
+    :   - `shot shell --show-env` prints lines like `PATH=/path/to/env/bin:...`
+        - Only variables that differ from the current environment are shown
+        - Variables are sorted alphabetically
+        - Count of modified variables printed at the end
+
+!!! exercise-intermediate "Generate Dotenv File from Activation"
+
+    Add `shot shell --dotenv [path]` that writes the activation environment to a dotenv file. This lets other tools (Docker, systemd, IDE run configs) consume the environment without shell-specific activation. Use the `Activator` to compute the full environment, diff against the current env, and write only the changed variables.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    `Environment::activation_env()` returns `Result<HashMap<String, String>>` and is async, so `execute` must become async (update `src/main.rs` to add `.await`). Compare with `std::env::vars()` to find the diff. Use dotenv format: `KEY="value with spaces"` or `KEY=simple_value`. Modify `src/commands/shell.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `shot shell --dotenv` writes `moonshot.env` in the project root (not `.env`, which is the conda prefix directory)
+        - `shot shell --dotenv /tmp/my.env` writes to the specified path
+        - File format: `KEY=VALUE` per line, values quoted if they contain spaces
+        - Only activation-added/changed variables are included (not the full inherited environment)
+
+!!! exercise-hard "Stacked Environment Activation"
+
+    Implement `shot shell --stack /other/env` that generates an activation script layering a second environment on top of the currently active one. Construct `ActivationVariables` from the already-activated environment state, then run the `Activator` for the stacked prefix. The result should have both envs on PATH in the correct order.
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Build `ActivationVariables` with `conda_prefix: None` and include the base env's `bin/` paths in the `path` vec. Using `conda_prefix: Some(base_prefix)` would cause the activator to deactivate the base env. Use `rattler_shell::activation::prefix_path_entries` to get the path entries for the base prefix. Call `Activator::from_path(stacked_prefix, shell, platform)` and `activator.activation(vars)` to generate the stacked script. Set `PathModificationBehavior::Prepend` so the stacked env appears first on PATH. Modify `src/environment.rs` and `src/commands/shell.rs`.
+    </details>
+
+    Acceptance criteria
+    :   - `eval $(shot shell)` then `eval $(shot shell --stack /other/env)` puts both envs on PATH
+        - Stacked env's `bin/` appears before the base env's `bin/`
+        - `CONDA_PREFIX` reflects the top-of-stack environment
+        - A `MOONSHOT_STACK_DEPTH` env var tracks nesting level
 
 ## Summary
 
