@@ -1,7 +1,7 @@
 # Chapter 4: The `search` Command
 
 <span class="newthought">Before we can install</span> anything, we need to know what's out there. This chapter
-introduces repodata, channels, and the rattler Gateway by building a standalone
+introduces repodata, channels, and the [rattler] Gateway by building a standalone
 command that lets you search for packages by name.
 
 ## Design
@@ -81,7 +81,7 @@ full syntax is defined in [CEP-29]. A few things worth knowing:
 
 [CEP-29]: https://conda.org/learn/ceps/cep-0029/
 
-rattler parses MatchSpecs into a typed struct:
+[rattler] parses MatchSpecs into a typed struct:
 
 ```rust
 use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
@@ -92,22 +92,23 @@ let spec: MatchSpec = MatchSpec::from_str("lua >=5.4", opts)?;
 
 ### The `Gateway`
 
-`rattler_repodata_gateway::Gateway` is the main type for fetching repodata. It
+[rattler_repodata_gateway]'s `Gateway` is the main type for fetching repodata. It
 manages the on-disk repodata cache, a package cache, the HTTP client, and
 per-channel configuration.
 
 ### Why querying is fast: sharded repodata
 
 The naive approach fetches all of `repodata.json` and loads it into RAM. For
-conda-forge that file is ~300 MB. That's slow on the first run and wasteful when
+conda-forge that file can exceed 350 MB. That's slow on the first run and wasteful when
 you only need packages starting with `lua`.
 
 <details class="margin-note" markdown>
 <summary>Why sharding exists</summary>
 
 The full-file approach stopped scaling when conda-forge passed 200,000
-packages. Downloading and parsing 300 MB on every install was the single
-biggest latency bottleneck for conda users. [CEP-16][cep-16] solves this
+package records (name-version-build combinations). Downloading and parsing
+hundreds of megabytes on every install was the single biggest latency
+bottleneck for conda users. [CEP-16][cep-16] solves this
 by splitting repodata into per-package shards so the client never
 downloads data it will never read.
 </details>
@@ -134,7 +135,9 @@ the client never re-downloads shards it already has.
 <details class="margin-note" markdown>
 <summary>Other formats</summary>
 
-Besides CEP-16 sharding, rattler also supports downloading the full
+<<<<<<< conflict 2 of 2
++++++++ ouryvlzm 980375a6 (rebase destination)
+Besides CEP-16 sharding, [rattler] also supports downloading the full
 `repodata.json` (plain, `.zst`, or `.bz2` compressed) and [JLAP]
 incremental patches for updating a cached copy. When a full file is
 loaded, rattler parses it lazily (internally called "sparse" loading) so
@@ -156,7 +159,7 @@ authentication, and OCI support, see [Deep Dive: The Networking Stack](deep-dive
 
 ### The cache directory
 
-rattler caches repodata on disk so it doesn't re-download on every run.
+[rattler] caches repodata on disk so it doesn't re-download on every run.
 
 `rattler::default_cache_dir()` returns the OS-appropriate location:
 
@@ -164,7 +167,7 @@ rattler caches repodata on disk so it doesn't re-download on every run.
 - macOS: `~/Library/Caches/rattler/cache`
 - Windows: `%LOCALAPPDATA%\rattler\cache`
 
-By sharing this cache with pixi and rattler-build, packages are downloaded only
+By sharing this cache with [pixi] and [rattler-build], packages are downloaded only
 once across all tools.
 
 <details class="margin-note" markdown>
@@ -178,7 +181,7 @@ cache hits when a rebuild produces different files.
 
 ### The HTTP client
 
-rattler uses `reqwest` for HTTP.  We build a client with authentication and OCI
+[rattler] uses [reqwest] for HTTP.  We build a client with authentication and OCI
 support.
 
 ## Implementation
@@ -425,7 +428,7 @@ Ok(())
 ### `src/progress.rs`
 
 The progress module provides spinner wrappers that we'll reuse in both `search`
-and `install`. A more polished tool would use `indicatif::MultiProgress` with a
+and `install`. A more polished tool would use [indicatif]'s `MultiProgress` with a
 custom log writer to prevent tracing output from interleaving with spinners, but
 for our purposes a simple spinner does the job.
 
@@ -503,3 +506,10 @@ luafilesystem                  1.8.0
 In the next chapter we implement `shot add`, which edits the manifest.
 Then in [Chapter 6](ch06-lock.md) we build `shot lock`, which adds solving
 to the repodata pipeline and records the result.
+
+[rattler]: https://github.com/conda/rattler
+[rattler_repodata_gateway]: https://crates.io/crates/rattler_repodata_gateway
+[reqwest]: https://docs.rs/reqwest
+[pixi]: https://pixi.sh
+[rattler-build]: https://prefix.dev/docs/rattler-build/overview
+[indicatif]: https://crates.io/crates/indicatif

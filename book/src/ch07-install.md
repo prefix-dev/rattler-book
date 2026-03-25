@@ -79,10 +79,10 @@ them.
 </details>
 
 From the cache, files are linked into the target prefix. On most systems,
-rattler uses **reflinks** (copy-on-write clones) when the filesystem supports
+[rattler] uses **reflinks** (copy-on-write clones) when the filesystem supports
 them (APFS on macOS, Btrfs and XFS on Linux). A reflink shares the underlying
 data blocks without sharing the inode, so writing to one copy doesn't affect
-the other. On filesystems without reflink support, rattler falls back to
+the other. On filesystems without reflink support, [rattler] falls back to
 **hard links**, which are a second directory entry pointing to the same inode.
 If hard links are also unavailable (some network filesystems, Windows
 cross-volume), it copies the file.
@@ -195,12 +195,12 @@ to transitive dependencies) via `with_requested_specs`. It records this in the
 
 This distinction drives automatic cleanup: when a direct dependency is
 removed, the installer can garbage-collect its transitive dependencies that
-nothing else needs. Both npm and pip added this tracking late in their
+nothing else needs. Both [npm] and [pip] added this tracking late in their
 development, and the lack of it caused years of accumulated orphan packages
 in user environments.
 </details>
 
-`IndicatifReporter` is a rattler-provided reporter that shows per-package
+`IndicatifReporter` is a [rattler]-provided reporter backed by [indicatif] that shows per-package
 progress bars during download and extraction. If you want custom progress
 display, you can implement your own; it's a trait, not a concrete type.
 
@@ -381,7 +381,7 @@ After `shot install`, the prefix looks like this:
 </ul>
 </div>
 
-The `conda-meta/` directory is rattler's installation database.  Each JSON
+The `conda-meta/` directory is [rattler]'s installation database.  Each JSON
 file records the package name, version, build, all installed files, and their
 hashes. You can inspect these to see exactly what's in your environment.
 
@@ -407,3 +407,8 @@ hashes. You can inspect these to see exactly what's in your environment.
 
 In the next chapter we set up shell hooks, which generate activation
 scripts so you can use the installed packages.
+
+[rattler]: https://github.com/conda/rattler
+[npm]: https://www.npmjs.com
+[pip]: https://pip.pypa.io
+[indicatif]: https://crates.io/crates/indicatif

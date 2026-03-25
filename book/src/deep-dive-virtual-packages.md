@@ -13,7 +13,7 @@ those things?
 
 ## The problem
 
-Conda environments are hermetic.  They contain everything needed to run a piece
+[Conda] environments are hermetic.  They contain everything needed to run a piece
 of software.  But some things can't be installed:
 
 - The Linux kernel
@@ -30,7 +30,7 @@ version and a compatible GPU.
 
 Virtual packages are synthetic packages that represent host capabilities.  They
 exist only in the solver's view of the world; they're never installed.
-Instead, `rattler_virtual_packages` *detects* them from the system at solve time.
+Instead, [rattler_virtual_packages] *detects* them from the system at solve time.
 
 A few examples:
 
@@ -112,7 +112,7 @@ A package compiled with AVX2 goes in the `x86_64_v3` level.  The virtual package
 `__archspec =1 x86_64_v3` means "this CPU supports at least the v3 instruction
 set".
 
-rattler detects the current CPU level by reading the CPUID instruction (on x86)
+[rattler] detects the current CPU level by reading the CPUID instruction (on x86)
 or equivalent hardware registers on ARM.  The `archspec` crate wraps this
 platform-specific logic.
 
@@ -169,5 +169,8 @@ auto-detection".
 - Archspec maps CPUs to capability levels using CPUID/equivalent.
 - `GenericVirtualPackage` strips type information for the solver.
 [Archspec]: https://github.com/archspec/archspec
+[rattler_virtual_packages]: https://crates.io/crates/rattler_virtual_packages
+[rattler]: https://github.com/conda/rattler
+[Conda]: https://docs.conda.io
 
 - Overrides enable cross-compilation scenarios.

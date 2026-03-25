@@ -72,7 +72,7 @@ back to `["conda-forge"]` when omitted.
 
 `std::fs::read_to_string` returns `Result<String, std::io::Error>`.  We convert
 that to `miette::Result` with `into_diagnostic()`, then attach a context message
-with `with_context`. miette renders these as user-friendly error messages with
+with `with_context`. [miette] renders these as user-friendly error messages with
 source context.
 
 ## Implementation
@@ -162,7 +162,7 @@ The `version`, `license`, and `description` fields are all optional. The
 project can leave all of these out.
 
 We keep the dependency values as plain `String`s rather than parsing them
-immediately. `rattler_conda_types` parses them into `MatchSpec` values at
+immediately. [rattler_conda_types] parses them into `MatchSpec` values at
 solve-time, so parse errors surface with full context instead of at
 manifest-read time.
 
@@ -387,7 +387,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 }
 ```
 
-**`console::style("✔").green()`** uses the `console` crate to color terminal
+**`console::style("✔").green()`** uses the [console] crate to color terminal
 output.  It degrades gracefully when stdout isn't a terminal (redirected to a
 file, CI, etc.).
 
@@ -423,6 +423,9 @@ lua = ">=5.4"
 
 [serde]: https://serde.rs
 [TOML]: https://toml.io
+[miette]: https://docs.rs/miette
+[console]: https://crates.io/crates/console
+[rattler_conda_types]: https://crates.io/crates/rattler_conda_types
 
 In the next chapter we'll implement `shot search`, which queries a channel for
 available packages.

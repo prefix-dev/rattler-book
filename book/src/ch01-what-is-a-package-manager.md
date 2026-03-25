@@ -1,7 +1,7 @@
 # Chapter 1: What Is a Package Manager?
 
 <span class="newthought">Before writing</span> a single line of Rust, let's agree on what a package manager does
-and how the concepts map to the conda ecosystem we're building on.
+and how the concepts map to the [conda] ecosystem we're building on.
 
 ## Universal concepts
 
@@ -9,7 +9,7 @@ Regardless of ecosystem ([npm], [pip], [cargo][cargo-book], conda), every packag
 handful of ideas:
 
 **Versions.** Every package has a version. [Semantic versioning][semver] (major.minor.patch)
-is common but not universal. conda uses its own version ordering that is
+is common but not universal. [conda] uses its own version ordering that is
 compatible with semver but also handles four-part versions, pre-release suffixes,
 and post-release tags.
 
@@ -29,7 +29,7 @@ dependencies), and sometimes pre-compiled binaries.
 - npm: the npm registry at `registry.npmjs.org`
 - pip: [PyPI] at `pypi.org/simple/`
 - cargo: [crates.io] at `index.crates.io`
-- conda: **channels**, e.g. `conda.anaconda.org/conda-forge/`, each publishing a per-platform catalog called **repodata**
+- [conda]: **channels**, e.g. `conda.anaconda.org/conda-forge/`, each publishing a per-platform catalog called **repodata**
 
 You'll find these four concepts in every ecosystem. The differences lie in how
 each system implements them and what trade-offs it makes.
@@ -49,9 +49,9 @@ Someone has written a library called `moonshine`.  You want to use it.  How does
 your tool know that `moonshine` exists, what version it is, and where to download
 it?
 
-The answer is a **channel** (conda terminology) or **registry** (npm/cargo
+The answer is a **channel** ([conda] terminology) or **registry** (npm/cargo
 terminology) or **index** (pip terminology): a server that publishes a catalog of
-available packages.  The catalog is called **repodata** in conda.
+available packages.  The catalog is called **repodata** in [conda].
 
 <div class="file-tree">
 <ul>
@@ -72,7 +72,7 @@ available packages.  The catalog is called **repodata** in conda.
 </ul>
 </div>
 
-`repodata.json` is a large JSON file (often hundreds of megabytes) that lists
+`repodata.json` is a large JSON file (which can exceed 350 MB for large channels like conda-forge) that lists
 every package, every version of every package, and the dependencies of each
 version.
 
@@ -99,11 +99,11 @@ installable, the formula is satisfiable.
 Not every package manager hits this complexity.  If you allow multiple versions
 of the same package to coexist (as [Nix] and [Go modules] do), you can install
 everything the dependency graph asks for and the problem becomes much simpler. In our case, the
-hardness comes from the "exactly one version" constraint.  conda enforces that
+hardness comes from the "exactly one version" constraint.  [conda] enforces that
 constraint, so we need a real solver.
 
 In practice, real package ecosystems have enough structure that modern SAT
-heuristics solve them quickly, in most cases.  We'll use rattler's solver implementation, which is backed by
+heuristics solve them quickly, in most cases.  We'll use [rattler]'s solver implementation, which is backed by
 [resolvo], a pure-Rust SAT solver written by the prefix.dev team.
 
 [vsat]: https://research.swtch.com/version-sat
@@ -127,7 +127,7 @@ Once you know *which* packages to install, you have to download and unpack them.
 These are some of the things you need to think about:
 
 - **Caching**: if you've downloaded `lua-5.4.7` before, don't download it again.
-- **Deduplication**: if ten projects all use `lua-5.4.7`, rattler's approach is: store it once on disk
+- **Deduplication**: if ten projects all use `lua-5.4.7`, [rattler]'s approach is: store it once on disk
   and link (reflink, hardlink, etc.) it into each project's environment.
 - **Transactive installation**: if the install fails halfway through, don't leave the environment
   in a broken half-installed state.
@@ -136,12 +136,12 @@ These are some of the things you need to think about:
 
 ## What we're building
 
-`moonshot` is the minimal Lua package manager we're building on top of rattler.
-Here's how conda and rattler map to the universal concepts:
+`moonshot` is the minimal Lua package manager we're building on top of [rattler].
+Here's how [conda] and [rattler] map to the universal concepts:
 
-| Universal concept | conda / rattler term |
+| Universal concept | [conda] / [rattler] term |
 |---|---|
-| Version | conda version string |
+| Version | [conda] version string |
 | Requirement | MatchSpec (`lua >=5.4`) |
 | Artifact | `.conda` archive |
 | Index | `repodata.json` per channel/subdir |
@@ -163,7 +163,7 @@ We'll implement each of these commands in its own chapter in Part I.
 
 ## The conda file format
 
-A conda package is an archive.  Historically it was a `.tar.bz2` file, but the
+A [conda] package is an archive.  Historically it was a `.tar.bz2` file, but the
 modern [`.conda` format][cep-35] (version 2) is an uncompressed ZIP that contains:
 
 <div class="file-tree">
@@ -192,18 +192,18 @@ We're keeping `moonshot` intentionally minimal.  It does not:
 - **Upload to a public channel.** Publishing requires authentication, signing, and a trust model. We build packages locally and index them as a local channel instead.
 - **Handle C extensions.** Supporting compiled extensions means invoking a C compiler, linking against the right libraries, and producing platform-specific artifacts. Our build command targets pure Lua only.
 
-What it *does* do is wire together all the major rattler subsystems:
+What it *does* do is wire together all the major [rattler] subsystems:
 
 | Subsystem | Crate | Role |
 |---|---|---|
-| Repodata gateway | `rattler_repodata_gateway` | Fetch & cache channel metadata |
-| Virtual packages | `rattler_virtual_packages` | Probe host system capabilities |
-| Solver | `rattler_solve` | Pick consistent package versions |
-| Installer | `rattler` | Download, extract, hard-link |
-| Shell activation | `rattler_shell` | Generate activation scripts |
-| Lock files | `rattler_lock` | Persist exact solve results |
+| Repodata gateway | [`rattler_repodata_gateway`] | Fetch & cache channel metadata |
+| Virtual packages | [`rattler_virtual_packages`] | Probe host system capabilities |
+| Solver | [`rattler_solve`] | Pick consistent package versions |
+| Installer | [`rattler`][rattler] | Download, extract, hard-link |
+| Shell activation | [`rattler_shell`] | Generate activation scripts |
+| Lock files | [`rattler_lock`] | Persist exact solve results |
 
-These are just the crates moonshot uses directly.  The full rattler project
+These are just the crates moonshot uses directly.  The full [rattler] project
 contains roughly 28 crates; see [Overview of the rattler crates](deep-dive-crate-ecosystem.md)
 for the complete picture.
 
@@ -212,10 +212,20 @@ for the complete picture.
 - Every package manager shares four concepts: versions, requirements, artifacts,
   and an index.
 - Installing packages is a three-step pipeline: discovery, solving, installation.
-- conda is a platform-first, hermetic environment system with a well-defined file
+- [conda] is a platform-first, hermetic environment system with a well-defined file
   format.
-- rattler implements the conda specification in pure Rust, providing library
+- [rattler] implements the [conda] specification in pure Rust, providing library
   crates for each subsystem.
 - We'll use all of them to build `moonshot`.
+
+[conda]: https://docs.conda.io
+[rattler]: https://github.com/conda/rattler
+[rattler_repodata_gateway]: https://crates.io/crates/rattler_repodata_gateway
+[rattler_virtual_packages]: https://crates.io/crates/rattler_virtual_packages
+[rattler_solve]: https://crates.io/crates/rattler_solve
+[rattler_shell]: https://crates.io/crates/rattler_shell
+[rattler_lock]: https://crates.io/crates/rattler_lock
+[pixi]: https://pixi.sh
+[rattler-build]: https://prefix.dev/docs/rattler-build/overview
 
 In the next chapter we'll set up the Rust project and define the CLI structure.

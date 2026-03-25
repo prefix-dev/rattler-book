@@ -22,7 +22,7 @@ Open `Cargo.toml` and add the following.  We'll explain each crate as we use it.
 ```
 
 The header declares the package metadata, binary name, and TLS feature flags
-that propagate `rustls-tls` through reqwest and the rattler crates.
+that propagate `rustls-tls` through [reqwest] and the [rattler] crates.
 
 ``` {.toml #cargo-header}
 [package]
@@ -47,7 +47,7 @@ rustls-tls = [
 ]
 ```
 
-The dependencies start with the core rattler crates. These implement the conda
+The dependencies start with the core [rattler] crates. These implement the conda
 specification. Each is fine-grained so you only pull in what you need.
 
 ``` {.toml #cargo-deps}
@@ -68,7 +68,7 @@ rattler_virtual_packages = { version = "2.3.12", default-features = false }
 ```
 
 The remaining dependencies are general-purpose infrastructure: `clap` for CLI
-parsing, `tokio` for async I/O, `reqwest` for HTTP, and so on.
+parsing, `tokio` for async I/O, [reqwest] for HTTP, and so on.
 
 ``` {.toml #cargo-deps}
 
@@ -116,19 +116,19 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 ```
 
-The rattler crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) implement the conda specification. The rest of the dependency list is general-purpose infrastructure: `clap` for CLI parsing, `tokio` for async I/O, `reqwest` for HTTP, and so on.
+The [rattler] crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) implement the conda specification. The rest of the dependency list is general-purpose infrastructure: `clap` for CLI parsing, `tokio` for async I/O, [reqwest] for HTTP, and so on.
 
 <details class="margin-note" markdown>
 <summary>Why so many rattler crates?</summary>
 
-rattler is split into fine-grained crates so you can depend on only the
+[rattler] is split into fine-grained crates so you can depend on only the
 parts you need.  A tool that only needs to solve dependencies doesn't have
 to pull in the HTTP stack.  We use most of them, so the list is long.
 </details>
 
 A package manager surfaces errors from many sources (network, filesystem, solver conflicts, malformed metadata), so we pull in [miette] with `features = ["fancy"]` early. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string.
 
-Notice that we declare `reqwest` with `features = ["stream"]` for streaming downloads. TLS is handled at the crate level through the `[features]` section, where our `rustls-tls` feature propagates `reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots` (along with matching features for the rattler crates). This gives us a pure-Rust TLS implementation without linking against the system's OpenSSL.
+Notice that we declare [reqwest] with `features = ["stream"]` for streaming downloads. TLS is handled at the crate level through the `[features]` section, where our `rustls-tls` feature propagates `reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots` (along with matching features for the [rattler] crates). This gives us a pure-Rust TLS implementation via [rustls], without linking against the system's OpenSSL.
 
 ## The entry point: `src/main.rs`
 
@@ -196,7 +196,7 @@ Let's take it section by section.
 ### Imports and module declarations
 
 The imports pull in Clap for argument parsing, miette for error reporting, and
-the tracing filter types for log-level control. The `mod` declarations make the
+the [tracing] filter types for log-level control. The `mod` declarations make the
 rest of our crate visible — including the new `project`, `session`,
 `environment`, and `build_backend` modules we will fill in over the coming
 chapters.
@@ -349,6 +349,11 @@ async fn async_main() -> miette::Result<()> {
 [Clap]: https://docs.rs/clap
 [miette]: https://docs.rs/miette
 [Tokio]: https://tokio.rs
+[reqwest]: https://docs.rs/reqwest
+[rustls]: https://github.com/rustls/rustls
+[rattler]: https://github.com/conda/rattler
+[tracing]: https://docs.rs/tracing
+[serde]: https://serde.rs
 
 In the next chapter we implement the simplest command: `shot init`, which
 writes the project manifest.

@@ -83,7 +83,7 @@ learning, decision heuristics, and the connection to CDCL, see
 
 ### Virtual packages
 
-Virtual packages model the host system as if it were a regular package. Instead of special-casing "requires glibc 2.17" as a platform check, the solver treats `__glibc` as a regular dependency that happens to be provided by the OS. This lets package authors express system requirements using the same constraint syntax they use for library dependencies.
+Virtual packages model the host system as if it were a regular package. Instead of special-casing "requires glibc 2.17" as a platform check, the solver treats `__glibc` as a regular dependency that happens to be provided by the OS. This lets package authors express system requirements using the same constraint syntax they use for library dependencies. The [rattler_virtual_packages] crate detects what the current system provides.
 
 The system is probed for things like:
 
@@ -140,7 +140,7 @@ satisfy `>=5.4`.  The conda convention is:
 4. Prefer packages from channels listed **earlier** in the channel list.
 
 This biases the solver toward fresh versions for things you asked for, while
-keeping the rest of your environment stable.  resolvo implements these priorities
+keeping the rest of your environment stable.  [resolvo] implements these priorities
 through a scoring system, not a separate post-processing step. Without the "prefer locked for transitive deps" rule, adding one new package could cascade upgrades across your entire environment.
 
 ## Concepts: Lock Files
@@ -159,7 +159,7 @@ Every serious package manager converges on this pattern:
 | Cargo | `Cargo.lock` |
 | npm | `package-lock.json` |
 | pip | `requirements.txt` (manual) / `uv.lock` |
-| pixi | `pixi.lock` |
+| [pixi] | `pixi.lock` |
 | moonshot | `moonshot.lock` |
 
 ### Two-phase model
@@ -183,8 +183,8 @@ How do we know when to re-solve? We compare file modification times:
 
 ### The `rattler_lock` format
 
-`moonshot.lock` is a YAML file following the `rattler_lock` crate's format (the
-same format pixi uses for `pixi.lock`). A simplified example:
+`moonshot.lock` is a YAML file following the [rattler_lock] crate's format (the
+same format [pixi] uses for `pixi.lock`). A simplified example:
 
 ```yaml
 version: 6
@@ -202,7 +202,7 @@ environments:
 ```
 
 Each entry records the exact URL, SHA-256 hash, and full dependency metadata.
-The `rattler_lock` crate handles serialization and deserialization.
+The [rattler_lock] crate handles serialization and deserialization.
 
 ## Implementation
 
@@ -392,7 +392,7 @@ dependency metadata.
 
 ### Extending `Project` with lock helpers
 
-The `Project` struct from [Chapter 5](ch05-project.md) knows where the
+The `Project` struct from [Chapter 5](ch05-add.md) knows where the
 manifest lives but has no concept of locking yet. We add two small methods:
 `lock_path` returns the expected lock file location, and `is_lock_fresh`
 delegates to the freshness check we just wrote.
@@ -894,7 +894,7 @@ this case, pick either `lua` or `luajit`, not both. For harder cases where
 transitive dependencies conflict, the error message shows which intermediate
 packages are involved so you know where to look.
 
-resolvo generates these explanations by tracing its conflict graph, the same
+[resolvo] generates these explanations by tracing its conflict graph, the same
 CDCL machinery described in
 [Deep Dive: The resolvo SAT Solver](deep-dive-resolvo.md). The explanation
 isn't just "no solution"; it's the minimal set of constraints that cannot be
@@ -914,8 +914,13 @@ satisfied together.
 - `Session` bundles a `Project`, HTTP client, and repodata gateway. Its
   `ensure_resolved` method handles the full resolve pipeline and lock writing.
 - `is_lock_fresh` compares modification times to decide whether to re-solve.
-- `read_lock_file` extracts `RepoDataRecord`s from the lock via `rattler_lock`.
+- `read_lock_file` extracts `RepoDataRecord`s from the lock via [rattler_lock].
 - `write_lock_file` builds a `LockFile` from the solver output and writes YAML.
 
 In the next chapter we implement `shot install`, which uses the lock file
 as its source of truth for installation.
+
+[resolvo]: https://github.com/mamba-org/resolvo
+[rattler_lock]: https://crates.io/crates/rattler_lock
+[pixi]: https://pixi.sh
+[rattler_virtual_packages]: https://crates.io/crates/rattler_virtual_packages

@@ -22,9 +22,9 @@ environment of a child process.  The trick is:
 1. Compute what the environment *would* look like after activation.
 2. Spawn the user's command with that modified environment.
 
-The child inherits the modified environment; the parent is untouched. This is the same pattern pixi uses for `pixi run`.
+The child inherits the modified environment; the parent is untouched. This is the same pattern [pixi] uses for `pixi run`.
 
-This uses the same activation logic from [Chapter 8](ch08-shell-hook.md), but instead of printing a script it captures the resulting environment as a map of variable names to values. Because `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
+This uses the same activation logic from [Chapter 8](ch08-shell-hook.md), but instead of printing a script it captures the resulting environment as a map of variable names to values. Because [rattler]'s `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
 
 ## Implementation
 
@@ -71,7 +71,7 @@ It then runs that script and diffs the two snapshots, returning only the changed
 variables as a `HashMap<String, String>`.
 
 We use `spawn_blocking` because `run_activation` spawns a synchronous child
-process internally.
+process internally. The [tokio] runtime manages the blocking thread pool.
 
 ### The run command
 
@@ -130,7 +130,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
 ### Spawning the child process
 
-We use `tokio::process::Command` (the async version of `std::process::Command`)
+We use [tokio]'s `tokio::process::Command` (the async version of `std::process::Command`)
 to launch the child.
 
 `.envs(&activation_env)` overlays the activation variables on top of the
@@ -180,7 +180,7 @@ would cause `miette` to print a message, cluttering the output.
 
 - `shot run` computes a modified environment via `run_activation` and spawns
   a child process with it.
-- `spawn_blocking` offloads synchronous, potentially-blocking code to a
+- [tokio]'s `spawn_blocking` offloads synchronous, potentially-blocking code to a
   dedicated thread pool.
 - `.envs()` overlays activation variables on the inherited environment.
 - `.stdin/stdout/stderr(Stdio::inherit())` gives the child full terminal access.
@@ -188,3 +188,7 @@ would cause `miette` to print a message, cluttering the output.
 
 In the next chapter, the most complex one, we implement `shot build`: turning
 source code into a distributable conda package.
+
+[pixi]: https://pixi.sh
+[rattler]: https://github.com/conda/rattler
+[tokio]: https://tokio.rs

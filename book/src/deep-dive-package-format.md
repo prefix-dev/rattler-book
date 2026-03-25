@@ -189,7 +189,7 @@ cache reuse across platforms.
 
 ## The `conda-meta/` installation record
 
-When rattler installs a package, it writes a JSON file to
+When [rattler] installs a package, it writes a JSON file to
 `<prefix>/conda-meta/<name>-<version>-<build>.json`:
 
 ```json
@@ -225,7 +225,7 @@ The Rust ecosystem has mature crates for this:
 zstd = "0.13"
 ```
 
-rattler uses `zstd` through the `rattler_package_streaming` crate, which also
+rattler uses `zstd` through the [rattler_package_streaming] crate, which also
 handles tar creation/extraction and the ZIP wrapper.
 
 For comparison:
@@ -233,13 +233,13 @@ For comparison:
 - `.tar.bz2`: bzip2 compression, high ratio, very slow (single-threaded)
 - `.conda` inner tars: zstd, good ratio, very fast, parallel
 
-The practical effect: a modern `.conda` package installs roughly 5-10x faster
-than a `.tar.bz2` of equivalent content, because zstd decompression saturates
-available cores.
+The practical effect: a modern `.conda` package installs roughly 2-3x faster
+than a `.tar.bz2` of equivalent content, because zstd decompression is
+significantly faster and can leverage multiple cores.
 
 ## Streaming readers and writers
 
-A key design pattern in rattler's package streaming code is *streaming* I/O.
+A key design pattern in [rattler]'s package streaming code is *streaming* I/O.
 Instead of reading an entire archive into memory and then processing it, you
 process it chunk by chunk:
 
@@ -272,5 +272,7 @@ memory.  This is how rattler can install a 500 MB package on a machine with only
 - zstd provides fast, parallel decompression.
 [zstd]: https://docs.rs/zstd
 [Zstandard]: https://facebook.github.io/zstd/
+[rattler]: https://github.com/conda/rattler
+[rattler_package_streaming]: https://crates.io/crates/rattler_package_streaming
 
 - Streaming I/O avoids loading entire archives into memory.

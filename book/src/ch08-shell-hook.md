@@ -31,7 +31,7 @@ command. Most package managers end up needing both.
 
 ### Why activation is non-trivial
 
-Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. conda uses eval-based activation: the tool prints a shell script and you evaluate it in your current shell. This gives packages full control over the environment (including `PATH`, `LD_LIBRARY_PATH`, `LUA_PATH`, and other variables), at the cost of being shell-dependent.
+Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. [conda] uses eval-based activation: the tool prints a shell script and you evaluate it in your current shell. This gives packages full control over the environment (including `PATH`, `LD_LIBRARY_PATH`, `LUA_PATH`, and other variables), at the cost of being shell-dependent.
 
 A child process cannot modify the environment of its parent.  That's a Unix
 rule with no exceptions.  So when you run `shot shell`, it can't just set
@@ -51,8 +51,8 @@ This sounds simple, but several complications arise:
   `etc/conda/activate.d/` that need to be sourced.  A CUDA package might set
   `LD_LIBRARY_PATH`; an OpenBLAS package might set `OPENBLAS_NUM_THREADS`.
 
-conda tracks nesting depth with `CONDA_SHLVL` and the current prefix with
-`CONDA_PREFIX`.  rattler implements the same protocol.
+[conda] tracks nesting depth with `CONDA_SHLVL` and the current prefix with
+`CONDA_PREFIX`.  [rattler] implements the same protocol.
 
 ## Implementation
 
@@ -307,10 +307,15 @@ compatibility.
 
 - Shell activation generates a script that the user evaluates to modify their
   shell's environment.
-- `rattler_shell` handles multi-shell compatibility (Bash, Fish, PowerShell, ...).
+- [rattler_shell] handles multi-shell compatibility (Bash, Fish, PowerShell, ...).
 - `Activator::from_path` reads activation metadata from the prefix.
 - `ActivationVariables` captures current state for correct nested-activation
   handling.
 
 In the next chapter we implement `shot run`, a way to run a command inside the
 activated environment without permanently modifying the shell.
+
+[rattler_shell]: https://crates.io/crates/rattler_shell
+[rattler]: https://github.com/conda/rattler
+[pixi]: https://pixi.sh
+[conda]: https://docs.conda.io

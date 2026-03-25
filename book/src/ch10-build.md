@@ -141,7 +141,7 @@ reproducible builds.
 
 The `.conda` format (version 2) is an uncompressed ZIP containing two inner
 `.tar.zst` archives: one for the info metadata and one for the payload files.
-`rattler_package_streaming::write::write_conda_package` handles creating this
+[rattler_package_streaming]'s `write_conda_package` function handles creating this
 structure.
 
 <details class="margin-note" markdown>
@@ -979,7 +979,7 @@ Ok(())
 
 #### Collecting paths and hashing
 
-We walk the install prefix, hash every file with SHA-256, and record each path
+We walk the install prefix using [walkdir], hash every file with [sha2]'s SHA-256, and record each path
 in a `PathsJson` manifest:
 
 ``` {.rust #build-collect-paths}
@@ -1266,9 +1266,14 @@ conda-forge uses to distribute tens of thousands of packages.
   package.
 - Dependencies are installed into a temporary build prefix, keeping build tools
   separate from the final package.
-- `paths.json` lists every file with its SHA-256 hash.
-- `write_conda_package` produces the `.conda` archive format.
-- `rattler_index` turns the output directory into a valid conda channel.
+- `paths.json` lists every file with its [sha2] SHA-256 hash.
+- [rattler_package_streaming]'s `write_conda_package` produces the `.conda` archive format.
+- [rattler_index] turns the output directory into a valid conda channel.
 
 With `shot build` working, our package manager is feature-complete! In Part II
 we'll look deeper into the mechanisms we've been using.
+
+[rattler_package_streaming]: https://crates.io/crates/rattler_package_streaming
+[rattler_index]: https://crates.io/crates/rattler_index
+[sha2]: https://crates.io/crates/sha2
+[walkdir]: https://crates.io/crates/walkdir

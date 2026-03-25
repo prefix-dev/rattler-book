@@ -184,7 +184,7 @@ its conflict graph to find the minimal set of incompatibilities.
 
 ## The conda scoring model
 
-rattler's interface to resolvo (`rattler_solve::resolvo`) translates the conda
+[rattler]'s interface to resolvo (`rattler_solve::resolvo`, provided by [rattler_solve]) translates the [conda]
 preference model into resolvo's scoring system.
 
 The key insight is that conda uses a **multi-objective** ordering:
@@ -214,8 +214,8 @@ conda-forge packages that aren't relevant to your request.
 
 ## `libsolv`: the alternative backend
 
-rattler also ships a binding to [libsolv], a C library used by older conda tools
-(conda, [mamba]).  You can select it via feature flags:
+[rattler] also ships a binding to [libsolv], a C library used by older [conda] tools
+([conda], [mamba]).  You can select it via feature flags:
 
 ```toml
 rattler_solve = { version = "5.0.0", features = ["resolvo", "libsolv_c"] }
@@ -240,5 +240,8 @@ one-line change.
 [MiniSat]: http://minisat.se
 [libsolv]: https://github.com/openSUSE/libsolv
 [mamba]: https://github.com/mamba-org/mamba
+[conda]: https://docs.conda.io
+[rattler]: https://github.com/conda/rattler
+[rattler_solve]: https://crates.io/crates/rattler_solve
 
 - resolvo is faster than libsolv and produces better diagnostics.

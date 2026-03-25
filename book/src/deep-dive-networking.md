@@ -29,7 +29,7 @@ The direct `reqwest` dependency only enables `"stream"` (for streaming response
 bodies).  TLS is activated through Cargo feature propagation at the crate level:
 the project's `[features]` section defines a `rustls-tls` feature that enables
 `reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots`, along with the
-matching feature on every rattler crate.  This avoids a dependency on OpenSSL,
+matching feature on every rattler crate.  This avoids a dependency on [OpenSSL],
 which complicates static builds and cross-compilation.
 
 ### The `no_gzip` flag
@@ -100,7 +100,7 @@ look identical to HTTPS channels.
 
 ## S3 and GCS middleware (bonus topic)
 
-rattler also ships middlewares for AWS S3 and Google Cloud Storage.  These are
+[rattler] also ships middlewares for AWS S3 and Google Cloud Storage.  These are
 useful for organizations that host private conda channels in cloud storage buckets.
 
 The S3 middleware uses SigV4 request signing:
@@ -133,7 +133,7 @@ internet traffic.
 
 Rust has two main TLS implementations:
 
-**OpenSSL (via `openssl-sys`)**: links to the system's OpenSSL.  Widely
+**[OpenSSL] (via `openssl-sys`)**: links to the system's OpenSSL.  Widely
 compatible but introduces a C dependency, complicates static builds, and causes
 security alerts when OpenSSL has vulnerabilities.
 
@@ -170,12 +170,13 @@ from the same server can share a handful of connections.
 
 Response bodies are consumed as async streams of byte chunks, so the HTTP
 response is never fully loaded into memory.  This is how rattler downloads a
-300 MB `repodata.json` without needing 300 MB of RAM.
+350+ MB `repodata.json` without needing that much RAM.
 
 ## Retry middleware
 
 Network requests fail.  Servers go down, DNS hiccups, TCP connections time out.
 Reliable tools need automatic retries with exponential backoff.
+The [reqwest-retry] crate provides this as a middleware:
 
 ```toml
 reqwest-retry = "0.7"
@@ -214,5 +215,8 @@ hammering a struggling server.
 [reqwest_middleware]: https://docs.rs/reqwest-middleware
 [rustls]: https://github.com/rustls/rustls
 [OCI]: https://opencontainers.org
+[reqwest-retry]: https://crates.io/crates/reqwest-retry
+[rattler]: https://github.com/conda/rattler
+[OpenSSL]: https://www.openssl.org
 
 - Retry middleware handles transient network failures gracefully.

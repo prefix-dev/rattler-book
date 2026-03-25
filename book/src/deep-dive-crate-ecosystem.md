@@ -64,9 +64,9 @@ These crates have no dependencies on other rattler crates.
 1. **[`rattler_libsolv_c`](https://crates.io/crates/rattler_libsolv_c)** -- Safe Rust bindings to the C [libsolv](https://github.com/openSUSE/libsolv) library. Used by `rattler_solve` as one of its solver backends, alongside the pure-Rust resolvo solver.
 1. **[`file_url`](https://crates.io/crates/file_url)** -- Converts between file-system paths and `file://` URLs, handling platform quirks (drive letters on Windows, UNC paths, etc.).
 1. **[`path_resolver`](https://crates.io/crates/path_resolver)** -- Locates standard config/cache/data directories per OS conventions: XDG on Linux, `Library` on macOS, `AppData` on Windows.
-1. **[`simple_spawn_blocking`](https://crates.io/crates/simple_spawn_blocking)** -- Runs blocking child processes from async code. When you need to run an external command from inside a tokio runtime, this crate handles the thread-pool dispatch.
+1. **[`simple_spawn_blocking`](https://crates.io/crates/simple_spawn_blocking)** -- Runs blocking child processes from async code. When you need to run an external command from inside a [tokio] runtime, this crate handles the thread-pool dispatch.
 1. **[`coalesced_map`](https://crates.io/crates/coalesced_map)** -- Concurrent data structure that deduplicates simultaneous lookups for the same key. This reduces redundant work in hot paths like repodata fetching.
-1. **[`rattler_sandbox`](https://crates.io/crates/rattler_sandbox)** -- Restricts what a child process can access on the host system. Uses `birdcage` under the hood (seatbelt profiles on macOS, user namespaces on Linux).
+1. **[`rattler_sandbox`](https://crates.io/crates/rattler_sandbox)** -- Restricts what a child process can access on the host system. Uses [birdcage] under the hood (seatbelt profiles on macOS, user namespaces on Linux).
 
 ### Type system
 
@@ -74,7 +74,7 @@ These crates have no dependencies on other rattler crates.
 
 ### Networking
 
-1. **[`rattler_networking`](https://crates.io/crates/rattler_networking)** -- Authentication middleware (token-based, Bearer, HTTP Basic), retry policies, and download progress reporting. Wraps `reqwest` with a `reqwest_middleware` chain. See the [Networking deep dive](deep-dive-networking.md).
+1. **[`rattler_networking`](https://crates.io/crates/rattler_networking)** -- Authentication middleware (token-based, Bearer, HTTP Basic), retry policies, and download progress reporting. Wraps [reqwest] with a [reqwest_middleware] chain. See the [Networking deep dive](deep-dive-networking.md).
 1. **[`rattler_s3`](https://crates.io/crates/rattler_s3)** -- S3-compatible object storage backend for channels. Translates conda channel URLs into S3 API calls so that channels can be hosted in AWS S3, MinIO, or other S3-compatible buckets. Depends on `rattler_networking`.
 
 ### Configuration
@@ -85,7 +85,7 @@ These crates have no dependencies on other rattler crates.
 
 1. **[`rattler_package_streaming`](https://crates.io/crates/rattler_package_streaming)** -- Streaming extraction of `.conda` (ZIP-based) and `.tar.bz2` packages. Streaming means extraction can begin before the full download has finished. See the [Package Format deep dive](deep-dive-package-format.md). Depends on `rattler_conda_types`, `rattler_digest`.
 1. **[`rattler_cache`](https://crates.io/crates/rattler_cache)** -- Manages the on-disk package cache. Handles concurrent extraction: when two environments both need the same package, only one extraction runs and the other waits. Also validates cached packages against their checksums. Depends on `rattler_conda_types`, `rattler_package_streaming`, `rattler_networking`.
-1. **`rattler_glob`** -- Glob pattern matching for file selection tasks such as filtering package contents or specifying include/exclude patterns. Depends on `rattler_digest`.
+1. **[`rattler_glob`]** -- Glob pattern matching for file selection tasks such as filtering package contents or specifying include/exclude patterns. Depends on `rattler_digest`.
 
 ### Specialized
 
@@ -133,3 +133,9 @@ a channel backend.
 
 The most recent addition is **`rattler_glob`** (January 2026), which adds glob
 pattern matching.
+
+[reqwest]: https://docs.rs/reqwest
+[reqwest_middleware]: https://docs.rs/reqwest-middleware
+[`rattler_glob`]: https://crates.io/crates/rattler_glob
+[birdcage]: https://crates.io/crates/birdcage
+[tokio]: https://tokio.rs
