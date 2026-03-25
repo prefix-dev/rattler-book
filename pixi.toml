@@ -41,8 +41,8 @@ tangle = { depends-on = [{ task = "_tangle", environment = "book" }], descriptio
 build = "cargo build"
 build-release = "cargo build --release"
 
-# Run
-run = "cargo run --"
+# Run shot cli
+shot = "cargo run --"
 
 # Development
 check = "cargo check"

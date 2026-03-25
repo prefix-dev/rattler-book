@@ -7,8 +7,8 @@ site_dir: book
 theme:
   name: material
   custom_dir: overrides
-  logo: assets/pixi-logo.svg
-  favicon: assets/pixi-logo.svg
+  logo: assets/book-icon.png
+  favicon: assets/book-icon.png
   palette:
     - scheme: default
       primary: custom
