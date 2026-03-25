@@ -1,81 +1,81 @@
-# moonshot
+<p align="center">
+  <img src="book/src/assets/paxton-moon.png" alt="The Rattler Book" width="400" />
+</p>
 
-A minimal Lua package manager built on the [Rattler](https://github.com/conda/rattler) framework. This is a worked example that accompanies **The Rattler Book**, demonstrating how to build conda-compatible package management tools in Rust.
+<h1 align="center">The Rattler Book</h1>
 
-## What it does
+<p align="center">
+  <strong>Building a package manager with <a href="https://github.com/conda/rattler">Rattler</a></strong>
+  <br />
+  <a href="https://prefix-dev.github.io/rattler-book/">Read the book online</a> | <a href="https://github.com/prefix-dev/rattler-book">GitHub Repository</a>
+</p>
 
-moonshot installs Lua packages from conda channels (primarily conda-forge), creates isolated environments, and includes a build system for creating new Lua packages.
+---
 
-## Commands
+This repository contains **The Rattler Book** — a hands-on guide to building conda-compatible package management tools in Rust using the [Rattler](https://github.com/conda/rattler) framework. The book walks you through creating **moonshot**, a minimal Lua package manager, from scratch.
 
-| Command   | Description                                         |
-|-----------|-----------------------------------------------------|
-| `init`    | Create a new `moonshot.toml` project manifest       |
-| `add`     | Add a package to the manifest and install it         |
-| `install` | Resolve and install all dependencies                 |
-| `shell`   | Print shell activation script for the environment    |
-| `run`     | Execute a command inside the activated environment    |
-| `build`   | Build a `.conda` package from a `recipe.toml`        |
+## What you'll learn
 
-## Quick start
+The book covers the full lifecycle of a package manager:
+
+1. **Parsing** dependency specs from a project manifest
+2. **Fetching** repodata from conda channels via `rattler_repodata_gateway`
+3. **Solving** dependencies using the resolvo SAT solver
+4. **Installing** packages with hard-linking from cache
+5. **Activating** environments for shell sessions or command execution
+6. **Building** new conda packages with a Lua-based build system
+
+## Book chapters
+
+| # | Chapter | Topic |
+|---|---------|-------|
+| 1 | What Is a Package Manager? | Core concepts and terminology |
+| 2 | Setting Up the Project | Scaffolding with Rattler crates |
+| 3 | The `init` Command | Creating a project manifest |
+| 4 | The `search` Command | Querying conda channels |
+| 5 | The `add` Command | Adding packages to the manifest |
+| 6 | The `lock` Command | Dependency resolution and lock files |
+| 7 | The `install` Command | Downloading and linking packages |
+| 8 | The `shell` Command | Shell activation scripts |
+| 9 | The `run` Command | Running commands in an environment |
+| 10 | The `build` Command | Building `.conda` packages |
+
+Plus deep-dive chapters on the conda package format, virtual packages, networking, the resolvo SAT solver, and the full Rattler crate ecosystem.
+
+## The moonshot CLI
+
+The worked example — **moonshot** — is a fully functional Lua package manager:
 
 ```bash
-# Build from source
-cargo build --release
-
-# Initialize a new project
-shot init
-
-# Add a package
-shot add lua ">=5.4"
-
-# Install dependencies
-shot install
-
-# Run a Lua script in the environment
-shot run lua my_script.lua
+shot init                    # Create a new project
+shot add lua ">=5.4"         # Add a package
+shot install                 # Resolve and install dependencies
+shot run lua my_script.lua   # Run a command in the environment
+shot build                   # Build a .conda package
 ```
 
-## Project structure
+## Repository structure
 
 ```
-src/
-├── main.rs              # CLI entry point
-├── manifest.rs          # moonshot.toml parsing
-├── recipe.rs            # recipe.toml (build recipe) parsing
-├── progress.rs          # Spinner utilities
-├── build_prelude.lua    # Lua helpers embedded into build scripts
-└── commands/
-    ├── init.rs          # Project initialization
-    ├── add.rs           # Add packages
-    ├── install.rs       # Dependency resolution & installation
-    ├── shell.rs         # Shell activation
-    ├── run.rs           # Run commands in environment
-    └── build.rs         # Package building
-
-book/                    # mdBook documentation (The Rattler Book)
+book/                    # The Rattler Book (mkdocs documentation)
+src/                     # moonshot source code (Rust)
 examples/                # Example Lua packages (moonjson, mooncolor, moontemplate, hello-moon)
 ```
 
-## How it works
+## Getting started
 
-1. **Parse** dependency specs from `moonshot.toml`
-2. **Fetch** repodata from conda channels via `rattler_repodata_gateway`
-3. **Solve** dependencies using the resolvo SAT solver
-4. **Install** packages into `.env/` with hard-linking from cache
-5. **Activate** the environment for shell sessions or command execution
+Read the book online at **[prefix-dev.github.io/rattler-book](https://prefix-dev.github.io/rattler-book/)**, or build it locally:
 
-## Examples
+```bash
+pixi run serve
+```
 
-Four example Lua packages demonstrate the build system:
+To build the moonshot CLI:
 
-- **moonjson** — JSON library
-- **mooncolor** — Color utilities
-- **moontemplate** — Template engine
-- **hello-moon** — Demo app using all three
+```bash
+cargo build --release
+```
 
-Each contains a `recipe.toml` and a `build.lua` script.
+## License
 
-## Documentation
-
-See the `book/` directory for full documentation covering package manager concepts, the solver, installation, shell activation, building packages, and more.
+This project is part of the [prefix-dev](https://github.com/prefix-dev) ecosystem.

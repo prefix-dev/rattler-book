@@ -1,6 +1,8 @@
 site_name: The Rattler Book
 site_url: https://prefix-dev.github.io/rattler-book/
 site_description: Building a package manager with rattler
+repo_url: https://github.com/prefix-dev/rattler-book
+repo_name: prefix-dev/rattler-book
 docs_dir: src
 site_dir: book
 

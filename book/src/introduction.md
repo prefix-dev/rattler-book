@@ -55,7 +55,8 @@ $ shot run lua script.lua   # run inside the environment
 $ shot build                # build a distributable package
 ```
 
-The final source will live in the `src/` directory alongside this book.
+The full source code lives in the `src/` directory alongside this book in the
+[rattler-book repository][repo].
 
 ## How this book is organized
 
@@ -163,7 +164,7 @@ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 Then clone the repository and build:
 
 ```bash
-git clone https://github.com/mamba-org/rattler-book
+git clone https://github.com/prefix-dev/rattler-book
 cd rattler-book
 cargo build
 ```
@@ -192,7 +193,8 @@ That said, conda isn't always the right choice:
 - **Large binary packages.** Conda packages include compiled artifacts.  If your
   language is source-only or has a fast compiler, source distribution may be
   simpler.
-[rattler]: https://github.com/mamba-org/rattler
+[rattler]: https://github.com/conda/rattler
+[repo]: https://github.com/prefix-dev/rattler-book
 [Lua]: https://www.lua.org
 [conda-forge]: https://conda-forge.org
 
