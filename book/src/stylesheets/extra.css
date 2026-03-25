@@ -4,6 +4,33 @@
    ========================================================================== */
 
 /* ---------------------------------------------------------------------------
+   @font-face: self-hosted IBM Plex Mono
+   --------------------------------------------------------------------------- */
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono/ibm-plex-mono-regular.woff2") format("woff2");
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono/ibm-plex-mono-italic.woff2") format("woff2");
+  font-weight: normal;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "IBM Plex Mono";
+  src: url("../fonts/ibm-plex-mono/ibm-plex-mono-semibold.woff2") format("woff2");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* ---------------------------------------------------------------------------
    @font-face: self-hosted ET Book
    --------------------------------------------------------------------------- */
 @font-face {
@@ -36,7 +63,7 @@
 :root {
   /* Fonts */
   --rb-font-body: "ET Book", Palatino, "Palatino Linotype", "Book Antiqua", Georgia, serif;
-  --rb-font-code: "JetBrains Mono", monospace;
+  --rb-font-code: "IBM Plex Mono", "JetBrains Mono", monospace;
 
   /* Header chrome */
   --rb-header-weight: 500;
@@ -50,7 +77,7 @@
      Material's responsive root scaling */
   --rb-body-size: 21px;
   --rb-body-line-height: 30px;
-  --rb-code-size: 0.8em;
+  --rb-code-size: 0.85em;
   --rb-nav-size: 0.8rem;
 
   /* Heading sizes */
@@ -424,9 +451,10 @@
    =========================================================================== */
 .md-typeset code {
   font-size: var(--rb-code-size);
-  padding: 0.15em 0.35em;
-  border-radius: 3px;
-  border: 1px solid var(--rb-code-border);
+  padding: 0.1em 0.2em;
+  border-radius: 2px;
+  border: none;
+  background: transparent;
 }
 
 .highlight {
@@ -505,6 +533,24 @@
 }
 .md-sidebar__scrollwrap:hover {
   overflow-y: auto;
+}
+
+/* ---------------------------------------------------------------------------
+   Focus mode: hide left nav for distraction-free reading
+   --------------------------------------------------------------------------- */
+body.focus-mode .md-sidebar--primary {
+  opacity: 0;
+}
+
+/* Focus toggle button — styled like the palette toggle, hidden on mobile */
+.focus-toggle.md-header__button {
+  cursor: pointer;
+}
+
+@media (max-width: 76.1875em) {
+  .focus-toggle.md-header__button {
+    display: none;
+  }
 }
 
 /* Reset scrollbars to browser defaults */
@@ -709,7 +755,7 @@
 }
 
 [data-md-color-scheme="default"] .md-typeset code {
-  background: var(--rb-code-bg);
+  background: transparent;
   color: var(--rb-code-text);
 }
 
@@ -763,7 +809,7 @@
 }
 
 [data-md-color-scheme="slate"] .md-typeset code {
-  background: var(--rb-code-bg);
+  background: transparent;
   color: var(--rb-code-text);
 }
 
