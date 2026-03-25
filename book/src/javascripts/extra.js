@@ -7,3 +7,8 @@ function updateMarginNotes() {
 }
 updateMarginNotes();
 window.matchMedia("(min-width: 1400px)").addEventListener("change", updateMarginNotes);
+// Re-run after MkDocs Material instant (SPA) navigation
+document.addEventListener("DOMContentLoaded", updateMarginNotes);
+if (typeof document$ !== "undefined") {
+  document$.subscribe(updateMarginNotes);
+}
