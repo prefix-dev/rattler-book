@@ -159,7 +159,7 @@ per-platform.
 
 ## Implementation
 
-We built `install_from_manifest` in [Chapter 7](ch07-install.md) for
+We built `Session::resolve_and_install` in [Chapter 7](ch07-install.md) for
 `shot install`. Now we reuse it to install build dependencies into a temporary
 prefix. That's one of the payoffs of keeping build configuration in the
 manifest.
@@ -202,6 +202,249 @@ pub fn subdir(&self) -> &'static str {
 }
 ```
 
+### The `BuildBackend` trait
+
+Before looking at the build command itself, we introduce a `BuildBackend`
+trait that encapsulates how build scripts are executed. This lives in
+`src/build_backend.rs`:
+
+``` {.rust file=src/build_backend.rs}
+<<build-backend-imports>>
+
+<<build-context-struct>>
+
+<<build-backend-trait>>
+
+<<lua-backend-const>>
+
+<<lua-backend-struct>>
+
+<<lua-backend-impl>>
+
+<<lua-find-lua>>
+
+<<lua-run-build-script>>
+```
+
+#### Imports
+
+``` {.rust #build-backend-imports}
+use std::path::{Path, PathBuf};
+
+use miette::{Context, IntoDiagnostic};
+
+use crate::manifest::Manifest;
+```
+
+#### The `BuildContext` struct
+
+``` {.rust #build-context-struct}
+/// Context passed to a [`BuildBackend`] when executing a build.
+pub struct BuildContext<'a> {
+    pub manifest: &'a Manifest,
+    pub src_dir: PathBuf,
+    pub install_prefix: PathBuf,
+    pub build_prefix: PathBuf,
+}
+```
+
+#### The trait
+
+``` {.rust #build-backend-trait}
+/// A pluggable build backend.
+///
+/// Implement this trait to add support for new build-script languages
+/// beyond Lua.
+#[allow(dead_code)]
+pub trait BuildBackend {
+    /// Human-readable name of this backend, for log messages.
+    fn name(&self) -> &str;
+
+    /// Run the build script, installing files into `ctx.install_prefix`.
+    fn run_build(
+        &self,
+        ctx: &BuildContext<'_>,
+    ) -> impl std::future::Future<Output = miette::Result<()>> + Send;
+}
+```
+
+The trait is generic over the build-script language. Today we only have Lua,
+but the design allows adding Python, shell, or other backends later.
+
+#### The Lua backend
+
+``` {.rust #lua-backend-const}
+const BUILD_PRELUDE: &str = include_str!("build_prelude.lua");
+```
+
+``` {.rust #lua-backend-struct}
+/// The default build backend — runs a Lua build script.
+pub struct LuaBuildBackend;
+```
+
+``` {.rust #lua-backend-impl}
+impl BuildBackend for LuaBuildBackend {
+    fn name(&self) -> &str {
+        "lua"
+    }
+
+    async fn run_build(&self, ctx: &BuildContext<'_>) -> miette::Result<()> {
+        let build_config = ctx
+            .manifest
+            .build
+            .as_ref()
+            .expect("[build] section validated in execute()");
+
+        let script_path = ctx.src_dir.join(&build_config.script);
+        if !script_path.exists() {
+            miette::bail!(
+                "Build script `{}` not found (expected at `{}`)",
+                build_config.script,
+                script_path.display()
+            );
+        }
+
+        let lua_bin = find_lua(&ctx.build_prefix)?;
+
+        println!(
+            "  {} Running build script `{}`",
+            console::style("→").blue(),
+            build_config.script
+        );
+
+        run_build_script(
+            &lua_bin,
+            &script_path,
+            &ctx.install_prefix,
+            &ctx.src_dir,
+            &ctx.build_prefix,
+            ctx.manifest,
+        )
+        .await
+    }
+}
+```
+
+#### Finding the Lua interpreter
+
+``` {.rust #lua-find-lua}
+fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
+    let bin_dirs: &[&str] = if cfg!(windows) {
+        &["Library/bin", "bin"]
+    } else {
+        &["bin"]
+    };
+    let exe_ext = if cfg!(windows) { ".exe" } else { "" };
+
+    for bin_dir in bin_dirs {
+        let lua = prefix.join(bin_dir).join(format!("lua{exe_ext}"));
+        if lua.exists() {
+            return Ok(lua);
+        }
+        for minor in (1u8..=4u8).rev() {
+            let versioned = prefix.join(bin_dir).join(format!("lua5.{minor}{exe_ext}"));
+            if versioned.exists() {
+                return Ok(versioned);
+            }
+        }
+    }
+
+    let searched: Vec<_> = bin_dirs
+        .iter()
+        .map(|d| prefix.join(d).display().to_string())
+        .collect();
+    miette::bail!(
+        "No Lua interpreter found in `{}`. \
+         Add `lua` to [dependencies] in moonshot.toml.",
+        searched.join("`, `")
+    )
+}
+```
+
+#### Running the build script
+
+We locate the Lua interpreter in the build prefix and run the build script
+through a wrapper that loads the prelude first. We use a wrapper file rather
+than `-e '...'` so that error messages show correct line numbers.
+
+The build script can use any tool installed in `build_prefix/bin` because we
+prepend it to `PATH`.
+
+``` {.rust #lua-run-build-script}
+async fn run_build_script(
+    lua_bin: &Path,
+    script: &Path,
+    install_prefix: &Path,
+    src_dir: &Path,
+    build_prefix: &Path,
+    manifest: &Manifest,
+) -> miette::Result<()> {
+    let wrapper_dir = tempfile::tempdir()
+        .into_diagnostic()
+        .context("creating wrapper temp dir")?;
+
+    let prelude_path = wrapper_dir.path().join("prelude.lua");
+    std::fs::write(&prelude_path, BUILD_PRELUDE)
+        .into_diagnostic()
+        .context("writing build prelude")?;
+
+    let wrapper_src = format!(
+        "dofile({prelude:?})\ndofile({script:?})\n",
+        prelude = prelude_path.to_string_lossy(),
+        script = script.to_string_lossy(),
+    );
+    let wrapper_path = wrapper_dir.path().join("wrapper.lua");
+    std::fs::write(&wrapper_path, &wrapper_src)
+        .into_diagnostic()
+        .context("writing build wrapper")?;
+
+    let original_path = std::env::var("PATH").unwrap_or_default();
+    let path_sep = if cfg!(windows) { ";" } else { ":" };
+    let new_path = if cfg!(windows) {
+        format!(
+            "{}{path_sep}{}{path_sep}{original_path}",
+            build_prefix.join("Library").join("bin").display(),
+            build_prefix.join("bin").display(),
+        )
+    } else {
+        format!(
+            "{}{path_sep}{original_path}",
+            build_prefix.join("bin").display(),
+        )
+    };
+
+    let build_config = manifest
+        .build
+        .as_ref()
+        .expect("[build] section validated in execute()");
+
+    let status = tokio::process::Command::new(lua_bin)
+        .arg(&wrapper_path)
+        .env("PREFIX", install_prefix)
+        .env("SRC_DIR", src_dir)
+        .env("BUILD_PREFIX", build_prefix)
+        .env("PKG_NAME", &manifest.project.name)
+        .env(
+            "PKG_VERSION",
+            manifest.project.version.as_deref().unwrap_or("0.0.0"),
+        )
+        .env("PKG_BUILD_NUM", build_config.build_number.to_string())
+        .env("PATH", &new_path)
+        .status()
+        .await
+        .into_diagnostic()
+        .context("launching Lua interpreter")?;
+
+    if !status.success() {
+        miette::bail!(
+            "Build script exited with status {}",
+            status.code().unwrap_or(-1)
+        );
+    }
+    Ok(())
+}
+```
+
 ### The build command
 
 Here is the full file skeleton for `src/commands/build.rs`, with each section
@@ -214,10 +457,6 @@ defined as we encounter it:
 
 <<build-execute>>
 
-<<build-prelude-const>>
-
-<<build-run-script>>
-
 <<build-write-metadata>>
 
 <<build-collect-paths>>
@@ -225,14 +464,11 @@ defined as we encounter it:
 <<build-sha256>>
 
 <<build-pack-conda>>
-
-<<build-find-lua>>
 ```
 
 #### Imports
 
 ``` {.rust #build-imports}
-use std::env;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
@@ -248,8 +484,10 @@ use rattler_package_streaming::write::write_conda_package;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 
-use crate::commands::install::install_from_manifest;
+use crate::build_backend::{BuildBackend, BuildContext, LuaBuildBackend};
 use crate::manifest::{Manifest, MANIFEST_FILENAME};
+use crate::project::Project;
+use crate::session::Session;
 ```
 
 #### CLI arguments
@@ -267,127 +505,80 @@ pub struct Args {
 
 #### The `execute` function
 
-The build has five stages: parse the manifest, set up working directories,
-install dependencies, run the build script, and pack the result.
+The build has five stages: discover the project, set up working directories,
+install dependencies, run the build script via the backend, and pack the result.
 
 ``` {.rust #build-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
-    <<parse-manifest>>
-    <<setup-dirs>>
-    <<install-deps>>
-    <<run-script-call>>
+    let project = Project::discover()?;
+    let session = Session::new(project)?;
+    let manifest = &session.project.manifest;
+    let cwd = &session.project.root;
+
+    let _build_config = manifest.build.as_ref().ok_or_else(|| {
+        miette::miette!(
+            "No [build] section in `{MANIFEST_FILENAME}`. \
+             Add one to make this project buildable, or run \
+             `shot init --library` to start a new library project."
+        )
+    })?;
+
+    let version = manifest.project.version.as_deref().ok_or_else(|| {
+        miette::miette!(
+            "No `version` in [project]. \
+             A version is required to build a package."
+        )
+    })?;
+
+    println!(
+        "Building {} {} (build {})",
+        console::style(&manifest.project.name).cyan(),
+        version,
+        manifest.build_string(),
+    );
+
+    let work_dir = tempfile::tempdir()
+        .into_diagnostic()
+        .context("creating temporary build directory")?;
+
+    let build_prefix = work_dir.path().join("build_prefix");
+    let install_prefix = work_dir.path().join("install_prefix");
+    std::fs::create_dir_all(&build_prefix)
+        .into_diagnostic()
+        .context("creating build_prefix")?;
+    std::fs::create_dir_all(&install_prefix)
+        .into_diagnostic()
+        .context("creating install_prefix")?;
+
+    let src_dir = std::path::absolute(cwd)
+        .into_diagnostic()
+        .context("resolving SRC_DIR")?;
+
+    if !manifest.dependencies.is_empty() {
+        println!(
+            "  {} Installing {} build dependencies…",
+            console::style("→").blue(),
+            manifest.dependencies.len()
+        );
+        session.resolve_and_install(build_prefix.clone()).await?;
+    }
+
+    let backend = LuaBuildBackend;
+    let ctx = BuildContext {
+        manifest,
+        src_dir: src_dir.clone(),
+        install_prefix: install_prefix.clone(),
+        build_prefix: build_prefix.clone(),
+    };
+    backend.run_build(&ctx).await?;
+
     <<pack-and-index>>
 }
 ```
 
-##### Parsing the manifest
-
-We read `moonshot.toml` from the current directory and check that it has a
-`[build]` section:
-
-``` {.rust #parse-manifest}
-let cwd = env::current_dir().into_diagnostic()?;
-
-let (_manifest_path, manifest) = Manifest::find_in_dir(&cwd)?;
-
-let build_config = manifest.build.as_ref().ok_or_else(|| {
-    miette::miette!(
-        "No [build] section in `{MANIFEST_FILENAME}`. \
-         Add one to make this project buildable, or run \
-         `shot init --library` to start a new library project."
-    )
-})?;
-
-let version = manifest.project.version.as_deref().ok_or_else(|| {
-    miette::miette!(
-        "No `version` in [project]. \
-         A version is required to build a package."
-    )
-})?;
-
-println!(
-    "Building {} {} (build {})",
-    console::style(&manifest.project.name).cyan(),
-    version,
-    manifest.build_string(),
-);
-```
-
-##### Setting up working directories
-
-We create a temporary directory with two subdirectories: `build_prefix` for
-build-time dependencies and `install_prefix` as the fake root where the build
-script installs files. The source directory is simply the current directory.
-
-``` {.rust #setup-dirs}
-let work_dir = tempfile::tempdir()
-    .into_diagnostic()
-    .context("creating temporary build directory")?;
-
-let build_prefix = work_dir.path().join("build_prefix");
-let install_prefix = work_dir.path().join("install_prefix");
-std::fs::create_dir_all(&build_prefix)
-    .into_diagnostic()
-    .context("creating build_prefix")?;
-std::fs::create_dir_all(&install_prefix)
-    .into_diagnostic()
-    .context("creating install_prefix")?;
-
-let src_dir = std::path::absolute(&cwd)
-    .into_diagnostic()
-    .context("resolving SRC_DIR")?;
-```
-
-##### Installing build dependencies
-
-We reuse `install_from_manifest` (the same function `shot install` calls) to
-install the project's dependencies into the build prefix. This gives us the Lua
-interpreter and any libraries the build script needs.
-
-``` {.rust #install-deps}
-if !manifest.dependencies.is_empty() {
-    println!(
-        "  {} Installing {} build dependencies…",
-        console::style("→").blue(),
-        manifest.dependencies.len()
-    );
-    install_from_manifest(&manifest, build_prefix.clone()).await?;
-}
-```
-
-##### Running the build script
-
-We verify the build script exists, find the Lua interpreter in the build
-prefix, and call `run_build_script`.
-
-``` {.rust #run-script-call}
-let script_path = cwd.join(&build_config.script);
-if !script_path.exists() {
-    miette::bail!(
-        "Build script `{}` not found (expected at `{}`)",
-        build_config.script,
-        script_path.display()
-    );
-}
-
-let lua_bin = find_lua(&build_prefix)?;
-
-println!(
-    "  {} Running build script `{}`",
-    console::style("→").blue(),
-    build_config.script
-);
-
-run_build_script(
-    &lua_bin,
-    &script_path,
-    &install_prefix,
-    &src_dir,
-    &build_prefix,
-    &manifest,
-)
-.await?;
-```
+The execute function now uses `Session` and delegates build-script execution
+to the `LuaBuildBackend` via the `BuildBackend` trait. The `BuildContext`
+bundles all the paths and metadata the backend needs.
 
 ##### Packing and indexing
 
@@ -395,7 +586,7 @@ We write package metadata, pack the `.conda` archive, and index the output
 channel so other tools can use it.
 
 ``` {.rust #pack-and-index}
-write_package_metadata(&install_prefix, &manifest).context("writing package metadata")?;
+write_package_metadata(&install_prefix, manifest).context("writing package metadata")?;
 
 let output_dir = std::path::absolute(&args.output_dir)
     .into_diagnostic()
@@ -409,7 +600,7 @@ std::fs::create_dir_all(&subdir_dir)
 let filename = manifest.package_filename()?;
 let output_path = subdir_dir.join(&filename);
 
-pack_conda(&install_prefix, &output_path, &manifest)?;
+pack_conda(&install_prefix, &output_path, manifest)?;
 ```
 
 ``` {.rust #pack-and-index}
@@ -688,107 +879,6 @@ log(string.format("PREFIX    = %s", PREFIX))
 log(string.format("SRC_DIR   = %s", SRC_DIR))
 ```
 
-#### Build prelude constant
-
-``` {.rust #build-prelude-const}
-const BUILD_PRELUDE: &str = include_str!("../build_prelude.lua");
-```
-
-#### Running the build script
-
-We locate the Lua interpreter in the build prefix and run the build script
-through a wrapper that loads the prelude first. We use a wrapper file rather
-than `-e '...'` so that error messages show correct line numbers.
-
-The build script can use any tool installed in `build_prefix/bin` because we
-prepend it to `PATH`.
-
-``` {.rust #build-run-script}
-async fn run_build_script(
-    lua_bin: &Path,
-    script: &Path,
-    install_prefix: &Path,
-    src_dir: &Path,
-    build_prefix: &Path,
-    manifest: &Manifest,
-) -> miette::Result<()> {
-    <<create-wrapper>>
-    <<exec-lua>>
-}
-```
-
-``` {.rust #create-wrapper}
-let wrapper_dir = tempfile::tempdir()
-    .into_diagnostic()
-    .context("creating wrapper temp dir")?;
-
-let prelude_path = wrapper_dir.path().join("prelude.lua");
-std::fs::write(&prelude_path, BUILD_PRELUDE)
-    .into_diagnostic()
-    .context("writing build prelude")?;
-
-// The wrapper dofile()s the prelude then the user script.
-let wrapper_src = format!(
-    "dofile({prelude:?})\ndofile({script:?})\n",
-    prelude = prelude_path.to_string_lossy(),
-    script = script.to_string_lossy(),
-);
-let wrapper_path = wrapper_dir.path().join("wrapper.lua");
-std::fs::write(&wrapper_path, &wrapper_src)
-    .into_diagnostic()
-    .context("writing build wrapper")?;
-```
-
-``` {.rust #exec-lua}
-// Prepend build_prefix bin directories to PATH so the script can call
-// any installed build tools (luarocks, make, etc.).
-// On Windows, conda puts binaries in Library/bin as well as bin.
-let original_path = env::var("PATH").unwrap_or_default();
-let path_sep = if cfg!(windows) { ";" } else { ":" };
-let new_path = if cfg!(windows) {
-    format!(
-        "{}{path_sep}{}{path_sep}{original_path}",
-        build_prefix.join("Library").join("bin").display(),
-        build_prefix.join("bin").display(),
-    )
-} else {
-    format!(
-        "{}{path_sep}{original_path}",
-        build_prefix.join("bin").display(),
-    )
-};
-
-let build_config = manifest
-    .build
-    .as_ref()
-    .expect("[build] section validated in execute()");
-
-let status = tokio::process::Command::new(lua_bin)
-    .arg(&wrapper_path)
-    .env("PREFIX", install_prefix)
-    .env("SRC_DIR", src_dir)
-    .env("BUILD_PREFIX", build_prefix)
-    .env("PKG_NAME", &manifest.project.name)
-    .env(
-        "PKG_VERSION",
-        manifest.project.version.as_deref().unwrap_or("0.0.0"),
-    )
-    .env("PKG_BUILD_NUM", build_config.build_number.to_string())
-    .env("PATH", &new_path)
-    .status()
-    .await
-    .into_diagnostic()
-    .context("launching Lua interpreter")?;
-
-if !status.success() {
-    miette::bail!(
-        "Build script exited with status {}",
-        status.code().unwrap_or(-1)
-    );
-}
-Ok(())
-```
-
 ### Packaging
 
 Once the build script finishes, we turn the install prefix into a `.conda`
@@ -846,17 +936,7 @@ let index = IndexJson {
     arch: None,
     platform: None,
     noarch,
-    depends: manifest
-        .dependencies
-        .iter()
-        .map(|(name, spec)| {
-            if spec == "*" {
-                name.clone()
-            } else {
-                format!("{name} {spec}")
-            }
-        })
-        .collect(),
+    depends: manifest.dependency_strings(),
     constrains: vec![],
     experimental_extra_depends: Default::default(),
     features: None,
@@ -1019,45 +1099,6 @@ fn pack_conda(
     .context("writing .conda archive")?;
 
     Ok(())
-}
-```
-
-#### Finding the Lua interpreter
-
-``` {.rust #build-find-lua}
-fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
-    // On Windows, conda installs binaries in Library/bin/ with .exe extension;
-    // on Unix they go in bin/ without an extension.
-    let bin_dirs: &[&str] = if cfg!(windows) {
-        &["Library/bin", "bin"]
-    } else {
-        &["bin"]
-    };
-    let exe_ext = if cfg!(windows) { ".exe" } else { "" };
-
-    for bin_dir in bin_dirs {
-        let lua = prefix.join(bin_dir).join(format!("lua{exe_ext}"));
-        if lua.exists() {
-            return Ok(lua);
-        }
-        // Try lua5.4, lua5.3, … as fallbacks
-        for minor in (1u8..=4u8).rev() {
-            let versioned = prefix.join(bin_dir).join(format!("lua5.{minor}{exe_ext}"));
-            if versioned.exists() {
-                return Ok(versioned);
-            }
-        }
-    }
-
-    let searched: Vec<_> = bin_dirs
-        .iter()
-        .map(|d| prefix.join(d).display().to_string())
-        .collect();
-    miette::bail!(
-        "No Lua interpreter found in `{}`. \
-         Add `lua` to [dependencies] in moonshot.toml.",
-        searched.join("`, `")
-    )
 }
 ```
 

@@ -28,36 +28,65 @@ This uses the same activation logic from [Chapter 8](ch08-shell-hook.md), but in
 
 ## Implementation
 
-The full `src/commands/run.rs` is assembled from three named sections:
+### Adding `activation_env` to `Environment`
 
-``` {.rust file=src/commands/run.rs}
-<<run-imports>>
+The `Environment` struct from [Chapter 8](ch08-shell-hook.md) already handles
+shell activation scripts. For `shot run`, we need a different view: instead of
+a script to evaluate, we need the full set of environment variables as a map.
+We add an `activation_env` method that appends to `src/environment.rs`:
 
-<<run-args>>
-
-<<run-execute>>
+``` {.rust file=src/environment.rs}
+<<environment-activation-env>>
 ```
 
-### Imports
+``` {.rust #environment-activation-env}
+impl Environment {
+    /// Compute the full set of environment variables that activation
+    /// would produce.
+    pub async fn activation_env(&self) -> miette::Result<HashMap<String, String>> {
+        let prefix = self.prefix.clone();
+        let platform = self.platform;
 
-``` {.rust #run-imports}
-use std::env;
+        tokio::task::spawn_blocking(move || {
+            let shell: ShellEnum = ShellEnum::from_env().unwrap_or_else(|| Bash.into());
+            let activator =
+                Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
+            let vars = ActivationVariables::from_env().into_diagnostic()?;
+            activator.run_activation(vars, None).into_diagnostic()
+        })
+        .await
+        .into_diagnostic()?
+    }
+}
+```
+
+rattler's `Activator::run_activation` works by writing a temporary shell script
+that:
+
+1. Emits the current environment (via `env` on Unix, `set` on Windows).
+2. Sources the activation logic.
+3. Emits the environment again.
+
+It then runs that script and diffs the two snapshots, returning only the changed
+variables as a `HashMap<String, String>`.
+
+We use `spawn_blocking` because `run_activation` spawns a synchronous child
+process internally.
+
+### The run command
+
+With `Environment` handling activation, the run command becomes straightforward:
+
+``` {.rust file=src/commands/run.rs}
 use std::process::Stdio;
 
 use clap::Parser;
 use miette::IntoDiagnostic;
-use rattler_conda_types::Platform;
-use rattler_shell::activation::{ActivationVariables, Activator};
-use rattler_shell::shell::{Bash, ShellEnum};
 use tokio::process::Command;
-```
 
-### Command arguments
+use crate::environment::Environment;
+use crate::project::Project;
 
-Our `Args` struct accepts a trailing variadic argument for the command to run,
-plus an optional `--prefix` override.
-
-``` {.rust #run-args}
 #[derive(Debug, Parser)]
 pub struct Args {
     /// The command to run (and its arguments).
@@ -70,64 +99,33 @@ pub struct Args {
     #[clap(long)]
     pub prefix: Option<std::path::PathBuf>,
 }
-```
 
-### The execute function
-
-Our `execute` function breaks into four steps: resolve the prefix and build
-the activator, compute the activation environment, spawn the child process,
-and propagate its exit code.
-
-``` {.rust #run-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
-    <<run-setup>>
+    let project = Project::discover()?;
+    let env = Environment::from_project(&project, args.prefix)?;
+    env.ensure_exists()?;
 
-    <<run-activation>>
+    let activation_env = env.activation_env().await?;
 
-    <<run-spawn>>
+    let (program, rest_args) = args.command.split_first().expect("clap ensures non-empty");
 
-    <<run-exit-code>>
-}
-```
-
-First we resolve the prefix path and construct an `Activator`. If the prefix
-doesn't exist, we bail early with a helpful message.
-
-``` {.rust #run-setup}
-let cwd = env::current_dir().into_diagnostic()?;
-let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
-let prefix = std::path::absolute(prefix).into_diagnostic()?;
-
-if !prefix.exists() {
-    miette::bail!(
-        "Environment not found at `{}`. Run `shot install` first.",
-        prefix.display()
-    );
-}
-
-let platform = Platform::current();
-let shell: ShellEnum = ShellEnum::from_env().unwrap_or_else(|| Bash.into());
-
-let activator = Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
-let current_vars = ActivationVariables::from_env().into_diagnostic()?;
-```
-
-rattler provides the key function `Activator::run_activation`.
-`run_activation` works by writing a temporary shell script that:
-
-1. Emits the current environment (via `env` on Unix, `set` on Windows).
-2. Sources the activation logic.
-3. Emits the environment again.
-
-It then runs that script and diffs the two snapshots, returning only the changed
-variables as a `HashMap<String, String>`.
-
-``` {.rust #run-activation}
-let activation_env =
-    tokio::task::spawn_blocking(move || activator.run_activation(current_vars, None))
+    let status = Command::new(program)
+        .args(rest_args)
+        .envs(&activation_env)
+        .stdin(Stdio::inherit())
+        .stdout(Stdio::inherit())
+        .stderr(Stdio::inherit())
+        .status()
         .await
-        .into_diagnostic()?
         .into_diagnostic()?;
+
+    if !status.success() {
+        let code = status.code().unwrap_or(1);
+        std::process::exit(code);
+    }
+
+    Ok(())
+}
 ```
 
 ### Spawning the child process
@@ -148,20 +146,6 @@ and write to it directly; `lua` works interactively.
 `.status()` runs the command and returns its exit status once it completes,
 without capturing stdout/stderr.
 
-``` {.rust #run-spawn}
-let (program, rest_args) = args.command.split_first().expect("clap ensures non-empty");
-
-let status = Command::new(program)
-    .args(rest_args)
-    .envs(&activation_env)
-    .stdin(Stdio::inherit())
-    .stdout(Stdio::inherit())
-    .stderr(Stdio::inherit())
-    .status()
-    .await
-    .into_diagnostic()?;
-```
-
 ### Propagating the exit code
 
 !!! warning "Exit code propagation"
@@ -174,15 +158,6 @@ If the child fails, we exit with the same code.  This lets you compose
 
 ```bash
 shot run lua test.lua || echo "tests failed"
-```
-
-``` {.rust #run-exit-code}
-if !status.success() {
-    let code = status.code().unwrap_or(1);
-    std::process::exit(code);
-}
-
-Ok(())
 ```
 
 `std::process::exit(code)` terminates the process immediately with the given

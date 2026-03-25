@@ -1,10 +1,8 @@
 // ~/~ begin <<book/src/ch05-add.md#src/commands/add.rs>>[init]
-use std::env;
-
 use clap::Parser;
-use miette::IntoDiagnostic;
 
-use crate::manifest::{Manifest, MANIFEST_FILENAME};
+use crate::manifest::MANIFEST_FILENAME;
+use crate::project::Project;
 
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -14,21 +12,20 @@ pub struct Args {
 }
 
 pub async fn execute(args: Args) -> miette::Result<()> {
-    let cwd = env::current_dir().into_diagnostic()?;
-    let manifest_path = cwd.join(MANIFEST_FILENAME);
-    let (_, mut manifest) = Manifest::find_in_dir(&cwd)?;
+    let mut project = Project::discover()?;
 
     let mut added = 0usize;
     for pkg in &args.packages {
         let (name, version) = split_spec(pkg);
-        manifest
+        project
+            .manifest
             .dependencies
             .entry(name.to_string())
             .or_insert_with(|| version.to_string());
         added += 1;
     }
 
-    manifest.write(&manifest_path)?;
+    project.save()?;
     println!(
         "{} Added {added} package(s) to `{MANIFEST_FILENAME}`",
         console::style("✔").green()

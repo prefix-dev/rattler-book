@@ -54,6 +54,23 @@ pub fn read_lock_file(lock_path: &Path, platform: Platform) -> miette::Result<Ve
 }
 // ~/~ end
 
+// ~/~ begin <<book/src/ch06-lock.md#lock-read-locked>>[init]
+/// Read existing locked packages from the lock file, if it exists.
+///
+/// Returns the records from the lock or an empty vector if the file
+/// is missing or unreadable.
+pub fn read_locked_packages(
+    lock_path: &std::path::Path,
+    platform: Platform,
+) -> Vec<RepoDataRecord> {
+    if lock_path.exists() {
+        read_lock_file(lock_path, platform).unwrap_or_default()
+    } else {
+        Vec::new()
+    }
+}
+// ~/~ end
+
 // ~/~ begin <<book/src/ch06-lock.md#lock-write>>[init]
 /// Write a lock file containing the solved packages.
 ///

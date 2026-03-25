@@ -1,6 +1,5 @@
 // ~/~ begin <<book/src/ch10-build.md#src/commands/build.rs>>[init]
 // ~/~ begin <<book/src/ch10-build.md#build-imports>>[init]
-use std::env;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
@@ -16,8 +15,10 @@ use rattler_package_streaming::write::write_conda_package;
 use sha2::{Digest, Sha256};
 use walkdir::WalkDir;
 
-use crate::commands::install::install_from_manifest;
+use crate::build_backend::{BuildBackend, BuildContext, LuaBuildBackend};
 use crate::manifest::{Manifest, MANIFEST_FILENAME};
+use crate::project::Project;
+use crate::session::Session;
 // ~/~ end
 
 // ~/~ begin <<book/src/ch10-build.md#build-args>>[init]
@@ -33,38 +34,37 @@ pub struct Args {
 
 // ~/~ begin <<book/src/ch10-build.md#build-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
-    // ~/~ begin <<book/src/ch10-build.md#parse-manifest>>[init]
-    let cwd = env::current_dir().into_diagnostic()?;
-    
-    let (_manifest_path, manifest) = Manifest::find_in_dir(&cwd)?;
-    
-    let build_config = manifest.build.as_ref().ok_or_else(|| {
+    let project = Project::discover()?;
+    let session = Session::new(project)?;
+    let manifest = &session.project.manifest;
+    let cwd = &session.project.root;
+
+    let _build_config = manifest.build.as_ref().ok_or_else(|| {
         miette::miette!(
             "No [build] section in `{MANIFEST_FILENAME}`. \
              Add one to make this project buildable, or run \
              `shot init --library` to start a new library project."
         )
     })?;
-    
+
     let version = manifest.project.version.as_deref().ok_or_else(|| {
         miette::miette!(
             "No `version` in [project]. \
              A version is required to build a package."
         )
     })?;
-    
+
     println!(
         "Building {} {} (build {})",
         console::style(&manifest.project.name).cyan(),
         version,
         manifest.build_string(),
     );
-    // ~/~ end
-    // ~/~ begin <<book/src/ch10-build.md#setup-dirs>>[init]
+
     let work_dir = tempfile::tempdir()
         .into_diagnostic()
         .context("creating temporary build directory")?;
-    
+
     let build_prefix = work_dir.path().join("build_prefix");
     let install_prefix = work_dir.path().join("install_prefix");
     std::fs::create_dir_all(&build_prefix)
@@ -73,51 +73,31 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     std::fs::create_dir_all(&install_prefix)
         .into_diagnostic()
         .context("creating install_prefix")?;
-    
-    let src_dir = std::path::absolute(&cwd)
+
+    let src_dir = std::path::absolute(cwd)
         .into_diagnostic()
         .context("resolving SRC_DIR")?;
-    // ~/~ end
-    // ~/~ begin <<book/src/ch10-build.md#install-deps>>[init]
+
     if !manifest.dependencies.is_empty() {
         println!(
             "  {} Installing {} build dependencies…",
             console::style("→").blue(),
             manifest.dependencies.len()
         );
-        install_from_manifest(&manifest, build_prefix.clone()).await?;
+        session.resolve_and_install(build_prefix.clone()).await?;
     }
-    // ~/~ end
-    // ~/~ begin <<book/src/ch10-build.md#run-script-call>>[init]
-    let script_path = cwd.join(&build_config.script);
-    if !script_path.exists() {
-        miette::bail!(
-            "Build script `{}` not found (expected at `{}`)",
-            build_config.script,
-            script_path.display()
-        );
-    }
-    
-    let lua_bin = find_lua(&build_prefix)?;
-    
-    println!(
-        "  {} Running build script `{}`",
-        console::style("→").blue(),
-        build_config.script
-    );
-    
-    run_build_script(
-        &lua_bin,
-        &script_path,
-        &install_prefix,
-        &src_dir,
-        &build_prefix,
-        &manifest,
-    )
-    .await?;
-    // ~/~ end
+
+    let backend = LuaBuildBackend;
+    let ctx = BuildContext {
+        manifest,
+        src_dir: src_dir.clone(),
+        install_prefix: install_prefix.clone(),
+        build_prefix: build_prefix.clone(),
+    };
+    backend.run_build(&ctx).await?;
+
     // ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[init]
-    write_package_metadata(&install_prefix, &manifest).context("writing package metadata")?;
+    write_package_metadata(&install_prefix, manifest).context("writing package metadata")?;
     
     let output_dir = std::path::absolute(&args.output_dir)
         .into_diagnostic()
@@ -131,7 +111,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let filename = manifest.package_filename()?;
     let output_path = subdir_dir.join(&filename);
     
-    pack_conda(&install_prefix, &output_path, &manifest)?;
+    pack_conda(&install_prefix, &output_path, manifest)?;
     // ~/~ end
     // ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[1]
     println!(
@@ -161,92 +141,6 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     println!("  package → {}", output_path.display());
     println!("  channel → {}", output_dir.display());
     
-    Ok(())
-    // ~/~ end
-}
-// ~/~ end
-
-// ~/~ begin <<book/src/ch10-build.md#build-prelude-const>>[init]
-const BUILD_PRELUDE: &str = include_str!("../build_prelude.lua");
-// ~/~ end
-
-// ~/~ begin <<book/src/ch10-build.md#build-run-script>>[init]
-async fn run_build_script(
-    lua_bin: &Path,
-    script: &Path,
-    install_prefix: &Path,
-    src_dir: &Path,
-    build_prefix: &Path,
-    manifest: &Manifest,
-) -> miette::Result<()> {
-    // ~/~ begin <<book/src/ch10-build.md#create-wrapper>>[init]
-    let wrapper_dir = tempfile::tempdir()
-        .into_diagnostic()
-        .context("creating wrapper temp dir")?;
-    
-    let prelude_path = wrapper_dir.path().join("prelude.lua");
-    std::fs::write(&prelude_path, BUILD_PRELUDE)
-        .into_diagnostic()
-        .context("writing build prelude")?;
-    
-    // The wrapper dofile()s the prelude then the user script.
-    let wrapper_src = format!(
-        "dofile({prelude:?})\ndofile({script:?})\n",
-        prelude = prelude_path.to_string_lossy(),
-        script = script.to_string_lossy(),
-    );
-    let wrapper_path = wrapper_dir.path().join("wrapper.lua");
-    std::fs::write(&wrapper_path, &wrapper_src)
-        .into_diagnostic()
-        .context("writing build wrapper")?;
-    // ~/~ end
-    // ~/~ begin <<book/src/ch10-build.md#exec-lua>>[init]
-    // Prepend build_prefix bin directories to PATH so the script can call
-    // any installed build tools (luarocks, make, etc.).
-    // On Windows, conda puts binaries in Library/bin as well as bin.
-    let original_path = env::var("PATH").unwrap_or_default();
-    let path_sep = if cfg!(windows) { ";" } else { ":" };
-    let new_path = if cfg!(windows) {
-        format!(
-            "{}{path_sep}{}{path_sep}{original_path}",
-            build_prefix.join("Library").join("bin").display(),
-            build_prefix.join("bin").display(),
-        )
-    } else {
-        format!(
-            "{}{path_sep}{original_path}",
-            build_prefix.join("bin").display(),
-        )
-    };
-    
-    let build_config = manifest
-        .build
-        .as_ref()
-        .expect("[build] section validated in execute()");
-    
-    let status = tokio::process::Command::new(lua_bin)
-        .arg(&wrapper_path)
-        .env("PREFIX", install_prefix)
-        .env("SRC_DIR", src_dir)
-        .env("BUILD_PREFIX", build_prefix)
-        .env("PKG_NAME", &manifest.project.name)
-        .env(
-            "PKG_VERSION",
-            manifest.project.version.as_deref().unwrap_or("0.0.0"),
-        )
-        .env("PKG_BUILD_NUM", build_config.build_number.to_string())
-        .env("PATH", &new_path)
-        .status()
-        .await
-        .into_diagnostic()
-        .context("launching Lua interpreter")?;
-    
-    if !status.success() {
-        miette::bail!(
-            "Build script exited with status {}",
-            status.code().unwrap_or(-1)
-        );
-    }
     Ok(())
     // ~/~ end
 }
@@ -292,17 +186,7 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
         arch: None,
         platform: None,
         noarch,
-        depends: manifest
-            .dependencies
-            .iter()
-            .map(|(name, spec)| {
-                if spec == "*" {
-                    name.clone()
-                } else {
-                    format!("{name} {spec}")
-                }
-            })
-            .collect(),
+        depends: manifest.dependency_strings(),
         constrains: vec![],
         experimental_extra_depends: Default::default(),
         features: None,
@@ -455,43 +339,6 @@ fn pack_conda(
     .context("writing .conda archive")?;
 
     Ok(())
-}
-// ~/~ end
-
-// ~/~ begin <<book/src/ch10-build.md#build-find-lua>>[init]
-fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
-    // On Windows, conda installs binaries in Library/bin/ with .exe extension;
-    // on Unix they go in bin/ without an extension.
-    let bin_dirs: &[&str] = if cfg!(windows) {
-        &["Library/bin", "bin"]
-    } else {
-        &["bin"]
-    };
-    let exe_ext = if cfg!(windows) { ".exe" } else { "" };
-
-    for bin_dir in bin_dirs {
-        let lua = prefix.join(bin_dir).join(format!("lua{exe_ext}"));
-        if lua.exists() {
-            return Ok(lua);
-        }
-        // Try lua5.4, lua5.3, … as fallbacks
-        for minor in (1u8..=4u8).rev() {
-            let versioned = prefix.join(bin_dir).join(format!("lua5.{minor}{exe_ext}"));
-            if versioned.exists() {
-                return Ok(versioned);
-            }
-        }
-    }
-
-    let searched: Vec<_> = bin_dirs
-        .iter()
-        .map(|d| prefix.join(d).display().to_string())
-        .collect();
-    miette::bail!(
-        "No Lua interpreter found in `{}`. \
-         Add `lua` to [dependencies] in moonshot.toml.",
-        searched.join("`, `")
-    )
 }
 // ~/~ end
 // ~/~ end

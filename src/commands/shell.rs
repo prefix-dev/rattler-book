@@ -1,12 +1,8 @@
 // ~/~ begin <<book/src/ch08-shell-hook.md#src/commands/shell.rs>>[init]
-use std::env;
-use std::str::FromStr;
-
 use clap::Parser;
-use miette::IntoDiagnostic;
-use rattler_conda_types::Platform;
-use rattler_shell::activation::{ActivationVariables, Activator};
-use rattler_shell::shell::{Bash, ShellEnum};
+
+use crate::environment::Environment;
+use crate::project::Project;
 
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -22,33 +18,11 @@ pub struct Args {
 }
 
 pub fn execute(args: Args) -> miette::Result<()> {
-    let cwd = env::current_dir().into_diagnostic()?;
-    let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
-    let prefix = std::path::absolute(prefix).into_diagnostic()?;
+    let project = Project::discover()?;
+    let env = Environment::from_project(&project, args.prefix)?;
+    env.ensure_exists()?;
 
-    if !prefix.exists() {
-        miette::bail!(
-            "Environment not found at `{}`. Run `shot install` first.",
-            prefix.display()
-        );
-    }
-
-    let platform = Platform::current();
-
-    let shell: ShellEnum = if let Some(ref name) = args.shell {
-        ShellEnum::from_str(name)
-            .map_err(|_| miette::miette!("Unknown shell `{name}`. Try: bash, zsh, fish"))?
-    } else {
-        ShellEnum::from_env().unwrap_or_else(|| Bash.into())
-    };
-
-    let activator = Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
-
-    let vars = ActivationVariables::from_env().into_diagnostic()?;
-
-    let result = activator.activation(vars).into_diagnostic()?;
-    let script = result.script.contents().into_diagnostic()?;
-
+    let script = env.activate_script(args.shell.as_deref())?;
     print!("{script}");
     Ok(())
 }

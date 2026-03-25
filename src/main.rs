@@ -4,12 +4,15 @@ use clap::Parser;
 use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 
+mod build_backend;
 mod client;
 mod commands;
+mod environment;
 mod lock;
 mod manifest;
 mod progress;
-mod resolve;
+mod project;
+mod session;
 // ~/~ end
 
 // ~/~ begin <<book/src/ch02-project-setup.md#main-cli-struct>>[init]

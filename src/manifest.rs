@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use miette::{Context, IntoDiagnostic};
+use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
 use serde::{Deserialize, Serialize};
 // ~/~ end
 
@@ -157,6 +158,46 @@ impl Manifest {
             _ => rattler_conda_types::Platform::current().as_str(),
         }
     }
+    // ~/~ end
+
+    // ~/~ begin <<book/src/ch03-init.md#manifest-spec-helpers>>[init]
+        /// Parse the `[dependencies]` table into a list of [`MatchSpec`]s.
+        ///
+        /// This is used by both the resolver and the installer to turn the
+        /// human-friendly `name = "version"` pairs into typed specs.
+        pub fn match_specs(&self) -> miette::Result<Vec<MatchSpec>> {
+            let opts = ParseMatchSpecOptions::default();
+            self.dependencies
+                .iter()
+                .map(|(name, version)| {
+                    let spec_str = if version == "*" {
+                        name.clone()
+                    } else {
+                        format!("{name} {version}")
+                    };
+                    MatchSpec::from_str(&spec_str, opts)
+                        .into_diagnostic()
+                        .with_context(|| format!("parsing spec `{spec_str}`"))
+                })
+                .collect()
+        }
+    
+        /// Format dependencies as `"name version"` strings (or just `"name"`
+        /// when the version is `"*"`).
+        ///
+        /// This is the format expected by conda's `index.json` `depends` field.
+        pub fn dependency_strings(&self) -> Vec<String> {
+            self.dependencies
+                .iter()
+                .map(|(name, spec)| {
+                    if spec == "*" {
+                        name.clone()
+                    } else {
+                        format!("{name} {spec}")
+                    }
+                })
+                .collect()
+        }
     // ~/~ end
 }
 // ~/~ end
