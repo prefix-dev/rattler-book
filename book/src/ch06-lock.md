@@ -909,7 +909,7 @@ satisfied together.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    `RepoDataRecord::package_record` contains `.name`, `.version`, `.build`, `.subdir`. Use `PackageName::as_normalized()` for display. Modify `src/commands/lock.rs` and add printing after `ensure_resolved`.
+    Each `RepoDataRecord` has a `package_record` with name, version, build, and subdir fields. Use `as_normalized()` to display package names. Add printing after `ensure_resolved` in `lock.rs`.
     </details>
 
     Acceptance criteria
@@ -924,7 +924,7 @@ satisfied together.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Use `read_lock_file(lock_path, platform)` from `src/lock.rs` to read the old solution. Build `HashMap<PackageName, VersionWithSource>` for old and new, then diff. `PackageName` implements `Eq + Hash` but not `Display`; use `.as_normalized()` for printing. `VersionWithSource` implements `Ord`. Modify `src/commands/lock.rs`.
+    Read the old lock file before resolving. Build a HashMap of name-to-version for both old and new solutions, then diff the maps. Note that `PackageName` does not implement `Display`; use `.as_normalized()` for printing.
     </details>
 
     Acceptance criteria
@@ -940,7 +940,7 @@ satisfied together.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Add `virtual_packages: HashMap<String, String>` to `Manifest` with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the serde rename from the recurring patterns note. Construct overrides with `GenericVirtualPackage { name: PackageName::from_str("__glibc"), version: Version::from_str("2.17"), build_string: "0".to_string() }`. Use `VirtualPackage::detect(...)` for defaults, then replace matching names with manifest overrides. Wire overrides into `SolverTask { virtual_packages, ... }` in `src/session.rs`. Modify `src/manifest.rs` and `src/session.rs`.
+    Add a `virtual_packages` HashMap to `Manifest` (with the serde rename from the recurring patterns note). Build `GenericVirtualPackage` values from the table entries. Start from `VirtualPackage::detect(...)` defaults, then replace matching names with the manifest overrides. Wire the result into `SolverTask` in `src/session.rs`.
     </details>
 
     Acceptance criteria

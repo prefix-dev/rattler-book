@@ -510,7 +510,7 @@ luafilesystem                  1.8.0
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    `PackageRecord::build` (String), `PackageRecord::version` (VersionWithSource, use `.to_string()`). Modify `src/commands/search.rs`, adjust the dedup/display logic.
+    Each `PackageRecord` has a `build` string and a `version` you can display with `.to_string()`. Adjust the dedup logic in `src/commands/search.rs`.
     </details>
 
     Acceptance criteria
@@ -525,7 +525,7 @@ luafilesystem                  1.8.0
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    `PackageRecord::depends` is `Vec<String>`, each entry is a conda dependency spec. `MatchSpec::from_str(dep_str, ParseMatchSpecOptions::default())` to parse. Modify `src/commands/search.rs`.
+    The `depends` field on `PackageRecord` is a list of dependency spec strings. Parse each one with `MatchSpec::from_str` to extract the structured name and constraint.
     </details>
 
     Acceptance criteria
@@ -541,7 +541,7 @@ luafilesystem                  1.8.0
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Add `--diff` as a clap arg taking two version strings (`num_args = 2`). The package name comes from the existing `query` positional arg, so the invocation is `shot search lua --diff 5.4.6 5.4.7`. Query the gateway twice: `MatchSpec::from_str("lua ==5.4.6", ...)` and `MatchSpec::from_str("lua ==5.4.7", ...)`. `PackageRecord` fields to compare: `build`, `depends` (`Vec<String>`), `size` (`Option<u64>`), `timestamp` (`Option<TimestampMs>`, call `.datetime()` to get `DateTime<Utc>`). Parse each dependency string with `MatchSpec::from_str` to extract the name via `.name` (returns `PackageNameMatcher`, call `.as_exact()` for `Option<&PackageName>`). Build `HashMap<PackageName, String>` from each version's depends list, then diff the maps. Modify `src/commands/search.rs`.
+    Add `--diff` as a clap arg taking two version strings. The package name comes from the existing `query` arg. Query the gateway twice with pinned specs like `"lua ==5.4.6"`. Compare `PackageRecord` fields between the two results; for dependencies, build a `HashMap` from each version's `depends` list and diff the maps. Note that `timestamp` is `TimestampMs`, not `DateTime`; call `.datetime()` to convert.
     </details>
 
     Acceptance criteria

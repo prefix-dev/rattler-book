@@ -191,7 +191,7 @@ luarocks = "*"
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    `MatchSpec::from_str(spec_str, ParseMatchSpecOptions::default())` parses and validates a spec string. Modify `src/commands/add.rs` and add a validation loop before the write loop. See `Manifest::match_specs()` in `src/manifest.rs` for the pattern.
+    Parse each spec with `MatchSpec::from_str` before writing anything. Add a validation loop before the write loop. See `Manifest::match_specs()` for the pattern.
     </details>
 
     Acceptance criteria
@@ -207,7 +207,7 @@ luarocks = "*"
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Create a `Session::new(project)` to get gateway access. Note: `Session::new` consumes the `Project`, so you may need to call `Project::discover()` again afterward for the manifest write. Use `Gateway::query(channels, [Platform::current(), Platform::NoArch], [spec]).recursive(false)` and check if the returned repodata has any records. Follow the gateway pattern in `src/commands/search.rs`. Modify `src/commands/add.rs`.
+    Create a `Session` to get gateway access and query for the package. Check whether the returned repodata has any records. Follow the pattern in `src/commands/search.rs`. Note that `Session::new` consumes the `Project`, so you may need to re-discover it afterward.
     </details>
 
     Acceptance criteria
@@ -223,7 +223,7 @@ luarocks = "*"
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    `rattler_conda_types::Platform::from_str("linux-64")` parses and validates platform strings. Use `Gateway::query(channels, [target_platform, Platform::NoArch], specs)` for platform-specific queries. Modify `src/manifest.rs` to add a `platform_dependencies` field with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the serde rename from the recurring patterns note. Modify `src/commands/add.rs` to add a `--platform` flag and route to the correct table.
+    Use `Platform::from_str` to validate platform strings. Add a `platform_dependencies` HashMap to `Manifest` (with the serde rename from the recurring patterns note). Route the `--platform` flag in `src/commands/add.rs` to write to the platform-specific table instead of `[dependencies]`.
     </details>
 
     Acceptance criteria

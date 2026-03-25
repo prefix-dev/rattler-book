@@ -1262,7 +1262,7 @@ conda-forge uses to distribute tens of thousands of packages.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Use `rattler_package_streaming::seek::stream_conda_info(reader)` to stream the info section as a tar archive. `IndexJson` and `PathsJson` are in `rattler_conda_types::package`. Deserialize from JSON found in the tar entries. Modify `src/commands/build.rs` (add `--inspect` as an alternative execution path).
+    Use `stream_conda_info` from `rattler_package_streaming` to read the info section as a tar archive. Look for `IndexJson` and `PathsJson` in `rattler_conda_types::package`. Add `--inspect` as an early-return path in `build.rs`.
     </details>
 
     Acceptance criteria
@@ -1277,7 +1277,7 @@ conda-forge uses to distribute tens of thousands of packages.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    `IndexJson::license` is already mapped in `src/commands/build.rs`. Add `home: Option<String>` and `dev_url: Option<String>` to `ProjectMetadata` in `src/manifest.rs`. Write `about.json` in the `write_package_metadata` section of `src/commands/build.rs`. Define a simple local struct for serialization rather than using rattler's `AboutJson` (which uses `Vec<Url>` for its fields). The `info/` directory is created around line 152 of `build.rs`.
+    The `license` field is already wired up in `build.rs`. Add `home` and `dev_url` to `ProjectMetadata`, then write an `about.json` file alongside `index.json` in the info directory. Define a simple local struct for serialization; rattler's `AboutJson` type uses `Vec<Url>` which is more than you need here.
     </details>
 
     Acceptance criteria
@@ -1293,7 +1293,7 @@ conda-forge uses to distribute tens of thousands of packages.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Modify `Manifest::build_string()` in `src/manifest.rs` to accept variant info. Variants encode into the build string by joining key-value pairs (sanitize: remove dots, e.g., `5.4` becomes `54`). Pass variants as env vars to the `LuaBuildBackend` via the `Command` environment. `write_conda_package` uses the build string for the filename. `index_fs` indexes everything in the output dir, so multiple packages work automatically. Modify `src/commands/build.rs`, `src/manifest.rs`, and `src/build_backend.rs` (add variants to `BuildContext`, inject `VARIANT_*` env vars).
+    Extend `Manifest::build_string()` to accept variant info. Encode variants into the build string by joining key-value pairs (remove dots: `5.4` becomes `54`). Pass each variant as a `VARIANT_*` env var to the build backend. Files to touch: `src/manifest.rs`, `src/commands/build.rs`, `src/build_backend.rs`.
     </details>
 
     Acceptance criteria

@@ -394,7 +394,7 @@ hashes. You can inspect these to see exactly what's in your environment.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Use `PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix_path)` to get installed packages. Access package fields via `record.repodata_record.package_record` (`.name`, `.version`, `.build`). Create `src/commands/list.rs`, register in `src/commands/mod.rs` and `src/main.rs`.
+    Use `PrefixRecord::collect_from_prefix` to list what is installed. Package fields live under `record.repodata_record.package_record`. Create a new command file and register it in `mod.rs` and `main.rs`.
     </details>
 
     Acceptance criteria
@@ -409,7 +409,7 @@ hashes. You can inspect these to see exactly what's in your environment.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Resolve via `Session::ensure_resolved(force)` to get the solution. Use `PrefixRecord::collect_from_prefix(prefix)` to read what is already installed. Compare by `PackageName` between resolved and installed sets. `PackageRecord::size` (`Option<u64>`) gives the download size. Modify `src/commands/install.rs` and short-circuit before `install_packages`.
+    Resolve to get the solution, then compare against what is already in the prefix. The `size` field on `PackageRecord` is optional. Short-circuit before `install_packages` to avoid any downloads.
     </details>
 
     Acceptance criteria
@@ -425,7 +425,7 @@ hashes. You can inspect these to see exactly what's in your environment.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Use `std::fs::remove_dir_all(prefix)` to clear the prefix. Use `read_lock_file(lock_path, platform)` from `src/lock.rs` to get locked packages. Call `Session::install_packages(&prefix, solution, platform)` to install and `Session::ensure_resolved(force)` with `force=true` for `--relock`. Create `src/commands/reinstall.rs` or add as a flag to `src/commands/install.rs`. Register in `src/main.rs`.
+    Remove the prefix with `remove_dir_all`, then read the lock file and call `Session::install_packages` to reinstall. For `--relock`, call `ensure_resolved(true)` first. Create `src/commands/reinstall.rs` (or add a flag to `install.rs`) and register it in `src/main.rs`.
     </details>
 
     Acceptance criteria

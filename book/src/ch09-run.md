@@ -179,7 +179,7 @@ would cause `miette` to print a message, cluttering the output.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Use `Environment::activation_env()` for the base environment. Detect the Lua version by running `<prefix>/bin/lua -v` and parsing the output (e.g., `Lua 5.5.0`). Do not scan `<prefix>/share/lua/` as that directory may not exist in a bare lua install. Use `tokio::process::Command::new("lua").envs(&env).spawn()` to launch. Modify `src/commands/run.rs` or create `src/commands/repl.rs`.
+    Get the activation env, then detect the Lua version by running `lua -v` and parsing the output. Set `LUA_PATH` and `LUA_CPATH` before spawning the REPL. Create `src/commands/repl.rs` or extend `run.rs`.
     </details>
 
     Acceptance criteria
@@ -196,7 +196,7 @@ would cause `miette` to print a message, cluttering the output.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    `Environment::activation_env()` returns `HashMap<String, String>`. Just `.insert()` the extras after getting the activation env. Parse `KEY=VALUE` by splitting on the first `=`. Modify `src/commands/run.rs` (add `--env` flag to `Args`).
+    Get the activation env, then insert the extra vars on top. Parse each `KEY=VALUE` by splitting on the first `=`.
     </details>
 
     Acceptance criteria
@@ -212,7 +212,7 @@ would cause `miette` to print a message, cluttering the output.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Use `Project::is_lock_fresh()` to check lock vs manifest mtime. Use `PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix)` for installed packages and `read_lock_file(lock_path, platform)` for expected packages. Use `Session::ensure_resolved()` + `Session::install_packages()` for the full pipeline. Modify `src/commands/run.rs`.
+    Check `Project::is_lock_fresh()` and compare installed packages against the lock file. If anything is missing or stale, run the resolve-and-install pipeline before spawning the command.
     </details>
 
     Acceptance criteria

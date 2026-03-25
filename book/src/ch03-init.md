@@ -430,11 +430,7 @@ lua = ">=5.4"
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    The `requires-lua` value is a version constraint (e.g., `">=5.1,<5.5"`), not a full match spec. To validate with `MatchSpec::from_str`, prepend the package name: `MatchSpec::from_str(&format!("lua {spec}"), ParseMatchSpecOptions::default())`.
-
-    Use `#[serde(rename = "requires-lua")]` on the Rust field so the TOML key uses a hyphen.
-
-    Modify `src/manifest.rs` (add field to `ProjectMetadata`) and `src/commands/init.rs` (add CLI flag, update the `ProjectMetadata` struct literal). See `Manifest::match_specs()` in `src/manifest.rs` for the parsing pattern.
+    The value is a version constraint, not a full match spec. Prepend `"lua "` to build a valid spec for `MatchSpec::from_str`. Use a serde rename so the TOML key keeps its hyphen. See `Manifest::match_specs()` for the parsing pattern.
     </details>
 
     Acceptance criteria
@@ -450,9 +446,7 @@ lua = ">=5.4"
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Use `rattler_virtual_packages::VirtualPackage::detect(&VirtualPackageOverrides::default())`. Convert each `VirtualPackage` to `GenericVirtualPackage` which has `.name` (`PackageName`), `.version` (`Version`), and `.build_string` (`String`). Note: `__archspec` stores the architecture in `build_string`, not `version` (its version is always `1`).
-
-    Modify `src/manifest.rs` (add `system: HashMap<String, String>`) and `src/commands/init.rs`. See how `src/session.rs` already calls `VirtualPackage::detect` for the pattern.
+    Call `VirtualPackage::detect` and convert results to `GenericVirtualPackage`. Note that `__archspec` puts the architecture in `build_string`, not `version`. See `src/session.rs` for the detection pattern. Store results as a `HashMap` in the manifest.
     </details>
 
     Acceptance criteria
@@ -470,9 +464,7 @@ lua = ">=5.4"
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Build an HTTP client using the pattern in `src/client.rs`. Use `Gateway::builder().with_client(client).finish()` to create the gateway. Query with `Gateway::query(channels, [Platform::current(), Platform::NoArch], [matchspec])` to check availability. Follow the gateway query pattern in `src/commands/search.rs`.
-
-    Modify `src/commands/init.rs`.
+    Build an HTTP client (see `src/client.rs`), create a `Gateway`, and query for the lua spec. Follow the gateway pattern in `src/commands/search.rs`.
     </details>
 
     Acceptance criteria

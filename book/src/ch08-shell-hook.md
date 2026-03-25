@@ -306,7 +306,7 @@ compatibility.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    `Environment::activation_env()` lives in `src/environment.rs`. Use `std::env::vars()` to get the current environment for comparison. You will need to modify `src/commands/shell.rs` to add the flag and call `activation_env` instead of `activate_script`. Note that `activation_env` is async, so the shell command's `execute` function may need to become async as well.
+    Call `activation_env()` and compare with the current environment to find changed variables. Note that `activation_env` is async, so `execute` will need to become async too.
     </details>
 
     Acceptance criteria
@@ -322,7 +322,7 @@ compatibility.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    `Environment::activation_env()` returns `Result<HashMap<String, String>>` and is async, so `execute` must become async (update `src/main.rs` to add `.await`). Compare with `std::env::vars()` to find the diff. Use dotenv format: `KEY="value with spaces"` or `KEY=simple_value`. Modify `src/commands/shell.rs`.
+    Same async `activation_env()` as the previous exercise. Diff against the current env and write only changed variables in dotenv format. Remember to update `main.rs` to `.await` the now-async `execute`.
     </details>
 
     Acceptance criteria
@@ -338,7 +338,7 @@ compatibility.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Build `ActivationVariables` with `conda_prefix: None` and include the base env's `bin/` paths in the `path` vec. Using `conda_prefix: Some(base_prefix)` would cause the activator to deactivate the base env. Use `rattler_shell::activation::prefix_path_entries` to get the path entries for the base prefix. Call `Activator::from_path(stacked_prefix, shell, platform)` and `activator.activation(vars)` to generate the stacked script. Set `PathModificationBehavior::Prepend` so the stacked env appears first on PATH. Modify `src/environment.rs` and `src/commands/shell.rs`.
+    Build `ActivationVariables` with `conda_prefix: None` and the base env's paths in the `path` vec. (Setting `conda_prefix: Some(...)` would deactivate the base env instead.) Use `prefix_path_entries` from `rattler_shell::activation` to get the base paths, then `Activator::from_path` and `activator.activation(vars)` for the stacked script. Set `PathModificationBehavior::Prepend`.
     </details>
 
     Acceptance criteria
