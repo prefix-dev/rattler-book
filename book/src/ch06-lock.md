@@ -73,11 +73,13 @@ ecosystems have structure that makes good heuristics very effective.
 
 [SAT]: https://en.wikipedia.org/wiki/Boolean_satisfiability_problem
 
-!!! note "Deep dive"
+<details class="margin-note" markdown>
+<summary>Deep dive</summary>
 
-    For a detailed look at how resolvo's SAT solver works, including clause
-    learning, decision heuristics, and the connection to CDCL, see
-    [Deep Dive: The resolvo SAT Solver](deep-dive-resolvo.md).
+For a detailed look at how resolvo's SAT solver works, including clause
+learning, decision heuristics, and the connection to CDCL, see
+[Deep Dive: The resolvo SAT Solver](deep-dive-resolvo.md).
+</details>
 
 ### Virtual packages
 
@@ -93,10 +95,12 @@ The system is probed for things like:
 Packages can list these as dependencies.  A CUDA-accelerated package might say
 `__cuda >=11.0`; the solver will refuse to install it on a machine without CUDA.
 
-!!! note "Deep dive"
+<details class="margin-note" markdown>
+<summary>Deep dive</summary>
 
-    For more on virtual packages and archspec, see
-    [Deep Dive: Virtual Packages](deep-dive-virtual-packages.md).
+For more on virtual packages and archspec, see
+[Deep Dive: Virtual Packages](deep-dive-virtual-packages.md).
+</details>
 
 ### Locked vs pinned packages
 
@@ -105,20 +109,24 @@ and pass them to the solver as **locked packages**: versions the solver
 should prefer to keep if possible. This gives stable upgrades; re-solving
 only changes what the new constraints require.
 
-!!! warning "Why locking matters"
+<details class="margin-note" markdown>
+<summary>Why locking matters</summary>
 
-    Without locking, every resolve could silently upgrade transitive
-    dependencies even when the manifest hasn't changed. That kind of drift is a
-    common source of "it worked yesterday" bugs. Locking gives you environmental
-    stability: the solver only changes what it must to satisfy new or modified
-    constraints.
+Without locking, every resolve could silently upgrade transitive
+dependencies even when the manifest hasn't changed. That kind of drift is a
+common source of "it worked yesterday" bugs. Locking gives you environmental
+stability: the solver only changes what it must to satisfy new or modified
+constraints.
+</details>
 
-!!! tip "Locked vs pinned"
+<details class="margin-note" markdown>
+<summary>Locked vs pinned</summary>
 
-    The difference between locked and pinned is important: locked packages are a
-    *preference* that the solver may override if constraints demand it, while
-    pinned packages are a *hard constraint* that the solver must satisfy or
-    report as a conflict.
+The difference between locked and pinned is important: locked packages are a
+*preference* that the solver may override if constraints demand it, while
+pinned packages are a *hard constraint* that the solver must satisfy or
+report as a conflict.
+</details>
 
 ### Resolver strategy: how conda sorting works
 

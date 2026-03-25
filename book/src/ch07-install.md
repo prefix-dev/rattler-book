@@ -69,12 +69,14 @@ many environments use it. Content-addressed keys (rather than name-plus-version)
 
 ### Hard links and reflinks
 
-!!! info "Why hard-linking is safe"
+<details class="margin-note" markdown>
+<summary>Why hard-linking is safe</summary>
 
-    Packages in the cache are immutable after extraction. No tool or environment
-    modifies them in place. This invariant is what makes hard-linking safe:
-    multiple environments can share the same inodes because nobody writes to
-    them.
+Packages in the cache are immutable after extraction. No tool or environment
+modifies them in place. This invariant is what makes hard-linking safe:
+multiple environments can share the same inodes because nobody writes to
+them.
+</details>
 
 From the cache, files are linked into the target prefix. On most systems,
 rattler uses **reflinks** (copy-on-write clones) when the filesystem supports
@@ -92,12 +94,14 @@ This means:
 
 ### Transactions
 
-!!! warning "Partial installs"
+<details class="margin-note" markdown>
+<summary>Partial installs</summary>
 
-    A naive package manager that unpacks files one by one can leave an
-    environment half-installed if the process is interrupted. Partial installs
-    are one of the most common failure modes in package management and often
-    require manual cleanup.
+A naive package manager that unpacks files one by one can leave an
+environment half-installed if the process is interrupted. Partial installs
+are one of the most common failure modes in package management and often
+require manual cleanup.
+</details>
 
 The Installer computes a **transaction**, a diff between the currently-installed
 state and the desired state, and applies only the changes:
@@ -109,10 +113,12 @@ state and the desired state, and applies only the changes:
 This makes `shot install` idempotent: running it twice with the same manifest
 is a no-op.
 
-!!! note "Deep dive"
+<details class="margin-note" markdown>
+<summary>Deep dive</summary>
 
-    For a detailed look at the .conda archive format, inner archives, and
-    content-addressed storage, see [Deep Dive: The conda Package Format](deep-dive-package-format.md).
+For a detailed look at the .conda archive format, inner archives, and
+content-addressed storage, see [Deep Dive: The conda Package Format](deep-dive-package-format.md).
+</details>
 
 ## Implementation
 
@@ -184,13 +190,15 @@ to transitive dependencies) via `with_requested_specs`. It records this in the
 `conda-meta/*.json` files so that future updates can correctly distinguish
 "you asked for this" from "installed because something else needed it".
 
-!!! info "Tracking direct vs transitive"
+<details class="margin-note" markdown>
+<summary>Tracking direct vs transitive</summary>
 
-    This distinction drives automatic cleanup: when a direct dependency is
-    removed, the installer can garbage-collect its transitive dependencies that
-    nothing else needs. Both npm and pip added this tracking late in their
-    development, and the lack of it caused years of accumulated orphan packages
-    in user environments.
+This distinction drives automatic cleanup: when a direct dependency is
+removed, the installer can garbage-collect its transitive dependencies that
+nothing else needs. Both npm and pip added this tracking late in their
+development, and the lack of it caused years of accumulated orphan packages
+in user environments.
+</details>
 
 `IndicatifReporter` is a rattler-provided reporter that shows per-package
 progress bars during download and extraction. If you want custom progress

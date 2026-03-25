@@ -86,13 +86,15 @@ This is the **dependency solving** problem.  When a package manager enforces
 that only one version of each package can be installed at a time, the problem is
 NP-complete.
 
-!!! note "Why is this NP-complete?"
+<details class="margin-note" markdown>
+<summary>Why is this NP-complete?</summary>
 
-    Russ Cox [proves this][vsat] by reducing [3-SAT] to package
-    version selection: each boolean variable becomes a package with two versions,
-    each clause becomes a package whose versions depend on the corresponding
-    literals, and a root package depends on all clause packages.  If the root is
-    installable, the formula is satisfiable.
+Russ Cox [proves this][vsat] by reducing [3-SAT] to package
+version selection: each boolean variable becomes a package with two versions,
+each clause becomes a package whose versions depend on the corresponding
+literals, and a root package depends on all clause packages.  If the root is
+installable, the formula is satisfiable.
+</details>
 
 Not every package manager hits this complexity.  If you allow multiple versions
 of the same package to coexist (as [Nix] and [Go modules] do), you can install

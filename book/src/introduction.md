@@ -198,4 +198,41 @@ That said, conda isn't always the right choice:
 [Lua]: https://www.lua.org
 [conda-forge]: https://conda-forge.org
 
+## Exercises
+
+Most chapters include programming exercises. They are marked by difficulty:
+
+!!! exercise-easy "Hello, rattler"
+
+    Write a short Rust program that prints the version of the `rattler_conda_types`
+    crate. This is a warm-up to make sure your toolchain is set up correctly.
+
+    Expected behavior
+    :   The program compiles and prints a version string such as `0.29.0`.
+
+!!! exercise-intermediate "Parse a MatchSpec"
+
+    <details class="margin-note" markdown>
+    <summary>Hint</summary>
+
+    Look at the `MatchSpec` type in `rattler_conda_types`. The `from_str`
+    method does most of the work.
+    </details>
+
+    Given the string `python >=3.8,<4.0`, write a function that extracts the
+    package name and version constraint using `MatchSpec::from_str`.
+
+    Expected behavior
+    :   Your function returns the package name `python` and constraint `>=3.8,<4.0`
+        as separate values.
+
+!!! exercise-hard "Version ordering from scratch"
+
+    Without using rattler's built-in comparison, implement the conda version
+    ordering algorithm for simple numeric versions like `1.2.3` vs `1.10.0`.
+
+    Expected behavior
+    :   Your comparison function agrees with `Version::from_str` ordering for all
+        pairs in a test suite of at least ten version strings.
+
 Let's get started.

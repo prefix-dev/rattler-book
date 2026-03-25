@@ -17,13 +17,15 @@ process, which *can* modify `PATH`.
 You can pass an optional `--shell` flag to override the detected shell
 dialect and `--prefix` to override the environment location.
 
-!!! info "`shell` vs `run`"
+<details class="margin-note" markdown>
+<summary>`shell` vs `run`</summary>
 
-    `shot shell` and `shot run` ([Chapter 9](ch09-run.md)) represent a design fork.
-    `shell` generates a script the user evaluates, which means it must know the
-    user's shell dialect. `run` spawns a child process with the right
-    environment variables, which is shell-agnostic but only lasts for one
-    command. Most package managers end up needing both.
+`shot shell` and `shot run` ([Chapter 9](ch09-run.md)) represent a design fork.
+`shell` generates a script the user evaluates, which means it must know the
+user's shell dialect. `run` spawns a child process with the right
+environment variables, which is shell-agnostic but only lasts for one
+command. Most package managers end up needing both.
+</details>
 
 ## Concepts
 
@@ -282,16 +284,18 @@ export CONDA_DEFAULT_ENV="/home/user/my-app/.env"
 You evaluate this, and from that point on `lua`, `luarocks`, etc. are on your
 PATH.
 
-!!! note "Why `CONDA_` variables?"
+<details class="margin-note" markdown>
+<summary>Why `CONDA_` variables?</summary>
 
-    You might notice that a Lua package manager is setting `CONDA_PREFIX` and
-    `CONDA_SHLVL`. This is because rattler implements conda's activation
-    protocol, and these variables are part of that protocol. The benefit is
-    compatibility: any tool that understands conda environments (editors, CI
-    systems, other package managers) will recognize our environment. The cost is
-    the naming confusion, since "CONDA" has nothing to do with Lua. A more
-    polished tool could alias these variables, but you would lose the ecosystem
-    compatibility.
+You might notice that a Lua package manager is setting `CONDA_PREFIX` and
+`CONDA_SHLVL`. This is because rattler implements conda's activation
+protocol, and these variables are part of that protocol. The benefit is
+compatibility: any tool that understands conda environments (editors, CI
+systems, other package managers) will recognize our environment. The cost is
+the naming confusion, since "CONDA" has nothing to do with Lua. A more
+polished tool could alias these variables, but you would lose the ecosystem
+compatibility.
+</details>
 
 <!-- TODO: Exercises
 - Run `shot shell` and inspect the output. What environment variables does it set?

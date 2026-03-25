@@ -102,13 +102,15 @@ The naive approach fetches all of `repodata.json` and loads it into RAM. For
 conda-forge that file is ~300 MB. That's slow on the first run and wasteful when
 you only need packages starting with `lua`.
 
-!!! info "Why sharding exists"
+<details class="margin-note" markdown>
+<summary>Why sharding exists</summary>
 
-    The full-file approach stopped scaling when conda-forge passed 200,000
-    packages. Downloading and parsing 300 MB on every install was the single
-    biggest latency bottleneck for conda users. [CEP-16][cep-16] solves this
-    by splitting repodata into per-package shards so the client never
-    downloads data it will never read.
+The full-file approach stopped scaling when conda-forge passed 200,000
+packages. Downloading and parsing 300 MB on every install was the single
+biggest latency bottleneck for conda users. [CEP-16][cep-16] solves this
+by splitting repodata into per-package shards so the client never
+downloads data it will never read.
+</details>
 
 [CEP-16][cep-16] (sharded repodata) replaces the monolithic file with a
 **content-addressed, per-package** scheme:
@@ -129,13 +131,15 @@ the client never re-downloads shards it already has.
 
 [cep-16]: https://conda.org/learn/ceps/cep-0016/
 
-!!! note "Other formats"
+<details class="margin-note" markdown>
+<summary>Other formats</summary>
 
-    Besides CEP-16 sharding, rattler also supports downloading the full
-    `repodata.json` (plain, `.zst`, or `.bz2` compressed) and [JLAP]
-    incremental patches for updating a cached copy. When a full file is
-    loaded, rattler parses it lazily (internally called "sparse" loading) so
-    that only the records you actually query are deserialized.
+Besides CEP-16 sharding, rattler also supports downloading the full
+`repodata.json` (plain, `.zst`, or `.bz2` compressed) and [JLAP]
+incremental patches for updating a cached copy. When a full file is
+loaded, rattler parses it lazily (internally called "sparse" loading) so
+that only the records you actually query are deserialized.
+</details>
 
 [JLAP]: https://conda.org/learn/ceps/cep-0014/
 
@@ -143,10 +147,12 @@ Setting `sharded_enabled: true` on the Gateway tells it to prefer the sharded
 format when a channel supports it. Both [prefix.dev](https://prefix.dev) and
 [anaconda.org](https://anaconda.org) serve sharded repodata for conda-forge.
 
-!!! note "Deep dive"
+<details class="margin-note" markdown>
+<summary>Deep dive</summary>
 
-    For a detailed look at the networking stack, including reqwest middleware,
-    authentication, and OCI support, see [Deep Dive: The Networking Stack](deep-dive-networking.md).
+For a detailed look at the networking stack, including reqwest middleware,
+authentication, and OCI support, see [Deep Dive: The Networking Stack](deep-dive-networking.md).
+</details>
 
 ### The cache directory
 
@@ -161,12 +167,14 @@ rattler caches repodata on disk so it doesn't re-download on every run.
 By sharing this cache with pixi and rattler-build, packages are downloaded only
 once across all tools.
 
-!!! tip "Content-addressed caching"
+<details class="margin-note" markdown>
+<summary>Content-addressed caching</summary>
 
-    The cache keys are content hashes, not name-plus-version pairs. This
-    matters because the same package version can be rebuilt (with a different
-    build number or build string), and content-addressed keys prevent stale
-    cache hits when a rebuild produces different files.
+The cache keys are content hashes, not name-plus-version pairs. This
+matters because the same package version can be rebuilt (with a different
+build number or build string), and content-addressed keys prevent stale
+cache hits when a rebuild produces different files.
+</details>
 
 ### The HTTP client
 

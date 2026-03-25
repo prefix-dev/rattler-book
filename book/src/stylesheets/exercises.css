@@ -1,0 +1,197 @@
+/* ===========================================================================
+   Exercise admonitions — Tufte minimal style
+   Three difficulty levels: exercise-easy, exercise-intermediate, exercise-hard.
+   No borders, no backgrounds — just typography and whitespace.
+   =========================================================================== */
+
+/* --- Counter ---------------------------------------------------------------- */
+.md-content {
+  counter-reset: exercise;
+}
+
+.md-typeset .admonition.exercise-easy,
+.md-typeset .admonition.exercise-intermediate,
+.md-typeset .admonition.exercise-hard,
+.md-typeset details.exercise-easy,
+.md-typeset details.exercise-intermediate,
+.md-typeset details.exercise-hard {
+  counter-increment: exercise;
+}
+
+/* --- Base: strip admonition chrome ----------------------------------------- */
+.md-typeset .admonition.exercise-easy,
+.md-typeset .admonition.exercise-intermediate,
+.md-typeset .admonition.exercise-hard,
+.md-typeset details.exercise-easy,
+.md-typeset details.exercise-intermediate,
+.md-typeset details.exercise-hard {
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  margin: 2.5rem 0;
+  overflow: visible;
+  position: relative;
+  font-size: inherit;
+}
+
+/* --- Centered dot separator above ------------------------------------------ */
+.md-typeset .admonition.exercise-easy::before,
+.md-typeset .admonition.exercise-intermediate::before,
+.md-typeset .admonition.exercise-hard::before,
+.md-typeset details.exercise-easy::before,
+.md-typeset details.exercise-intermediate::before,
+.md-typeset details.exercise-hard::before {
+  content: "· · ·";
+  display: block;
+  text-align: center;
+  color: var(--rb-gruvbox-muted);
+  font-size: 1.2em;
+  letter-spacing: 0.3em;
+  margin-bottom: 1.5rem;
+}
+
+/* --- Title: reset Material defaults ---------------------------------------- */
+.md-typeset .exercise-easy > .admonition-title,
+.md-typeset .exercise-easy > summary,
+.md-typeset .exercise-intermediate > .admonition-title,
+.md-typeset .exercise-intermediate > summary,
+.md-typeset .exercise-hard > .admonition-title,
+.md-typeset .exercise-hard > summary {
+  background: transparent;
+  border: none;
+  padding: 0 0 0.4rem 0;
+  font-weight: 400;
+  font-style: italic;
+  font-size: var(--rb-h3-size);
+  color: var(--rb-heading);
+}
+
+/* --- Title ::before → "EXERCISE N" counter --------------------------------- */
+.md-typeset .exercise-easy > .admonition-title::before,
+.md-typeset .exercise-easy > summary::before,
+.md-typeset .exercise-intermediate > .admonition-title::before,
+.md-typeset .exercise-intermediate > summary::before,
+.md-typeset .exercise-hard > .admonition-title::before,
+.md-typeset .exercise-hard > summary::before {
+  content: "EXERCISE " counter(exercise) "\a0\a0";
+  font-size: 0.75em;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  font-style: normal;
+  /* Reset Material icon rendering */
+  background-color: transparent;
+  mask-image: none;
+  -webkit-mask-image: none;
+  position: static;
+  display: inline;
+  width: auto;
+  height: auto;
+  margin: 0;
+  vertical-align: baseline;
+}
+
+/* --- Difficulty label (non-collapsible only) via ::after -------------------- */
+.md-typeset .exercise-easy > .admonition-title::after {
+  content: "(easy)";
+  color: var(--rb-gruvbox-green);
+}
+.md-typeset .exercise-intermediate > .admonition-title::after {
+  content: "(intermediate)";
+  color: var(--rb-gruvbox-yellow-dark);
+}
+.md-typeset .exercise-hard > .admonition-title::after {
+  content: "(hard)";
+  color: var(--rb-gruvbox-red);
+}
+
+/* Shared difficulty label style */
+.md-typeset .exercise-easy > .admonition-title::after,
+.md-typeset .exercise-intermediate > .admonition-title::after,
+.md-typeset .exercise-hard > .admonition-title::after {
+  font-size: 0.8em;
+  font-style: italic;
+  margin-left: 0.5em;
+  /* Reset Material ::after */
+  background: none;
+  mask-image: none;
+  -webkit-mask-image: none;
+  position: static;
+  display: inline;
+  width: auto;
+  height: auto;
+}
+
+/* --- Definition list <dt> inside exercises: bold with appended colon -------- */
+.md-typeset .admonition.exercise-easy dt,
+.md-typeset .admonition.exercise-intermediate dt,
+.md-typeset .admonition.exercise-hard dt,
+.md-typeset details.exercise-easy dt,
+.md-typeset details.exercise-intermediate dt,
+.md-typeset details.exercise-hard dt {
+  font-weight: 700;
+}
+.md-typeset .admonition.exercise-easy dt::after,
+.md-typeset .admonition.exercise-intermediate dt::after,
+.md-typeset .admonition.exercise-hard dt::after,
+.md-typeset details.exercise-easy dt::after,
+.md-typeset details.exercise-intermediate dt::after,
+.md-typeset details.exercise-hard dt::after {
+  content: ":";
+}
+
+
+/* For collapsible exercises, ::after is used by Material's chevron.
+   Color the counter text instead to communicate difficulty. */
+.md-typeset details.exercise-easy > summary::before {
+  color: var(--rb-gruvbox-green);
+}
+.md-typeset details.exercise-intermediate > summary::before {
+  color: var(--rb-gruvbox-yellow-dark);
+}
+.md-typeset details.exercise-hard > summary::before {
+  color: var(--rb-gruvbox-red);
+}
+
+/* --- Wide screen: hints inside exercises float to margin ------------------- */
+@media (min-width: 1400px) {
+  .md-typeset [class*="exercise-"] .margin-note {
+    position: absolute;
+    right: -18rem;
+    width: 15rem;
+    float: none;
+    margin: 0;
+  }
+}
+
+/* --- Wide screen: exercises stay full-width, never float to margin --------- */
+@media (min-width: 1400px) {
+  .md-typeset .admonition.exercise-easy,
+  .md-typeset .admonition.exercise-intermediate,
+  .md-typeset .admonition.exercise-hard,
+  .md-typeset details.exercise-easy,
+  .md-typeset details.exercise-intermediate,
+  .md-typeset details.exercise-hard {
+    float: none;
+    clear: both;
+    width: 100%;
+    margin-right: 0;
+    font-size: inherit;
+    background: transparent;
+    border: none;
+    padding: 0;
+    box-shadow: none;
+  }
+
+  .md-typeset .exercise-easy > .admonition-title,
+  .md-typeset .exercise-easy > summary,
+  .md-typeset .exercise-intermediate > .admonition-title,
+  .md-typeset .exercise-intermediate > summary,
+  .md-typeset .exercise-hard > .admonition-title,
+  .md-typeset .exercise-hard > summary {
+    background: transparent;
+    border-bottom: none;
+    font-size: inherit;
+    padding: 0 0 0.4rem 0;
+  }
+}

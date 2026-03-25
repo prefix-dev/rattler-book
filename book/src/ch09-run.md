@@ -148,10 +148,12 @@ without capturing stdout/stderr.
 
 ### Propagating the exit code
 
-!!! warning "Exit code propagation"
+<details class="margin-note" markdown>
+<summary>Exit code propagation</summary>
 
-    Without exit code propagation, `shot run` is unusable in CI: a failing
-    test would appear as a successful pipeline step.
+Without exit code propagation, `shot run` is unusable in CI: a failing
+test would appear as a successful pipeline step.
+</details>
 
 If the child fails, we exit with the same code.  This lets you compose
 `shot run` in shell scripts:

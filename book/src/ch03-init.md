@@ -168,12 +168,14 @@ manifest-read time.
 
 We list channels in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine doesn't silently pick up a different channel list.
 
-!!! note "Why default to conda-forge?"
+<details class="margin-note" markdown>
+<summary>Why default to conda-forge?</summary>
 
-    conda-forge is the largest community channel and covers most packages, so
-    it is the right default for getting started. A real package manager
-    might require an explicit channel list to avoid surprises, but for moonshot
-    the convenience outweighs the risk.
+conda-forge is the largest community channel and covers most packages, so
+it is the right default for getting started. A real package manager
+might require an explicit channel list to avoid surprises, but for moonshot
+the convenience outweighs the risk.
+</details>
 
 #### Methods
 
@@ -242,14 +244,16 @@ It returns a tuple `(PathBuf, Manifest)` because callers sometimes need to
 *write back* to the same path (e.g., `shot add` modifies the manifest before
 installing).
 
-!!! info "Design choice: no walk-up"
+<details class="margin-note" markdown>
+<summary>Design choice: no walk-up</summary>
 
-    `find_in_dir` only looks in the directory you pass it. An alternative
-    design, used by Cargo and npm, walks up the directory tree until it finds a
-    manifest. Walk-up is convenient when you run commands from a subdirectory,
-    but it introduces ambiguity: which manifest did the tool find? For moonshot we
-    chose current-directory-only because it is simpler to reason about and
-    avoids accidentally operating on a parent project.
+`find_in_dir` only looks in the directory you pass it. An alternative
+design, used by Cargo and npm, walks up the directory tree until it finds a
+manifest. Walk-up is convenient when you run commands from a subdirectory,
+but it introduces ambiguity: which manifest did the tool find? For moonshot we
+chose current-directory-only because it is simpler to reason about and
+avoids accidentally operating on a parent project.
+</details>
 
 ### Parsing dependencies as match specs
 

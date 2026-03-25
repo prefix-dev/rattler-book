@@ -71,12 +71,14 @@ projects but `version` is required when `[build]` is present.
 environment, and `shot build` bakes them into the package as runtime
 requirements.
 
-!!! note "Dev dependencies"
+<details class="margin-note" markdown>
+<summary>Dev dependencies</summary>
 
-    In a real-world tool you'd want a `[dev-dependencies]` section for packages
-    needed during development (test runners, linters) but that shouldn't ship in
-    the final package. Moonshot skips this for simplicity, but the pattern is
-    the same as Cargo's or npm's dev dependencies.
+In a real-world tool you'd want a `[dev-dependencies]` section for packages
+needed during development (test runners, linters) but that shouldn't ship in
+the final package. Moonshot skips this for simplicity, but the pattern is
+the same as Cargo's or npm's dev dependencies.
+</details>
 
 The Rust struct that maps to the `[build]` section lives in `manifest.rs`
 alongside `Manifest` and `ProjectMetadata` (which we defined in
@@ -142,11 +144,13 @@ The `.conda` format (version 2) is an uncompressed ZIP containing two inner
 `rattler_package_streaming::write::write_conda_package` handles creating this
 structure.
 
-!!! note "Deep dive"
+<details class="margin-note" markdown>
+<summary>Deep dive</summary>
 
-    For a detailed reference on what's inside a `.conda` archive, including
-    `info/index.json`, `info/paths.json`, and the outer ZIP structure, see
-    [Deep Dive: The conda Package Format](deep-dive-package-format.md).
+For a detailed reference on what's inside a `.conda` archive, including
+`info/index.json`, `info/paths.json`, and the outer ZIP structure, see
+[Deep Dive: The conda Package Format](deep-dive-package-format.md).
+</details>
 
 ### `noarch` packages
 
@@ -1123,14 +1127,16 @@ channels = ["./output", "conda-forge"]
 moonshine = ">=0.3"
 ```
 
-!!! note "Beyond local indexing"
+<details class="margin-note" markdown>
+<summary>Beyond local indexing</summary>
 
-    For a fully-featured package manager, local indexing is only the first step.
-    You would also need a way to push packages to a remote server, sign them so
-    consumers can verify authenticity, and define a trust model (who is allowed
-    to publish, and how do you revoke a compromised key). These are substantial
-    features that we skip in moonshot, but they are the difference between a local
-    build tool and a real distribution system.
+For a fully-featured package manager, local indexing is only the first step.
+You would also need a way to push packages to a remote server, sign them so
+consumers can verify authenticity, and define a trust model (who is allowed
+to publish, and how do you revoke a compromised key). These are substantial
+features that we skip in moonshot, but they are the difference between a local
+build tool and a real distribution system.
+</details>
 
 ## Try it
 

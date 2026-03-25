@@ -562,193 +562,59 @@
 }
 
 /* ===========================================================================
-   Admonitions — Gruvbox palette
+   Margin notes (Tufte sidenotes via <details class="margin-note">)
    =========================================================================== */
-
-/* note, abstract */
-.md-typeset .admonition.note,
-.md-typeset details.note,
-.md-typeset .admonition.abstract,
-.md-typeset details.abstract {
-  border-color: var(--rb-gruvbox-blue);
+.md-typeset details.margin-note {
+  display: block;
+  overflow: hidden;
+  border: none;
+  background: transparent;
+  box-shadow: none;
+  padding: 0;
+  margin: 0.5rem 0;
+  font-size: inherit;
 }
-.md-typeset .note > .admonition-title,
-.md-typeset .note > summary,
-.md-typeset .abstract > .admonition-title,
-.md-typeset .abstract > summary {
-  background-color: color-mix(in srgb, var(--rb-gruvbox-blue) 8%, transparent);
-}
-.md-typeset .note > .admonition-title::before,
-.md-typeset .note > summary::before,
-.md-typeset .abstract > .admonition-title::before,
-.md-typeset .abstract > summary::before {
-  background-color: var(--rb-gruvbox-blue);
-}
-.md-typeset .note > .admonition-title::after,
-.md-typeset .note > summary::after,
-.md-typeset .abstract > .admonition-title::after,
-.md-typeset .abstract > summary::after {
-  color: var(--rb-gruvbox-blue);
+.md-typeset details.margin-note:not([open]) > *:not(summary) {
+  display: none;
 }
 
-/* info */
-.md-typeset .admonition.info,
-.md-typeset details.info {
-  border-color: var(--rb-gruvbox-aqua);
+.md-typeset details.margin-note > summary {
+  font-weight: 600;
+  font-style: italic;
+  color: var(--rb-text-lighter);
+  cursor: pointer;
+  list-style: none;
+  background: transparent;
+  border: none;
+  padding: 0 0 0.2rem 0;
+  margin: 0;
 }
-.md-typeset .info > .admonition-title,
-.md-typeset .info > summary {
-  background-color: color-mix(in srgb, var(--rb-gruvbox-aqua) 8%, transparent);
+/* Hide Material's chevron and icon */
+.md-typeset details.margin-note > summary::after {
+  display: none;
 }
-.md-typeset .info > .admonition-title::before,
-.md-typeset .info > summary::before {
-  background-color: var(--rb-gruvbox-aqua);
+.md-typeset details.margin-note > summary::-webkit-details-marker {
+  display: none;
 }
-.md-typeset .info > .admonition-title::after,
-.md-typeset .info > summary::after {
-  color: var(--rb-gruvbox-aqua);
+/* Expand indicator on mobile — ⊕ when closed, ⊖ when open */
+.md-typeset details.margin-note > summary::before {
+  content: "⊕";
+  display: inline-block;
+  font-style: normal;
+  font-size: 0.85em;
+  margin-right: 0.3em;
+  color: var(--rb-gruvbox-muted);
+  transition: transform 0.2s;
+  background: none;
+  mask-image: none;
+  -webkit-mask-image: none;
+  position: static;
+  width: auto;
+  height: auto;
+  vertical-align: baseline;
 }
-
-/* tip, success */
-.md-typeset .admonition.tip,
-.md-typeset details.tip,
-.md-typeset .admonition.success,
-.md-typeset details.success {
-  border-color: var(--rb-gruvbox-green);
-}
-.md-typeset .tip > .admonition-title,
-.md-typeset .tip > summary,
-.md-typeset .success > .admonition-title,
-.md-typeset .success > summary {
-  background-color: color-mix(in srgb, var(--rb-gruvbox-green) 8%, transparent);
-}
-.md-typeset .tip > .admonition-title::before,
-.md-typeset .tip > summary::before,
-.md-typeset .success > .admonition-title::before,
-.md-typeset .success > summary::before {
-  background-color: var(--rb-gruvbox-green);
-}
-.md-typeset .tip > .admonition-title::after,
-.md-typeset .tip > summary::after,
-.md-typeset .success > .admonition-title::after,
-.md-typeset .success > summary::after {
-  color: var(--rb-gruvbox-green);
-}
-
-/* question */
-.md-typeset .admonition.question,
-.md-typeset details.question {
-  border-color: var(--rb-gruvbox-yellow);
-}
-.md-typeset .question > .admonition-title,
-.md-typeset .question > summary {
-  background-color: color-mix(in srgb, var(--rb-gruvbox-yellow) 8%, transparent);
-}
-.md-typeset .question > .admonition-title::before,
-.md-typeset .question > summary::before {
-  background-color: var(--rb-gruvbox-yellow);
-}
-.md-typeset .question > .admonition-title::after,
-.md-typeset .question > summary::after {
-  color: var(--rb-gruvbox-yellow);
-}
-
-/* warning */
-.md-typeset .admonition.warning,
-.md-typeset details.warning {
-  border-color: var(--rb-gruvbox-orange);
-}
-.md-typeset .warning > .admonition-title,
-.md-typeset .warning > summary {
-  background-color: color-mix(in srgb, var(--rb-gruvbox-orange) 8%, transparent);
-}
-.md-typeset .warning > .admonition-title::before,
-.md-typeset .warning > summary::before {
-  background-color: var(--rb-gruvbox-orange);
-}
-.md-typeset .warning > .admonition-title::after,
-.md-typeset .warning > summary::after {
-  color: var(--rb-gruvbox-orange);
-}
-
-/* danger, failure */
-.md-typeset .admonition.danger,
-.md-typeset details.danger,
-.md-typeset .admonition.failure,
-.md-typeset details.failure {
-  border-color: var(--rb-gruvbox-red);
-}
-.md-typeset .danger > .admonition-title,
-.md-typeset .danger > summary,
-.md-typeset .failure > .admonition-title,
-.md-typeset .failure > summary {
-  background-color: color-mix(in srgb, var(--rb-gruvbox-red) 8%, transparent);
-}
-.md-typeset .danger > .admonition-title::before,
-.md-typeset .danger > summary::before,
-.md-typeset .failure > .admonition-title::before,
-.md-typeset .failure > summary::before {
-  background-color: var(--rb-gruvbox-red);
-}
-.md-typeset .danger > .admonition-title::after,
-.md-typeset .danger > summary::after,
-.md-typeset .failure > .admonition-title::after,
-.md-typeset .failure > summary::after {
-  color: var(--rb-gruvbox-red);
-}
-
-/* bug */
-.md-typeset .admonition.bug,
-.md-typeset details.bug {
-  border-color: var(--rb-gruvbox-purple);
-}
-.md-typeset .bug > .admonition-title,
-.md-typeset .bug > summary {
-  background-color: color-mix(in srgb, var(--rb-gruvbox-purple) 8%, transparent);
-}
-.md-typeset .bug > .admonition-title::before,
-.md-typeset .bug > summary::before {
-  background-color: var(--rb-gruvbox-purple);
-}
-.md-typeset .bug > .admonition-title::after,
-.md-typeset .bug > summary::after {
-  color: var(--rb-gruvbox-purple);
-}
-
-/* example */
-.md-typeset .admonition.example,
-.md-typeset details.example {
-  border-color: var(--rb-gruvbox-purple-dark);
-}
-.md-typeset .example > .admonition-title,
-.md-typeset .example > summary {
-  background-color: color-mix(in srgb, var(--rb-gruvbox-purple-dark) 8%, transparent);
-}
-.md-typeset .example > .admonition-title::before,
-.md-typeset .example > summary::before {
-  background-color: var(--rb-gruvbox-purple-dark);
-}
-.md-typeset .example > .admonition-title::after,
-.md-typeset .example > summary::after {
-  color: var(--rb-gruvbox-purple-dark);
-}
-
-/* quote */
-.md-typeset .admonition.quote,
-.md-typeset details.quote {
-  border-color: var(--rb-gruvbox-gray);
-}
-.md-typeset .quote > .admonition-title,
-.md-typeset .quote > summary {
-  background-color: color-mix(in srgb, var(--rb-gruvbox-gray) 8%, transparent);
-}
-.md-typeset .quote > .admonition-title::before,
-.md-typeset .quote > summary::before {
-  background-color: var(--rb-gruvbox-gray);
-}
-.md-typeset .quote > .admonition-title::after,
-.md-typeset .quote > summary::after {
-  color: var(--rb-gruvbox-gray);
+.md-typeset details.margin-note[open] > summary::before {
+  content: "⊖";
 }
 
 /* ===========================================================================
@@ -776,72 +642,27 @@
     margin-left: 2rem;
     margin-right: 0;
   }
-  .md-typeset .admonition,
-  .md-typeset details {
+  .md-typeset details.margin-note {
     float: right;
     clear: right;
     margin-right: -18rem;
     width: 15rem;
     font-size: 0.8rem;
-    background: transparent;
-    border: none;
-    padding: 0;
-    box-shadow: none;
+    line-height: 1.3;
+    margin-top: 0.3rem;
+    margin-bottom: 0;
+    overflow: visible;
   }
-
-  .md-typeset .admonition .admonition-title,
-  .md-typeset details summary {
-    background: transparent;
-    border-bottom: 2px dashed;
-    display: flex;
-    align-items: center;
-    justify-content: flex-start;
-    gap: 0.3em;
-    padding: 0 0 0.2em 0;
-    font-size: 0.8rem;
-    font-weight: 600;
-    margin: 0 0 0.4em 0;
+  .md-typeset details.margin-note > summary {
+    pointer-events: none;
+    cursor: default;
   }
-
-  /* Icon: reset Material's absolute positioning, sit inline */
-  .md-typeset .admonition .admonition-title::before,
-  .md-typeset details summary::before {
-    position: static !important;
-    display: inline-block;
-    margin: 0;
-    color: var(--md-admonition-fg-color);
+  .md-typeset details.margin-note > summary::before {
+    display: none;
   }
-
-  .md-typeset .admonition p,
-  .md-typeset details p {
+  .md-typeset details.margin-note p {
     margin: 0.3em 0;
   }
-
-  /* Per-type title underline colors — Gruvbox */
-  .md-typeset .note > .admonition-title,
-  .md-typeset .note > summary,
-  .md-typeset .abstract > .admonition-title,
-  .md-typeset .abstract > summary { border-bottom-color: var(--rb-gruvbox-blue); }
-  .md-typeset .info > .admonition-title,
-  .md-typeset .info > summary { border-bottom-color: var(--rb-gruvbox-aqua); }
-  .md-typeset .tip > .admonition-title,
-  .md-typeset .tip > summary,
-  .md-typeset .success > .admonition-title,
-  .md-typeset .success > summary { border-bottom-color: var(--rb-gruvbox-green); }
-  .md-typeset .question > .admonition-title,
-  .md-typeset .question > summary { border-bottom-color: var(--rb-gruvbox-yellow); }
-  .md-typeset .warning > .admonition-title,
-  .md-typeset .warning > summary { border-bottom-color: var(--rb-gruvbox-orange); }
-  .md-typeset .danger > .admonition-title,
-  .md-typeset .danger > summary,
-  .md-typeset .failure > .admonition-title,
-  .md-typeset .failure > summary { border-bottom-color: var(--rb-gruvbox-red); }
-  .md-typeset .bug > .admonition-title,
-  .md-typeset .bug > summary { border-bottom-color: var(--rb-gruvbox-purple); }
-  .md-typeset .example > .admonition-title,
-  .md-typeset .example > summary { border-bottom-color: var(--rb-gruvbox-purple-dark); }
-  .md-typeset .quote > .admonition-title,
-  .md-typeset .quote > summary { border-bottom-color: var(--rb-gruvbox-gray); }
 }
 
 /* Re-center on very wide screens where admonitions fit naturally */

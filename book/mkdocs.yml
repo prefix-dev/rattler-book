@@ -62,6 +62,10 @@ nav:
 
 extra_css:
   - stylesheets/extra.css
+  - stylesheets/exercises.css
+
+extra_javascript:
+  - javascripts/extra.js
 
 plugins:
   - search
@@ -88,6 +92,7 @@ markdown_extensions:
   - pymdownx.tabbed:
       alternate_style: true
   - attr_list
+  - md_in_html
   - def_list
   - admonition
   - pymdownx.details
