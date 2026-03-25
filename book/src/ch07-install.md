@@ -116,6 +116,114 @@ is a no-op.
 
 ## Implementation
 
+### Session install methods
+
+Now that we have the resolve pipeline in `Session`, we can add methods that
+handle the installation side. These live in `src/session.rs` alongside the
+resolve logic:
+
+``` {.rust file=src/session.rs}
+<<session-install-packages>>
+
+<<session-resolve-and-install>>
+```
+
+#### `install_packages`
+
+This method takes a solved set of packages and links them into a prefix.
+It scans the prefix for already-installed packages (to compute a minimal
+transaction) and runs the `Installer` with progress bars.
+
+``` {.rust #session-install-packages}
+impl Session {
+    /// Install a set of solved packages into the given prefix.
+    pub async fn install_packages(
+        &self,
+        prefix: &std::path::Path,
+        solution: Vec<RepoDataRecord>,
+        platform: Platform,
+    ) -> miette::Result<()> {
+        let specs = self.project.manifest.match_specs()?;
+
+        let installed_packages =
+            PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix).into_diagnostic()?;
+
+        let start_install = Instant::now();
+        let result = Installer::new()
+            .with_download_client(self.client.clone())
+            .with_target_platform(platform)
+            .with_installed_packages(installed_packages)
+            .with_execute_link_scripts(true)
+            .with_requested_specs(specs)
+            .with_reporter(IndicatifReporter::builder().finish())
+            .install(prefix, solution)
+            .await
+            .into_diagnostic()
+            .context("installing packages")?;
+
+        if result.transaction.operations.is_empty() {
+            println!(
+                "{} Environment already up to date",
+                console::style("✔").green()
+            );
+        } else {
+            println!(
+                "{} Environment updated in {:.1}s",
+                console::style("✔").green(),
+                start_install.elapsed().as_secs_f64()
+            );
+            println!("  Activate with:  eval $(shot shell)");
+        }
+
+        Ok(())
+    }
+```
+
+The installer needs to know which packages you *directly* requested (as opposed
+to transitive dependencies) via `with_requested_specs`. It records this in the
+`conda-meta/*.json` files so that future updates can correctly distinguish
+"you asked for this" from "installed because something else needed it".
+
+!!! info "Tracking direct vs transitive"
+
+    This distinction drives automatic cleanup: when a direct dependency is
+    removed, the installer can garbage-collect its transitive dependencies that
+    nothing else needs. Both npm and pip added this tracking late in their
+    development, and the lack of it caused years of accumulated orphan packages
+    in user environments.
+
+`IndicatifReporter` is a rattler-provided reporter that shows per-package
+progress bars during download and extraction. If you want custom progress
+display, you can implement your own; it's a trait, not a concrete type.
+
+Setting `with_execute_link_scripts(true)` tells the installer to run conda's
+**link scripts** after installation. These are scripts in
+`<prefix>/etc/conda/activate.d/` that some packages use to set up post-install
+configuration (updating `LUA_PATH`, for example).
+
+Note that `session-install-packages` opens a new `impl Session {` block but
+doesn't close it. The closing brace comes from `session-resolve-and-install`:
+
+#### `resolve_and_install`
+
+This method resolves and installs in one step, without writing a lock file.
+We'll reuse it in the build command ([Chapter 10](ch10-build.md)) to install
+build-time dependencies into a temporary prefix.
+
+``` {.rust #session-resolve-and-install}
+    /// Resolve and install in one step, without writing a lock file.
+    pub async fn resolve_and_install(
+        &self,
+        prefix: std::path::PathBuf,
+    ) -> miette::Result<Vec<RepoDataRecord>> {
+        let (solution, _channels, platform) = self.resolve(vec![]).await?;
+        let result = solution.clone();
+        self.install_packages(&prefix, solution, platform).await?;
+        Ok(result)
+    }
+}
+```
+
 ### `src/commands/install.rs`
 
 Here is the full file skeleton, with each section defined as we encounter it:
@@ -125,34 +233,22 @@ Here is the full file skeleton, with each section defined as we encounter it:
 
 <<install-args>>
 
-<<install-from-manifest>>
-
 <<install-execute>>
-
-<<install-run-installer>>
 ```
 
 #### Imports
 
 ``` {.rust #install-imports}
-use std::env;
-use std::time::Instant;
-
 use clap::Parser;
 use miette::{Context, IntoDiagnostic};
-use rattler::install::{IndicatifReporter, Installer};
-use rattler_conda_types::{
-    MatchSpec, ParseMatchSpecOptions, Platform, PrefixRecord, RepoDataRecord,
-};
 
-use crate::client::build_authenticated_client;
-use crate::lock::{is_lock_fresh, read_lock_file, write_lock_file, LOCK_FILENAME};
-use crate::manifest::Manifest;
-use crate::resolve::{read_locked_packages, resolve_from_manifest};
+use crate::lock::LOCK_FILENAME;
+use crate::project::Project;
+use crate::session::{ResolveStatus, Session};
 ```
 
-Most of the gateway and solver imports are gone; the resolve pipeline lives
-in `src/resolve.rs` ([Chapter 6](ch06-lock.md)).
+The imports are much lighter now: the install command delegates to `Session`
+for both resolving and installing.
 
 #### Args
 
@@ -167,186 +263,50 @@ pub struct Args {
 }
 ```
 
-#### The `install_from_manifest` function
-
-This function resolves dependencies and installs them in one step. We'll reuse
-it in the build command ([Chapter 10](ch10-build.md)) to install build-time
-dependencies. It returns the solved records so callers can inspect what was
-installed.
-
-``` {.rust #install-from-manifest}
-/// Shared install logic: resolve from the manifest, then install into `prefix`.
-///
-/// Pulling this out into its own function means the build command can call
-/// it to install build dependencies without duplicating any networking or
-/// solving code.
-pub async fn install_from_manifest(
-    manifest: &Manifest,
-    prefix: std::path::PathBuf,
-) -> miette::Result<Vec<RepoDataRecord>> {
-    let (solution, _channels, platform) = resolve_from_manifest(manifest, vec![]).await?;
-    let result = solution.clone();
-    run_installer(manifest, &prefix, solution, platform).await?;
-    Ok(result)
-}
-```
-
-`resolve_from_manifest` runs the full pipeline (specs, HTTP, gateway, solver)
-and returns the solution. We clone the solution before handing it to the
-installer, which consumes it. The build command calls this function without
-going through the lock file, since build environments are temporary.
-
 #### The execute function
 
-The `execute` function is our entry point for `shot install`. It checks the
-lock file before deciding whether to resolve.
+The `execute` function is our entry point for `shot install`. It uses
+`Session::ensure_resolved` to check the lock file and resolve if needed,
+then calls `install_packages` to link everything into the prefix.
 
 ``` {.rust #install-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
-    let cwd = env::current_dir().into_diagnostic()?;
-    let (manifest_path, manifest) = Manifest::find_in_dir(&cwd)?;
+    let project = Project::discover()?;
+    let session = Session::new(project)?;
 
-    let prefix = args.prefix.unwrap_or_else(|| super::prefix_dir(&cwd));
+    let prefix = args
+        .prefix
+        .unwrap_or_else(|| session.project.default_prefix());
     std::fs::create_dir_all(&prefix)
         .into_diagnostic()
         .context("creating prefix directory")?;
     let prefix = std::path::absolute(prefix).into_diagnostic()?;
 
-    let lock_path = cwd.join(LOCK_FILENAME);
-    let platform = Platform::current();
+    let status = session.ensure_resolved(false).await?;
 
-    let solution = if is_lock_fresh(&lock_path, &manifest_path) {
-        read_lock_file(&lock_path, platform)?
-    } else {
-        let existing = read_locked_packages(&lock_path, platform);
-        let (solution, channels, platform) = resolve_from_manifest(&manifest, existing).await?;
-        write_lock_file(&lock_path, &channels, platform, &solution)?;
-        println!(
-            "{} Wrote {} ({} packages)",
-            console::style("✔").green(),
-            LOCK_FILENAME,
-            console::style(solution.len()).cyan()
-        );
-        solution
-    };
+    match &status {
+        ResolveStatus::AlreadyFresh(_) => {}
+        ResolveStatus::Resolved { solution, .. } => {
+            println!(
+                "{} Wrote {} ({} packages)",
+                console::style("✔").green(),
+                LOCK_FILENAME,
+                console::style(solution.len()).cyan()
+            );
+        }
+    }
 
-    run_installer(&manifest, &prefix, solution, platform).await
+    let platform = rattler_conda_types::Platform::current();
+    session
+        .install_packages(&prefix, status.into_solution(), platform)
+        .await
 }
 ```
 
-If the lock is fresh, `read_lock_file` returns the exact solution that was
-recorded previously, and the solver is never invoked. If the lock is stale or
-missing, we read whatever existing records the lock contains (for the solver's
-`locked_packages` preference), resolve, write the new lock, and print a
-confirmation message.
-
-#### The installer
-
-`run_installer` takes our solved set of packages and links them into the prefix.
-We build a lightweight HTTP client for package downloads, scan the prefix for
-already-installed packages (to compute a minimal transaction), and run the
-`Installer`.
-
-``` {.rust #install-run-installer}
-async fn run_installer(
-    manifest: &Manifest,
-    prefix: &std::path::Path,
-    solution: Vec<RepoDataRecord>,
-    platform: Platform,
-) -> miette::Result<()> {
-    <<parse-install-specs>>
-    <<install-client>>
-    <<run-install>>
-}
-```
-
-We re-parse the manifest specs so the installer knows which packages you
-directly requested (as opposed to transitive dependencies pulled in by the
-solver).
-
-``` {.rust #parse-install-specs}
-let match_spec_opts = ParseMatchSpecOptions::default();
-let specs: Vec<MatchSpec> = manifest
-    .dependencies
-    .iter()
-    .map(|(name, version)| {
-        let spec_str = if version == "*" {
-            name.clone()
-        } else {
-            format!("{name} {version}")
-        };
-        MatchSpec::from_str(&spec_str, match_spec_opts)
-            .into_diagnostic()
-            .with_context(|| format!("parsing spec `{spec_str}`"))
-    })
-    .collect::<miette::Result<_>>()?;
-```
-
-The HTTP client reuses the shared helper from [Chapter 4](ch04-search.md).
-
-``` {.rust #install-client}
-let client = build_authenticated_client()?;
-```
-
-Finally we scan the prefix for already-installed packages, build a minimal
-transaction, and run the `Installer`. It shows per-package progress bars via
-`IndicatifReporter`.
-
-``` {.rust #run-install}
-let installed_packages =
-    PrefixRecord::collect_from_prefix::<PrefixRecord>(prefix).into_diagnostic()?;
-
-let start_install = Instant::now();
-let result = Installer::new()
-    .with_download_client(client)
-    .with_target_platform(platform)
-    .with_installed_packages(installed_packages)
-    .with_execute_link_scripts(true)
-    .with_requested_specs(specs)
-    .with_reporter(IndicatifReporter::builder().finish())
-    .install(prefix, solution)
-    .await
-    .into_diagnostic()
-    .context("installing packages")?;
-
-if result.transaction.operations.is_empty() {
-    println!(
-        "{} Environment already up to date",
-        console::style("✔").green()
-    );
-} else {
-    println!(
-        "{} Environment updated in {:.1}s",
-        console::style("✔").green(),
-        start_install.elapsed().as_secs_f64()
-    );
-    println!("  Activate with:  eval $(shot shell)");
-}
-
-Ok(())
-```
-
-`IndicatifReporter` is a rattler-provided reporter that shows per-package
-progress bars during download and extraction. If you want custom progress
-display, you can implement your own; it's a trait, not a concrete type.
-
-Setting `with_execute_link_scripts(true)` tells the installer to run conda's
-**link scripts** after installation. These are scripts in
-`<prefix>/etc/conda/activate.d/` that some packages use to set up post-install
-configuration (updating `LUA_PATH`, for example).
-
-The installer needs to know which packages you *directly* requested (as opposed
-to transitive dependencies) via `with_requested_specs`. It records this in the
-`conda-meta/*.json` files so that future updates can correctly distinguish
-"you asked for this" from "installed because something else needed it".
-
-!!! info "Tracking direct vs transitive"
-
-    This distinction drives automatic cleanup: when a direct dependency is
-    removed, the installer can garbage-collect its transitive dependencies that
-    nothing else needs. Both npm and pip added this tracking late in their
-    development, and the lack of it caused years of accumulated orphan packages
-    in user environments.
+If the lock is fresh, `ensure_resolved` returns `AlreadyFresh` and the solver
+is never invoked. If the lock is stale or missing, it resolves, writes the new
+lock, and returns the solution. Either way, `install_packages` links the
+packages into the prefix.
 
 ## Running `shot install`
 
@@ -429,12 +389,13 @@ hashes. You can inspect these to see exactly what's in your environment.
 - The install command checks the lock file before doing any work.
 - If the lock is fresh, packages are installed directly from it (no solver,
   no network).
-- If the lock is stale or missing, `resolve_from_manifest` runs the full
+- If the lock is stale or missing, `Session::ensure_resolved` runs the full
   pipeline and the result is written to `moonshot.lock` before installation.
 - The `Installer` computes a transaction (diff) and applies only the changes.
 - Files are linked from the central cache into the prefix, using reflinks
   where available and falling back to hard links or copies.
-- `install_from_manifest` provides a one-call interface for the build command.
+- `Session::resolve_and_install` provides a one-call interface for the build
+  command.
 
 In the next chapter we set up shell hooks, which generate activation
 scripts so you can use the installed packages.

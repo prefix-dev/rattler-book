@@ -198,233 +198,9 @@ The `rattler_lock` crate handles serialization and deserialization.
 
 ## Implementation
 
-### `src/resolve.rs`
-
-The resolve module is a shared helper that we'll reuse in both the lock and
-install commands. It handles the full resolve pipeline: parse specs from the
-manifest, set up an HTTP client and gateway (the same pattern we built in
-[Chapter 4](ch04-search.md)'s search command), fetch repodata recursively,
-detect virtual packages, and run the solver.
-
-``` {.rust file=src/resolve.rs}
-<<resolve-imports>>
-
-<<resolve-read-locked>>
-
-<<resolve-fn>>
-
-<<resolve-helpers>>
-```
-
-#### Imports
-
-``` {.rust #resolve-imports}
-use std::collections::HashMap;
-use std::env;
-use std::time::Instant;
-
-use miette::{Context, IntoDiagnostic};
-use rattler::package_cache::PackageCache;
-use rattler_cache::{PACKAGE_CACHE_DIR, REPODATA_CACHE_DIR};
-use rattler_conda_types::{
-    Channel, ChannelConfig, GenericVirtualPackage, MatchSpec, ParseMatchSpecOptions, Platform,
-    RepoDataRecord,
-};
-use rattler_repodata_gateway::{Gateway, RepoData, SourceConfig};
-use rattler_solve::{resolvo, SolverImpl, SolverTask};
-
-use crate::client::build_authenticated_client;
-use crate::lock::read_lock_file;
-use crate::manifest::Manifest;
-use crate::progress::with_spinner;
-```
-
-#### Reading existing locked packages
-
-Before resolving, both `shot lock` and `shot install` read any existing lock
-file to extract locked packages. If the file is missing or unreadable, an
-empty vector is returned so the solver starts fresh.
-
-``` {.rust #resolve-read-locked}
-/// Read existing locked packages from the lock file, if it exists.
-///
-/// Returns the records from the lock or an empty vector if the file
-/// is missing or unreadable. These records can be passed to the solver
-/// as `locked_packages` for stable upgrades.
-pub fn read_locked_packages(
-    lock_path: &std::path::Path,
-    platform: Platform,
-) -> Vec<RepoDataRecord> {
-    if lock_path.exists() {
-        read_lock_file(lock_path, platform).unwrap_or_default()
-    } else {
-        Vec::new()
-    }
-}
-```
-
-#### The resolve function
-
-`resolve_from_manifest` runs the full resolve pipeline and returns the
-solution, the parsed channels, and the current platform. Callers use the
-channels and platform to write the lock file.
-
-``` {.rust #resolve-fn}
-/// Resolve dependencies from a manifest.
-///
-/// This is the shared resolve pipeline: parse specs, set up the HTTP
-/// client and gateway, fetch repodata, detect virtual packages, and
-/// run the solver. Both `shot lock` and `shot install` call this.
-pub async fn resolve_from_manifest(
-    manifest: &Manifest,
-    locked_packages: Vec<RepoDataRecord>,
-) -> miette::Result<(Vec<RepoDataRecord>, Vec<Channel>, Platform)> {
-    <<parse-specs>>
-    <<setup-client>>
-    <<fetch-repodata>>
-    <<run-solver>>
-}
-```
-
-##### Parsing match specs
-
-We convert each `(name, version)` pair from the manifest into a `MatchSpec`,
-the same way the search command does in [Chapter 4](ch04-search.md).
-
-``` {.rust #parse-specs}
-let channel_config =
-    ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
-
-let match_spec_opts = ParseMatchSpecOptions::default();
-let specs: Vec<MatchSpec> = manifest
-    .dependencies
-    .iter()
-    .map(|(name, version)| {
-        let spec_str = if version == "*" {
-            name.clone()
-        } else {
-            format!("{name} {version}")
-        };
-        MatchSpec::from_str(&spec_str, match_spec_opts)
-            .into_diagnostic()
-            .with_context(|| format!("parsing spec `{spec_str}`"))
-    })
-    .collect::<miette::Result<_>>()?;
-```
-
-##### Setting up the HTTP client
-
-We reuse the shared HTTP client helper from [Chapter 4](ch04-search.md).
-
-``` {.rust #setup-client}
-let cache_dir = rattler::default_cache_dir()
-    .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
-rattler_cache::ensure_cache_dir(&cache_dir)
-    .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
-
-let client = build_authenticated_client()?;
-```
-
-##### Fetching repodata
-
-Next we parse channels, set up the Gateway, and query repodata. The key
-difference from the search command is `.recursive(true)`, because we need transitive
-dependencies, not just direct matches.
-
-``` {.rust #fetch-repodata}
-let channels: Vec<Channel> = manifest
-    .project
-    .channels
-    .iter()
-    .map(|s| Channel::from_str(s, &channel_config))
-    .collect::<Result<_, _>>()
-    .into_diagnostic()
-    .context("parsing channels")?;
-
-let platform = Platform::current();
-
-let gateway = Gateway::builder()
-    .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
-    .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
-    .with_client(client)
-    .with_channel_config(rattler_repodata_gateway::ChannelConfig {
-        default: SourceConfig {
-            sharded_enabled: true,
-            ..SourceConfig::default()
-        },
-        per_channel: HashMap::new(),
-    })
-    .finish();
-
-let repo_data: Vec<RepoData> = with_spinner(
-    "Fetching repodata",
-    gateway
-        .query(
-            channels.clone(),
-            [platform, Platform::NoArch],
-            specs.clone(),
-        )
-        .recursive(true),
-)
-.await
-.into_diagnostic()
-.context("fetching repodata")?;
-
-let total_records: usize = repo_data.iter().map(RepoData::len).sum();
-println!(
-    "  {} repodata records loaded",
-    console::style(total_records).cyan()
-);
-```
-
-##### Running the solver
-
-Finally we detect virtual packages (like `__linux` or `__osx`), build a
-`SolverTask`, and run the solver. `locked_packages` allows callers to pass
-records from an existing (stale) lock file. The solver treats them as
-preferences, not hard constraints. On the first run with no lock, callers pass
-an empty vector.
-
-``` {.rust #run-solver}
-let virtual_packages: Vec<GenericVirtualPackage> =
-    rattler_virtual_packages::VirtualPackage::detect(
-        &rattler_virtual_packages::VirtualPackageOverrides::default(),
-    )
-    .into_diagnostic()
-    .context("detecting virtual packages")?
-    .into_iter()
-    .map(|v| v.into())
-    .collect();
-
-let solver_task = SolverTask {
-    locked_packages,
-    virtual_packages,
-    specs,
-    ..SolverTask::from_iter(&repo_data)
-};
-
-let start_solve = Instant::now();
-let solution = with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
-    .into_diagnostic()
-    .context("solving dependencies")?
-    .records;
-
-println!(
-    "  Solved {} packages in {:.1}s",
-    console::style(solution.len()).cyan(),
-    start_solve.elapsed().as_secs_f64()
-);
-
-Ok((solution, channels, platform))
-```
-
-#### Sync spinner helper
-
-``` {.rust #resolve-helpers}
-fn with_spinner_sync<T, F: FnOnce() -> T>(msg: &'static str, f: F) -> T {
-    crate::progress::with_spinner_sync(msg, f)
-}
-```
+The resolution logic that was previously in a standalone `src/resolve.rs` now
+lives in the `Session` struct, which bundles the project, HTTP client, and
+repodata gateway into a single object. We introduce it later in this chapter.
 
 ### The sync spinner
 
@@ -457,6 +233,8 @@ check, a reader, and a writer. The lock command will orchestrate them.
 <<lock-is-fresh>>
 
 <<lock-read>>
+
+<<lock-read-locked>>
 
 <<lock-write>>
 
@@ -535,6 +313,29 @@ pub fn read_lock_file(lock_path: &Path, platform: Platform) -> miette::Result<Ve
 `conda_repodata_records` converts the locked packages back into
 `RepoDataRecord`s that the `Installer` understands.
 
+#### Reading existing locked packages
+
+Before resolving, both `shot lock` and `shot install` read any existing lock
+file to extract locked packages. If the file is missing or unreadable, an
+empty vector is returned so the solver starts fresh.
+
+``` {.rust #lock-read-locked}
+/// Read existing locked packages from the lock file, if it exists.
+///
+/// Returns the records from the lock or an empty vector if the file
+/// is missing or unreadable.
+pub fn read_locked_packages(
+    lock_path: &std::path::Path,
+    platform: Platform,
+) -> Vec<RepoDataRecord> {
+    if lock_path.exists() {
+        read_lock_file(lock_path, platform).unwrap_or_default()
+    } else {
+        Vec::new()
+    }
+}
+```
+
 #### Writing a lock file
 
 ``` {.rust #lock-write}
@@ -581,10 +382,299 @@ The conversion `record.clone().into()` turns a `RepoDataRecord` into
 `rattler_lock::CondaPackageData`, preserving the download URL, hash, and full
 dependency metadata.
 
+### Extending `Project` with lock helpers
+
+The `Project` struct from [Chapter 5](ch05-project.md) knows where the
+manifest lives but has no concept of locking yet. We add two small methods:
+`lock_path` returns the expected lock file location, and `is_lock_fresh`
+delegates to the freshness check we just wrote.
+
+``` {.rust file=src/project.rs}
+<<project-lock-imports>>
+
+<<project-lock-methods>>
+```
+
+``` {.rust #project-lock-imports}
+use crate::lock::{is_lock_fresh, LOCK_FILENAME};
+```
+
+``` {.rust #project-lock-methods}
+impl Project {
+    /// Path to the lock file (`moonshot.lock`).
+    pub fn lock_path(&self) -> PathBuf {
+        self.root.join(LOCK_FILENAME)
+    }
+
+    /// Returns `true` when the lock file exists and is newer than the
+    /// manifest, meaning the solver does not need to run again.
+    pub fn is_lock_fresh(&self) -> bool {
+        is_lock_fresh(&self.lock_path(), &self.manifest_path)
+    }
+}
+```
+
+## The Session abstraction
+
+Several commands (lock, install, and later build) need the same set of
+resources: a `Project`, an HTTP client, a repodata `Gateway`, and a cache
+directory. Rather than constructing these independently in every command, we
+bundle them into a `Session` struct that is created once and threaded through
+the pipeline.
+
+`Session` also owns the resolve logic that was previously in a standalone
+`resolve.rs` module. By making resolution a method on `Session`, every command
+that needs a fresh solve can call `session.ensure_resolved(force)` and get
+back either a cached lock or a freshly computed one.
+
+### `src/session.rs`
+
+``` {.rust file=src/session.rs}
+<<session-imports>>
+
+<<resolve-status-enum>>
+
+<<session-struct>>
+
+<<session-new>>
+
+<<session-channels>>
+
+<<session-resolve>>
+
+<<session-ensure-resolved>>
+```
+
+#### Imports
+
+``` {.rust #session-imports}
+use std::collections::HashMap;
+use std::time::Instant;
+
+use miette::{Context, IntoDiagnostic};
+use rattler::install::{IndicatifReporter, Installer};
+use rattler::package_cache::PackageCache;
+use rattler_cache::{PACKAGE_CACHE_DIR, REPODATA_CACHE_DIR};
+use rattler_conda_types::{
+    Channel, ChannelConfig, GenericVirtualPackage, Platform, PrefixRecord, RepoDataRecord,
+};
+use rattler_repodata_gateway::{Gateway, RepoData, SourceConfig};
+use rattler_solve::{resolvo, SolverImpl, SolverTask};
+
+use crate::client::build_authenticated_client;
+use crate::lock::{read_lock_file, read_locked_packages, write_lock_file};
+use crate::progress::{with_spinner, with_spinner_sync};
+use crate::project::Project;
+```
+
+#### ResolveStatus
+
+The `ensure_resolved` method returns a `ResolveStatus` so that callers can
+distinguish between a cached result and a fresh solve. The lock command uses
+this to print different messages; the install command just extracts the
+solution.
+
+``` {.rust #resolve-status-enum}
+/// The outcome of [`Session::ensure_resolved`].
+pub enum ResolveStatus {
+    /// The lock file was already up to date; no work was done.
+    AlreadyFresh(Vec<RepoDataRecord>),
+    /// A fresh solve was performed and the lock file was written.
+    Resolved {
+        solution: Vec<RepoDataRecord>,
+        #[allow(dead_code)]
+        platform: Platform,
+    },
+}
+
+#[allow(dead_code)]
+impl ResolveStatus {
+    /// Extract the solution regardless of which variant we are.
+    pub fn solution(&self) -> &[RepoDataRecord] {
+        match self {
+            ResolveStatus::AlreadyFresh(s) => s,
+            ResolveStatus::Resolved { solution, .. } => solution,
+        }
+    }
+
+    pub fn into_solution(self) -> Vec<RepoDataRecord> {
+        match self {
+            ResolveStatus::AlreadyFresh(s) => s,
+            ResolveStatus::Resolved { solution, .. } => solution,
+        }
+    }
+}
+```
+
+#### The Session struct
+
+``` {.rust #session-struct}
+/// Bundles a [`Project`] with an HTTP client and repodata gateway.
+#[allow(dead_code)]
+pub struct Session {
+    pub project: Project,
+    pub client: reqwest_middleware::ClientWithMiddleware,
+    pub gateway: Gateway,
+    pub cache_dir: std::path::PathBuf,
+    pub channel_config: ChannelConfig,
+}
+```
+
+#### Creating a Session
+
+``` {.rust #session-new}
+impl Session {
+    /// Create a new session from a discovered project.
+    pub fn new(project: Project) -> miette::Result<Self> {
+        let cache_dir = rattler::default_cache_dir()
+            .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
+        rattler_cache::ensure_cache_dir(&cache_dir)
+            .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
+
+        let client = build_authenticated_client()?;
+        let channel_config = ChannelConfig::default_with_root_dir(project.root.clone());
+
+        let gateway = Gateway::builder()
+            .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
+            .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
+            .with_client(client.clone())
+            .with_channel_config(rattler_repodata_gateway::ChannelConfig {
+                default: SourceConfig {
+                    sharded_enabled: true,
+                    ..SourceConfig::default()
+                },
+                per_channel: HashMap::new(),
+            })
+            .finish();
+
+        Ok(Self {
+            project,
+            client,
+            gateway,
+            cache_dir,
+            channel_config,
+        })
+    }
+```
+
+#### Parsing channels
+
+``` {.rust #session-channels}
+    /// Parse the manifest channels into typed [`Channel`] values.
+    pub fn channels(&self) -> miette::Result<Vec<Channel>> {
+        self.project
+            .manifest
+            .project
+            .channels
+            .iter()
+            .map(|s| Channel::from_str(s, &self.channel_config))
+            .collect::<Result<_, _>>()
+            .into_diagnostic()
+            .context("parsing channels")
+    }
+```
+
+#### The resolve method
+
+`resolve` runs the full dependency-resolution pipeline: parse specs from the
+manifest, fetch repodata recursively, detect virtual packages, and run the
+solver. It returns the solution, channels, and platform so that callers can
+write the lock file.
+
+``` {.rust #session-resolve}
+    /// Run the full dependency-resolution pipeline.
+    pub async fn resolve(
+        &self,
+        locked_packages: Vec<RepoDataRecord>,
+    ) -> miette::Result<(Vec<RepoDataRecord>, Vec<Channel>, Platform)> {
+        let specs = self.project.manifest.match_specs()?;
+        let channels = self.channels()?;
+        let platform = Platform::current();
+
+        let repo_data: Vec<RepoData> = with_spinner(
+            "Fetching repodata",
+            self.gateway
+                .query(
+                    channels.clone(),
+                    [platform, Platform::NoArch],
+                    specs.clone(),
+                )
+                .recursive(true),
+        )
+        .await
+        .into_diagnostic()
+        .context("fetching repodata")?;
+
+        let total_records: usize = repo_data.iter().map(RepoData::len).sum();
+        println!(
+            "  {} repodata records loaded",
+            console::style(total_records).cyan()
+        );
+
+        let virtual_packages: Vec<GenericVirtualPackage> =
+            rattler_virtual_packages::VirtualPackage::detect(
+                &rattler_virtual_packages::VirtualPackageOverrides::default(),
+            )
+            .into_diagnostic()
+            .context("detecting virtual packages")?
+            .into_iter()
+            .map(|v| v.into())
+            .collect();
+
+        let solver_task = SolverTask {
+            locked_packages,
+            virtual_packages,
+            specs,
+            ..SolverTask::from_iter(&repo_data)
+        };
+
+        let start_solve = Instant::now();
+        let solution = with_spinner_sync("Solving", || resolvo::Solver.solve(solver_task))
+            .into_diagnostic()
+            .context("solving dependencies")?
+            .records;
+
+        println!(
+            "  Solved {} packages in {:.1}s",
+            console::style(solution.len()).cyan(),
+            start_solve.elapsed().as_secs_f64()
+        );
+
+        Ok((solution, channels, platform))
+    }
+```
+
+#### Ensuring the lock is up to date
+
+`ensure_resolved` is the main entry point for commands that need a solved
+environment. It checks freshness, reads any existing lock records as solver
+preferences, resolves if needed, and writes the lock file.
+
+``` {.rust #session-ensure-resolved}
+    /// Ensure the lock file is up to date, resolving if necessary.
+    pub async fn ensure_resolved(&self, force: bool) -> miette::Result<ResolveStatus> {
+        let lock_path = self.project.lock_path();
+        let platform = Platform::current();
+
+        if !force && self.project.is_lock_fresh() {
+            let records = read_lock_file(&lock_path, platform)?;
+            return Ok(ResolveStatus::AlreadyFresh(records));
+        }
+
+        let existing = read_locked_packages(&lock_path, platform);
+        let (solution, channels, platform) = self.resolve(existing).await?;
+
+        write_lock_file(&lock_path, &channels, platform, &solution)?;
+
+        Ok(ResolveStatus::Resolved { solution, platform })
+    }
+}
+```
+
 ### `src/commands/lock.rs`
 
-With the resolve logic in `src/resolve.rs`, our lock command ends up quite
-small. It checks freshness, calls the resolver, and writes the result.
+With `Session` handling the heavy lifting, the lock command becomes a thin
+wrapper: discover the project, create a session, and call `ensure_resolved`.
 
 ``` {.rust file=src/commands/lock.rs}
 <<lock-cmd-imports>>
@@ -597,15 +687,11 @@ small. It checks freshness, calls the resolver, and writes the result.
 #### Imports
 
 ``` {.rust #lock-cmd-imports}
-use std::env;
-
 use clap::Parser;
-use miette::IntoDiagnostic;
-use rattler_conda_types::Platform;
 
-use crate::lock::{is_lock_fresh, write_lock_file, LOCK_FILENAME};
-use crate::manifest::Manifest;
-use crate::resolve::{read_locked_packages, resolve_from_manifest};
+use crate::lock::LOCK_FILENAME;
+use crate::project::Project;
+use crate::session::{ResolveStatus, Session};
 ```
 
 #### Args
@@ -621,39 +707,28 @@ pub struct Args {
 
 #### The execute function
 
-Our execute function has three phases: check freshness, resolve, and write the lock.
-
 ``` {.rust #lock-cmd-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
-    let cwd = env::current_dir().into_diagnostic()?;
-    let (manifest_path, manifest) = Manifest::find_in_dir(&cwd)?;
-    let lock_path = cwd.join(LOCK_FILENAME);
+    let project = Project::discover()?;
+    let session = Session::new(project)?;
 
-    if !args.force && is_lock_fresh(&lock_path, &manifest_path) {
-        println!("{} Lock is already up to date", console::style("✔").green());
-        return Ok(());
+    match session.ensure_resolved(args.force).await? {
+        ResolveStatus::AlreadyFresh(_) => {
+            println!("{} Lock is already up to date", console::style("✔").green());
+        }
+        ResolveStatus::Resolved { ref solution, .. } => {
+            println!(
+                "{} Wrote {} ({} packages)",
+                console::style("✔").green(),
+                LOCK_FILENAME,
+                console::style(solution.len()).cyan()
+            );
+        }
     }
-
-    let platform = Platform::current();
-    let existing = read_locked_packages(&lock_path, platform);
-    let (solution, channels, platform) = resolve_from_manifest(&manifest, existing).await?;
-
-    write_lock_file(&lock_path, &channels, platform, &solution)?;
-
-    println!(
-        "{} Wrote {} ({} packages)",
-        console::style("✔").green(),
-        LOCK_FILENAME,
-        console::style(solution.len()).cyan()
-    );
 
     Ok(())
 }
 ```
-
-The freshness check exits early when the lock is newer than the manifest.
-Otherwise we read any existing lock records for the solver's `locked_packages`
-preference and call `resolve_from_manifest` to run the full pipeline.
 
 ## Testing
 
@@ -828,8 +903,8 @@ satisfied together.
 
 - `shot lock` resolves dependencies and writes `moonshot.lock`.
 - If the lock is already fresh, the command exits immediately.
-- `resolve_from_manifest` is a shared helper that handles the full resolve
-  pipeline: specs, HTTP client, gateway, repodata, virtual packages, solver.
+- `Session` bundles a `Project`, HTTP client, and repodata gateway. Its
+  `ensure_resolved` method handles the full resolve pipeline and lock writing.
 - `is_lock_fresh` compares modification times to decide whether to re-solve.
 - `read_lock_file` extracts `RepoDataRecord`s from the lock via `rattler_lock`.
 - `write_lock_file` builds a `LockFile` from the solver output and writes YAML.

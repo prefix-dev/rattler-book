@@ -31,15 +31,85 @@ duplicate entry or change the existing version constraint.
 
 ## Implementation
 
+The `add` command is where we first use the `Project` struct — a small
+abstraction that finds the manifest from the current directory and provides
+helpers for saving changes back to disk. We introduce `Project` in its own
+file.
+
+### `src/project.rs`
+
+The `Project` struct centralises the boilerplate that every command repeats:
+find the manifest, compute the project root, and derive paths from it. We
+define it here and extend it with more methods in later chapters.
+
+``` {.rust file=src/project.rs}
+<<project-imports>>
+
+<<project-struct>>
+
+<<project-impl>>
+```
+
+``` {.rust #project-imports}
+use std::path::PathBuf;
+
+use miette::IntoDiagnostic;
+
+use crate::manifest::Manifest;
+```
+
+``` {.rust #project-struct}
+/// A discovered project on disk.
+///
+/// Bundles the project root, manifest path, and parsed manifest into a
+/// single value so that every command does not have to repeat the same
+/// discovery boilerplate.
+pub struct Project {
+    /// The directory that contains `moonshot.toml`.
+    pub root: PathBuf,
+    /// Absolute path to `moonshot.toml`.
+    pub manifest_path: PathBuf,
+    /// The parsed manifest.
+    pub manifest: Manifest,
+}
+```
+
+``` {.rust #project-impl}
+impl Project {
+    /// Discover the project from the current working directory.
+    pub fn discover() -> miette::Result<Self> {
+        let cwd = std::env::current_dir().into_diagnostic()?;
+        let (manifest_path, manifest) = Manifest::find_in_dir(&cwd)?;
+        let root = manifest_path
+            .parent()
+            .expect("manifest path always has a parent")
+            .to_path_buf();
+        Ok(Self {
+            root,
+            manifest_path,
+            manifest,
+        })
+    }
+
+    /// The default prefix directory for the conda environment.
+    pub fn default_prefix(&self) -> PathBuf {
+        self.root.join(".env")
+    }
+
+    /// Persist the (possibly modified) manifest back to disk.
+    pub fn save(&self) -> miette::Result<()> {
+        self.manifest.write(&self.manifest_path)
+    }
+}
+```
+
 ### `src/commands/add.rs`
 
 ``` {.rust file=src/commands/add.rs}
-use std::env;
-
 use clap::Parser;
-use miette::IntoDiagnostic;
 
-use crate::manifest::{Manifest, MANIFEST_FILENAME};
+use crate::manifest::MANIFEST_FILENAME;
+use crate::project::Project;
 
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -49,21 +119,20 @@ pub struct Args {
 }
 
 pub async fn execute(args: Args) -> miette::Result<()> {
-    let cwd = env::current_dir().into_diagnostic()?;
-    let manifest_path = cwd.join(MANIFEST_FILENAME);
-    let (_, mut manifest) = Manifest::find_in_dir(&cwd)?;
+    let mut project = Project::discover()?;
 
     let mut added = 0usize;
     for pkg in &args.packages {
         let (name, version) = split_spec(pkg);
-        manifest
+        project
+            .manifest
             .dependencies
             .entry(name.to_string())
             .or_insert_with(|| version.to_string());
         added += 1;
     }
 
-    manifest.write(&manifest_path)?;
+    project.save()?;
     println!(
         "{} Added {added} package(s) to `{MANIFEST_FILENAME}`",
         console::style("✔").green()

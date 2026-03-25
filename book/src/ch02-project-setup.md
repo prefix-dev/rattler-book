@@ -141,10 +141,13 @@ Here is how the project is structured:
       <li class="file"><span class="name">lock.rs</span> <span class="comment">moonshot.lock reader/writer</span></li>
       <li class="file"><span class="name">manifest.rs</span> <span class="comment">moonshot.toml parser</span></li>
       <li class="file"><span class="name">progress.rs</span> <span class="comment">spinner helpers</span></li>
-      <li class="file"><span class="name">resolve.rs</span> <span class="comment">shared dependency resolver</span></li>
+      <li class="file"><span class="name">project.rs</span> <span class="comment">project discovery</span></li>
+      <li class="file"><span class="name">session.rs</span> <span class="comment">networking + resolve</span></li>
+      <li class="file"><span class="name">environment.rs</span> <span class="comment">prefix activation</span></li>
+      <li class="file"><span class="name">build_backend.rs</span> <span class="comment">build trait</span></li>
       <li class="dir"><span class="name">commands/</span>
         <ul>
-          <li class="file"><span class="name">mod.rs</span> <span class="comment">shared helpers (prefix_dir)</span></li>
+          <li class="file"><span class="name">mod.rs</span> <span class="comment">module declarations</span></li>
           <li class="file"><span class="name">init.rs</span></li>
           <li class="file"><span class="name">add.rs</span></li>
           <li class="file"><span class="name">install.rs</span></li>
@@ -161,9 +164,7 @@ Here is how the project is structured:
 
 ### Subcommand modules
 
-The `src/commands/mod.rs` file declares all subcommand modules and provides
-the shared `prefix_dir` helper that every command uses to locate the
-environment:
+The `src/commands/mod.rs` file declares all subcommand modules:
 
 ``` {.rust file=src/commands/mod.rs}
 pub mod add;
@@ -174,17 +175,6 @@ pub mod lock;
 pub mod run;
 pub mod search;
 pub mod shell;
-
-use std::path::{Path, PathBuf};
-
-/// Return the path to the conda prefix managed by `moonshot`.
-///
-/// By convention we store the environment at `.env/` relative to the
-/// project root (the directory that contains `moonshot.toml`).  This is similar
-/// to how pixi stores its environments in `.pixi/envs/`.
-pub fn prefix_dir(project_root: &Path) -> PathBuf {
-    project_root.join(".env")
-}
 ```
 
 The full `main.rs` is assembled from four named sections:
@@ -205,19 +195,24 @@ Let's take it section by section.
 
 The imports pull in Clap for argument parsing, miette for error reporting, and
 the tracing filter types for log-level control. The `mod` declarations make the
-rest of our crate visible.
+rest of our crate visible — including the new `project`, `session`,
+`environment`, and `build_backend` modules we will fill in over the coming
+chapters.
 
 ``` {.rust #main-imports}
 use clap::Parser;
 use miette::IntoDiagnostic;
 use tracing_subscriber::{filter::LevelFilter, EnvFilter};
 
+mod build_backend;
 mod client;
 mod commands;
+mod environment;
 mod lock;
 mod manifest;
 mod progress;
-mod resolve;
+mod project;
+mod session;
 ```
 
 ### The CLI struct and subcommands

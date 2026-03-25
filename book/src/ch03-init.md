@@ -98,6 +98,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 use miette::{Context, IntoDiagnostic};
+use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
 use serde::{Deserialize, Serialize};
 ```
 
@@ -187,6 +188,8 @@ impl Manifest {
     <<manifest-find-in-dir>>
 
     <<manifest-build-helpers>>
+
+    <<manifest-spec-helpers>>
 }
 ```
 
@@ -247,6 +250,56 @@ installing).
     but it introduces ambiguity: which manifest did the tool find? For moonshot we
     chose current-directory-only because it is simpler to reason about and
     avoids accidentally operating on a parent project.
+
+### Parsing dependencies as match specs
+
+Both the resolver and the installer need to turn the `name = "version"` pairs
+from `[dependencies]` into typed `MatchSpec` values. Rather than duplicating
+that logic in every command, we add two helpers directly on `Manifest`.
+
+`match_specs` parses each dependency into a `MatchSpec` using rattler's
+parser, and `dependency_strings` formats them as `"name version"` strings
+(the format conda's `index.json` uses for the `depends` field).
+
+``` {.rust #manifest-spec-helpers}
+    /// Parse the `[dependencies]` table into a list of [`MatchSpec`]s.
+    ///
+    /// This is used by both the resolver and the installer to turn the
+    /// human-friendly `name = "version"` pairs into typed specs.
+    pub fn match_specs(&self) -> miette::Result<Vec<MatchSpec>> {
+        let opts = ParseMatchSpecOptions::default();
+        self.dependencies
+            .iter()
+            .map(|(name, version)| {
+                let spec_str = if version == "*" {
+                    name.clone()
+                } else {
+                    format!("{name} {version}")
+                };
+                MatchSpec::from_str(&spec_str, opts)
+                    .into_diagnostic()
+                    .with_context(|| format!("parsing spec `{spec_str}`"))
+            })
+            .collect()
+    }
+
+    /// Format dependencies as `"name version"` strings (or just `"name"`
+    /// when the version is `"*"`).
+    ///
+    /// This is the format expected by conda's `index.json` `depends` field.
+    pub fn dependency_strings(&self) -> Vec<String> {
+        self.dependencies
+            .iter()
+            .map(|(name, spec)| {
+                if spec == "*" {
+                    name.clone()
+                } else {
+                    format!("{name} {spec}")
+                }
+            })
+            .collect()
+    }
+```
 
 ### `src/commands/init.rs`
 
