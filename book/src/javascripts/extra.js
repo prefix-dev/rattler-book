@@ -39,25 +39,13 @@ function initFocusMode() {
 initFocusMode();
 
 // ---------------------------------------------------------------------------
-// Margin notes: open on wide screens, collapse on narrow
-// ---------------------------------------------------------------------------
-// Force margin notes open on wide screens, collapse on narrow
-function updateMarginNotes() {
-  var wide = window.matchMedia("(min-width: 1400px)").matches;
-  document.querySelectorAll("details.margin-note").forEach(function (d) {
-    d.open = wide;
-  });
-}
-updateMarginNotes();
-window.matchMedia("(min-width: 1400px)").addEventListener("change", updateMarginNotes);
 // Re-run after MkDocs Material instant (SPA) navigation
+// ---------------------------------------------------------------------------
 document.addEventListener("DOMContentLoaded", function () {
-  updateMarginNotes();
   initFocusMode();
 });
 if (typeof document$ !== "undefined") {
   document$.subscribe(function () {
-    updateMarginNotes();
     initFocusMode();
   });
 }

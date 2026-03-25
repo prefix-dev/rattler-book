@@ -700,11 +700,19 @@ body.focus-mode .md-sidebar--primary {
     overflow: visible;
   }
   .md-typeset details.margin-note > summary {
-    pointer-events: none;
-    cursor: default;
+    display: none;
   }
   .md-typeset details.margin-note > summary::before {
     display: none;
+  }
+  /* Force content visible on wide screens regardless of [open] attribute */
+  .md-typeset details.margin-note:not([open]) > *:not(summary) {
+    display: block !important;
+  }
+  /* Modern browsers use content-visibility:hidden on ::details-content to hide closed details */
+  .md-typeset details.margin-note::details-content {
+    display: block !important;
+    content-visibility: visible !important;
   }
   .md-typeset details.margin-note p {
     margin: 0.3em 0;
