@@ -17,7 +17,7 @@ You can also pass a version constraint inline:
 $ shot add "lua >=5.4"
 ```
 
-The command parses the spec, validates it through `MatchSpec::from_str`, and
+The command parses the spec into a `NamelessMatchSpec`, and
 updates `[dependencies]` in `moonshot.toml`. If any spec is malformed the
 command aborts without modifying the manifest. It does not install anything;
 run `shot install` afterward to fetch and install the new packages.
@@ -105,7 +105,7 @@ impl Project {
 ``` {.rust file=src/commands/add.rs}
 use clap::Parser;
 use miette::{Context, IntoDiagnostic};
-use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
+use rattler_conda_types::NamelessMatchSpec;
 
 use crate::manifest::MANIFEST_FILENAME;
 use crate::project::Project;
@@ -121,31 +121,26 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let mut project = Project::discover()?;
 
     // Validate all specs before modifying the manifest.
-    let opts = ParseMatchSpecOptions::default();
-    let parsed: Vec<(&str, &str)> = args
+    let parsed: Vec<(&str, NamelessMatchSpec)> = args
         .packages
         .iter()
         .map(|pkg| {
             let (name, version) = split_spec(pkg);
-            let spec_str = if version == "*" {
-                name.to_string()
-            } else {
-                format!("{name} {version}")
-            };
-            MatchSpec::from_str(&spec_str, opts)
+            let spec: NamelessMatchSpec = version
+                .parse()
                 .into_diagnostic()
                 .with_context(|| format!("invalid dependency spec `{pkg}`"))?;
-            Ok((name, version))
+            Ok((name, spec))
         })
         .collect::<miette::Result<_>>()?;
 
     let mut added = 0usize;
-    for (name, version) in parsed {
+    for (name, spec) in parsed {
         project
             .manifest
             .dependencies
             .entry(name.to_string())
-            .or_insert_with(|| version.to_string());
+            .or_insert(spec);
         added += 1;
     }
 

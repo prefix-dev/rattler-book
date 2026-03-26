@@ -3,6 +3,7 @@ use std::collections::HashMap;
 
 use clap::Parser;
 use miette::IntoDiagnostic;
+use rattler_conda_types::NamelessMatchSpec;
 
 use crate::manifest::{BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME};
 
@@ -54,7 +55,10 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             license: None,
             description: None,
         },
-        dependencies: HashMap::from([("lua".to_string(), ">=5.4".to_string())]),
+        dependencies: HashMap::from([(
+            "lua".to_string(),
+            ">=5.4".parse::<NamelessMatchSpec>().unwrap(),
+        )]),
         build: if args.library {
             Some(BuildConfig::default())
         } else {

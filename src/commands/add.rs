@@ -1,7 +1,7 @@
 // ~/~ begin <<book/src/ch05-add.md#src/commands/add.rs>>[init]
 use clap::Parser;
 use miette::{Context, IntoDiagnostic};
-use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
+use rattler_conda_types::NamelessMatchSpec;
 
 use crate::manifest::MANIFEST_FILENAME;
 use crate::project::Project;
@@ -17,31 +17,26 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let mut project = Project::discover()?;
 
     // Validate all specs before modifying the manifest.
-    let opts = ParseMatchSpecOptions::default();
-    let parsed: Vec<(&str, &str)> = args
+    let parsed: Vec<(&str, NamelessMatchSpec)> = args
         .packages
         .iter()
         .map(|pkg| {
             let (name, version) = split_spec(pkg);
-            let spec_str = if version == "*" {
-                name.to_string()
-            } else {
-                format!("{name} {version}")
-            };
-            MatchSpec::from_str(&spec_str, opts)
+            let spec: NamelessMatchSpec = version
+                .parse()
                 .into_diagnostic()
                 .with_context(|| format!("invalid dependency spec `{pkg}`"))?;
-            Ok((name, version))
+            Ok((name, spec))
         })
         .collect::<miette::Result<_>>()?;
 
     let mut added = 0usize;
-    for (name, version) in parsed {
+    for (name, spec) in parsed {
         project
             .manifest
             .dependencies
             .entry(name.to_string())
-            .or_insert_with(|| version.to_string());
+            .or_insert(spec);
         added += 1;
     }
 

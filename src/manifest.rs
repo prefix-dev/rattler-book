@@ -2,22 +2,26 @@
 // ~/~ begin <<book/src/ch03-init.md#manifest-imports>>[init]
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use miette::{Context, IntoDiagnostic};
-use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
+use rattler_conda_types::{MatchSpec, NamelessMatchSpec, PackageName};
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 // ~/~ end
 // ~/~ begin <<book/src/ch03-init.md#manifest-filename-const>>[init]
 /// The file name we look for in the current directory.
 pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 // ~/~ end
 // ~/~ begin <<book/src/ch03-init.md#manifest-structs>>[init]
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub project: ProjectMetadata,
 
+    #[serde_as(as = "HashMap<_, DisplayFromStr>")]
     #[serde(default)]
-    pub dependencies: HashMap<String, String>,
+    pub dependencies: HashMap<String, NamelessMatchSpec>,
 
     /// Present only for buildable packages.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -91,12 +95,11 @@ impl Manifest {
             .into_diagnostic()
             .with_context(|| format!("reading manifest at `{}`", path.display()))?;
 
+        // `DisplayFromStr` validates every dependency spec during
+        // deserialization, so a typo like `">==5.4"` fails here.
         let manifest: Self = toml::from_str(&content)
             .into_diagnostic()
             .with_context(|| format!("parsing manifest at `{}`", path.display()))?;
-
-        // Validate dependency specs eagerly so typos are caught on load.
-        manifest.match_specs()?;
 
         Ok(manifest)
     }
@@ -160,36 +163,31 @@ impl Manifest {
     }
 // ~/~ end
 // ~/~ begin <<book/src/ch03-init.md#manifest-spec-helpers>>[init]
-    /// Parse the `[dependencies]` table into a list of [`MatchSpec`]s.
+    /// Combine each `[dependencies]` entry into a full [`MatchSpec`].
     ///
-    /// This is used by both the resolver and the installer to turn the
-    /// human-friendly `name = "version"` pairs into typed specs.
+    /// The values are already parsed `NamelessMatchSpec`s, so this just
+    /// attaches the package name.
     pub fn match_specs(&self) -> miette::Result<Vec<MatchSpec>> {
-        let opts = ParseMatchSpecOptions::default();
         self.dependencies
             .iter()
-            .map(|(name, version)| {
-                let spec_str = if version == "*" {
-                    name.clone()
-                } else {
-                    format!("{name} {version}")
-                };
-                MatchSpec::from_str(&spec_str, opts)
+            .map(|(name, spec)| {
+                let name = PackageName::from_str(name)
                     .into_diagnostic()
-                    .with_context(|| format!("parsing spec `{spec_str}`"))
+                    .with_context(|| format!("invalid package name `{name}`"))?;
+                Ok(MatchSpec::from_nameless(spec.clone(), name.into()))
             })
             .collect()
     }
 
     /// Format dependencies as `"name version"` strings (or just `"name"`
-    /// when the version is `"*"`).
+    /// when there is no version constraint).
     ///
     /// This is the format expected by conda's `index.json` `depends` field.
     pub fn dependency_strings(&self) -> Vec<String> {
         self.dependencies
             .iter()
             .map(|(name, spec)| {
-                if spec == "*" {
+                if spec.version.is_none() {
                     name.clone()
                 } else {
                     format!("{name} {spec}")

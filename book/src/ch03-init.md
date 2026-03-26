@@ -83,10 +83,12 @@ Here is the full `src/manifest.rs` assembled from the pieces we'll walk through:
 ``` {.rust #manifest-imports}
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::str::FromStr;
 
 use miette::{Context, IntoDiagnostic};
-use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
+use rattler_conda_types::{MatchSpec, NamelessMatchSpec, PackageName};
 use serde::{Deserialize, Serialize};
+use serde_with::{serde_as, DisplayFromStr};
 ```
 
 #### The manifest filename
@@ -101,12 +103,14 @@ A single constant for the filename keeps it consistent across all commands.
 #### Structs
 
 ``` {.rust #manifest-structs}
+#[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub project: ProjectMetadata,
 
+    #[serde_as(as = "HashMap<_, DisplayFromStr>")]
     #[serde(default)]
-    pub dependencies: HashMap<String, String>,
+    pub dependencies: HashMap<String, NamelessMatchSpec>,
 
     /// Present only for buildable packages.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -167,10 +171,25 @@ The `version`, `license`, and `description` fields are all optional. The
 [Chapter 10](ch10-build.md) when we implement `shot build`. A consume-only
 project can leave all of these out.
 
-We keep the dependency values as plain `String`s for serde compatibility with
-TOML, but validate them eagerly: `from_path` calls `match_specs()` after
-deserialising so that a typo like `lua = ">==5.4"` is caught at
-manifest-read time rather than later during resolution.
+### `serde_with` and `DisplayFromStr`
+
+The dependency values in TOML are plain strings like `">=5.4"`, but we want them
+as typed `NamelessMatchSpec` values in Rust. The [serde_with] crate bridges this
+gap with `DisplayFromStr`: it deserializes any type that implements `FromStr`
+from a string, and serializes it back via `Display`.
+
+The `#[serde_as]` attribute replaces serde's default (de)serialization for
+annotated fields. Here `HashMap<_, DisplayFromStr>` tells serde_with to leave
+the keys alone (they're already `String`s) but run each value through
+`NamelessMatchSpec::from_str` on read, and `Display::fmt` on write.
+
+This follows the "parse, don't validate" principle: a typo like
+`lua = ">==5.4"` is now caught during TOML deserialization itself, not in a
+separate validation step afterward. If the spec string is malformed,
+`toml::from_str` returns an error before `Manifest` is ever constructed.
+
+`rattler_conda_types` already uses `serde_with` internally, so adding it here
+does not introduce a new transitive dependency.
 
 We list channels in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine doesn't silently pick up a different channel list.
 
@@ -197,12 +216,11 @@ Reading TOML:
             .into_diagnostic()
             .with_context(|| format!("reading manifest at `{}`", path.display()))?;
 
+        // `DisplayFromStr` validates every dependency spec during
+        // deserialization, so a typo like `">==5.4"` fails here.
         let manifest: Self = toml::from_str(&content)
             .into_diagnostic()
             .with_context(|| format!("parsing manifest at `{}`", path.display()))?;
-
-        // Validate dependency specs eagerly so typos are caught on load.
-        manifest.match_specs()?;
 
         Ok(manifest)
     }
@@ -265,41 +283,39 @@ Both the resolver and the installer need to turn the `name = "version"` pairs
 from `[dependencies]` into typed `MatchSpec` values. Rather than duplicating
 that logic in every command, we add two helpers directly on `Manifest`.
 
-`match_specs` parses each dependency into a `MatchSpec` using rattler's
-parser, and `dependency_strings` formats them as `"name version"` strings
-(the format conda's `index.json` uses for the `depends` field).
+`match_specs` combines each key-value pair into a full `MatchSpec` using
+`MatchSpec::from_nameless`. Because the values are already parsed
+`NamelessMatchSpec`s (thanks to `DisplayFromStr`), no string concatenation
+or re-parsing is needed. `dependency_strings` formats them as
+`"name version"` strings (the format conda's `index.json` uses for the
+`depends` field).
 
 ``` {.rust #manifest-spec-helpers}
-    /// Parse the `[dependencies]` table into a list of [`MatchSpec`]s.
+    /// Combine each `[dependencies]` entry into a full [`MatchSpec`].
     ///
-    /// This is used by both the resolver and the installer to turn the
-    /// human-friendly `name = "version"` pairs into typed specs.
+    /// The values are already parsed `NamelessMatchSpec`s, so this just
+    /// attaches the package name.
     pub fn match_specs(&self) -> miette::Result<Vec<MatchSpec>> {
-        let opts = ParseMatchSpecOptions::default();
         self.dependencies
             .iter()
-            .map(|(name, version)| {
-                let spec_str = if version == "*" {
-                    name.clone()
-                } else {
-                    format!("{name} {version}")
-                };
-                MatchSpec::from_str(&spec_str, opts)
+            .map(|(name, spec)| {
+                let name = PackageName::from_str(name)
                     .into_diagnostic()
-                    .with_context(|| format!("parsing spec `{spec_str}`"))
+                    .with_context(|| format!("invalid package name `{name}`"))?;
+                Ok(MatchSpec::from_nameless(spec.clone(), name.into()))
             })
             .collect()
     }
 
     /// Format dependencies as `"name version"` strings (or just `"name"`
-    /// when the version is `"*"`).
+    /// when there is no version constraint).
     ///
     /// This is the format expected by conda's `index.json` `depends` field.
     pub fn dependency_strings(&self) -> Vec<String> {
         self.dependencies
             .iter()
             .map(|(name, spec)| {
-                if spec == "*" {
+                if spec.version.is_none() {
                     name.clone()
                 } else {
                     format!("{name} {spec}")
@@ -316,6 +332,7 @@ use std::collections::HashMap;
 
 use clap::Parser;
 use miette::IntoDiagnostic;
+use rattler_conda_types::NamelessMatchSpec;
 
 use crate::manifest::{BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME};
 
@@ -367,7 +384,10 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             license: None,
             description: None,
         },
-        dependencies: HashMap::from([("lua".to_string(), ">=5.4".to_string())]),
+        dependencies: HashMap::from([(
+            "lua".to_string(),
+            ">=5.4".parse::<NamelessMatchSpec>().unwrap(),
+        )]),
         build: if args.library {
             Some(BuildConfig::default())
         } else {
@@ -416,10 +436,11 @@ lua = ">=5.4"
 ## Summary
 
 - `Manifest` is a plain Rust struct derived from `Serialize`/`Deserialize`.
-- `Serde` handles TOML reading and writing.
+- `serde_with`'s `DisplayFromStr` bridges `FromStr`/`Display` types to serde, giving us typed dependency values for free.
 - `Miette` provides friendly error messages with context.
 
 [Serde]: https://serde.rs
+[serde_with]: https://docs.rs/serde_with
 [TOML]: https://toml.io
 [Miette]: https://docs.rs/miette
 [console]: https://crates.io/crates/console
