@@ -161,10 +161,10 @@ The `version`, `license`, and `description` fields are all optional. The
 [Chapter 10](ch10-build.md) when we implement `shot build`. A consume-only
 project can leave all of these out.
 
-We keep the dependency values as plain `String`s rather than parsing them
-immediately. [rattler_conda_types] parses them into `MatchSpec` values at
-solve-time, so parse errors surface with full context instead of at
-manifest-read time.
+We keep the dependency values as plain `String`s for serde compatibility with
+TOML, but validate them eagerly: `from_path` calls `match_specs()` after
+deserialising so that a typo like `lua = ">==5.4"` is caught at
+manifest-read time rather than later during resolution.
 
 We list channels in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine doesn't silently pick up a different channel list.
 
@@ -203,9 +203,14 @@ pub fn from_path(path: &Path) -> miette::Result<Self> {
         .into_diagnostic()
         .with_context(|| format!("reading manifest at `{}`", path.display()))?;
 
-    toml::from_str(&content)
+    let manifest: Self = toml::from_str(&content)
         .into_diagnostic()
-        .with_context(|| format!("parsing manifest at `{}`", path.display()))
+        .with_context(|| format!("parsing manifest at `{}`", path.display()))?;
+
+    // Validate dependency specs eagerly so typos are caught on load.
+    manifest.match_specs()?;
+
+    Ok(manifest)
 }
 ```
 

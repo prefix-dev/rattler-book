@@ -93,9 +93,14 @@ impl Manifest {
             .into_diagnostic()
             .with_context(|| format!("reading manifest at `{}`", path.display()))?;
     
-        toml::from_str(&content)
+        let manifest: Self = toml::from_str(&content)
             .into_diagnostic()
-            .with_context(|| format!("parsing manifest at `{}`", path.display()))
+            .with_context(|| format!("parsing manifest at `{}`", path.display()))?;
+    
+        // Validate dependency specs eagerly so typos are caught on load.
+        manifest.match_specs()?;
+    
+        Ok(manifest)
     }
     // ~/~ end
 

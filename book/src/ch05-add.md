@@ -17,9 +17,10 @@ You can also pass a version constraint inline:
 $ shot add "lua >=5.4"
 ```
 
-The command parses the spec and updates `[dependencies]` in `moonshot.toml`.
-It does not install anything; run `shot install` afterward to fetch and install
-the new packages.
+The command parses the spec, validates it through `MatchSpec::from_str`, and
+updates `[dependencies]` in `moonshot.toml`. If any spec is malformed the
+command aborts without modifying the manifest. It does not install anything;
+run `shot install` afterward to fetch and install the new packages.
 
 ## Concepts
 
@@ -107,6 +108,8 @@ impl Project {
 
 ``` {.rust file=src/commands/add.rs}
 use clap::Parser;
+use miette::{Context, IntoDiagnostic};
+use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
 
 use crate::manifest::MANIFEST_FILENAME;
 use crate::project::Project;
@@ -121,9 +124,27 @@ pub struct Args {
 pub async fn execute(args: Args) -> miette::Result<()> {
     let mut project = Project::discover()?;
 
+    // Validate all specs before modifying the manifest.
+    let opts = ParseMatchSpecOptions::default();
+    let parsed: Vec<(&str, &str)> = args
+        .packages
+        .iter()
+        .map(|pkg| {
+            let (name, version) = split_spec(pkg);
+            let spec_str = if version == "*" {
+                name.to_string()
+            } else {
+                format!("{name} {version}")
+            };
+            MatchSpec::from_str(&spec_str, opts)
+                .into_diagnostic()
+                .with_context(|| format!("invalid dependency spec `{pkg}`"))?;
+            Ok((name, version))
+        })
+        .collect::<miette::Result<_>>()?;
+
     let mut added = 0usize;
-    for pkg in &args.packages {
-        let (name, version) = split_spec(pkg);
+    for (name, version) in parsed {
         project
             .manifest
             .dependencies
@@ -184,21 +205,21 @@ luarocks = "*"
 
 ## Exercises
 
-!!! exercise-easy "Validate Specs Before Adding"
+!!! exercise-easy "Warn on Version Constraint Change"
 
-    Currently `shot add` writes the package string directly to the manifest without checking if it is a valid spec. Add validation that parses each user-provided spec through `MatchSpec::from_str` before writing. If any spec is malformed, abort without modifying the manifest.
+    Currently `shot add "lua >=5.3"` silently keeps the existing `>=5.4` constraint because of `or_insert_with`. Change `add` so it warns the user when a package already exists with a *different* version constraint, and add a `--force` flag that overwrites the existing constraint.
 
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Parse each spec with `MatchSpec::from_str` before writing anything. Add a validation loop before the write loop. See `Manifest::match_specs()` for the pattern.
+    Use `entry().and_modify()` or check the existing value before inserting. Add `#[clap(long)]` for the `--force` flag. Print the old and new constraints in the warning.
     </details>
 
     Acceptance criteria
-    :   - `shot add lua` succeeds (valid name)
-        - `shot add "lua >=5.4"` succeeds (valid name + version)
-        - `shot add "!!!invalid"` fails with a parse error, manifest unchanged
-        - If adding multiple packages and one fails, none are added
+    :   - `shot add lua` when `lua = ">=5.4"` already exists prints a warning and keeps `>=5.4`
+        - `shot add "lua >=5.3"` prints "lua already has constraint `>=5.4`, skipping (use --force to overwrite)"
+        - `shot add --force "lua >=5.3"` replaces the constraint with `>=5.3`
+        - Adding a truly new package still works as before
 
 !!! exercise-intermediate "Validate Package Exists in Channel Before Adding"
 
