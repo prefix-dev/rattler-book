@@ -1,5 +1,9 @@
 {% extends "main.html" %} {% block tabs %}{% endblock %} {% block site_nav %}{%
 endblock %} {% block footer %}{% endblock %} {% block container %}
+<script>
+    // Force light mode on cover page
+    document.body.setAttribute("data-md-color-scheme", "default");
+</script>
 <style>
     /* Hide header on cover page */
     .md-header {
@@ -12,6 +16,7 @@ endblock %} {% block footer %}{% endblock %} {% block container %}
         align-items: center;
         justify-content: center;
         max-width: 100%;
+        margin-top: 0;
     }
 
     .rb-landing {
@@ -19,34 +24,36 @@ endblock %} {% block footer %}{% endblock %} {% block container %}
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        min-height: calc(100vh - 4rem);
-        padding: 4rem 1.5rem 6rem;
+        min-height: 100vh;
+        padding: 1.5rem 1.5rem 1.5rem;
         font-family: var(--rb-font-body);
         width: 100%;
     }
 
+
     .rb-landing__inner {
         max-width: 580px;
         width: 100%;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
     }
 
     .rb-landing__image {
-        /*width: 420px;
-        height: 420px;*/
-        margin: 0 0 2.5rem;
+        margin: 0 0 1.5rem;
     }
 
     .rb-landing__image img {
-        width: 100%;
-        height: 100%;
-        object-fit: contain;
+        max-height: 40vh;
+        width: auto;
+        display: block;
     }
 
     .rb-landing__title {
         font-weight: 600;
         font-size: 3rem;
         line-height: 1.15;
-        margin: 0 0 1.2rem 0;
+        margin: 0 0 0.8rem 0;
         color: var(--rb-heading);
     }
 
@@ -54,7 +61,7 @@ endblock %} {% block footer %}{% endblock %} {% block container %}
         font-size: 1rem;
         line-height: 1.6;
         color: var(--rb-text-lighter);
-        margin: 0 0 3rem 0;
+        margin: 0 0 1.5rem 0;
     }
 
     .rb-landing__epigraph {
@@ -78,38 +85,59 @@ endblock %} {% block footer %}{% endblock %} {% block container %}
     }
 
     .rb-landing__cta {
-        font-variant: small-caps;
-        font-size: 1.1rem;
-        letter-spacing: 0.06em;
+        width: fit-content;
+        font-size: 1.25rem;
         color: var(--rb-link);
-        text-decoration: none;
-        border-bottom: 1px solid transparent;
-        padding-bottom: 2px;
-        transition: border-color 0.2s;
+        text-decoration: underline;
     }
 
     .rb-landing__cta:hover {
-        border-bottom-color: var(--rb-link);
         color: var(--rb-link-hover);
+    }
+
+    .rb-landing__partnership {
+        margin-top: 3rem;
+    }
+
+    .rb-landing__partnership-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        /*text-transform: uppercase;*/
+        color: var(--rb-text-lighter);
+        margin: 0 0 1rem 0;
+    }
+
+    .rb-landing__logos {
+        display: flex;
+        align-items: center;
+        gap: 2.5rem;
+    }
+
+    .rb-landing__logos img {
+        height: 32px;
+        width: auto;
+        object-fit: contain;
+        opacity: 0.85;
     }
 
     @media (max-width: 600px) {
         .rb-landing {
-            padding: 3rem 1rem 4rem;
+            padding: 1.5rem 1rem 1.5rem;
         }
 
-        .rb-landing__image {
-            width: 260px;
-            height: 260px;
-            margin-bottom: 1.8rem;
+        .rb-landing__image img {
+            max-height: 30vh;
         }
 
         .rb-landing__title {
             font-size: 2.2rem;
         }
 
-        .rb-landing__subtitle {
-            font-size: 1.05rem;
+        .rb-landing__logos {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 1rem;
         }
     }
 </style>
@@ -126,19 +154,25 @@ endblock %} {% block footer %}{% endblock %} {% block container %}
             />
         </div>
         <p class="rb-landing__subtitle">
-            Building a custom package manager from scratch using rattler, a rust
-            library for building package managers on top of the conda ecosystem.
+            Building a minimal lua package manager in rust using Rattler on top
+            of the conda ecosystem.
         </p>
-        <!--<div class="rb-landing__epigraph">
-            <p>
-                The function of good software is to make the complex appear to
-                be simple.
-            </p>
-            <footer>Grady Booch</footer>
-        </div>-->
         <a href="{{ 'introduction/' | url }}" class="rb-landing__cta"
-            >Click to start reading</a
+            ><b>Start Reading</b></a
         >
+        <div class="rb-landing__partnership">
+            <p class="rb-landing__partnership-label">Brought to you by</p>
+            <div class="rb-landing__logos">
+                <a href="https://www.anaconda.com" target="_blank" rel="noopener"><img
+                    src="{{ 'assets/anaconda_logo.png' | url }}"
+                    alt="Anaconda"
+                /></a>
+                <a href="https://prefix.dev" target="_blank" rel="noopener"><img
+                    src="{{ 'assets/prefix_logo.svg' | url }}"
+                    alt="prefix.dev"
+                /></a>
+            </div>
+        </div>
     </div>
 </div>
 {% endblock %}
