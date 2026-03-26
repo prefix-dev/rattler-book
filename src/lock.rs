@@ -7,12 +7,10 @@ use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::{Channel, Platform, RepoDataRecord};
 use rattler_lock::LockFile;
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#lock-filename>>[init]
 /// The name of the lock file written alongside `moonshot.toml`.
 pub const LOCK_FILENAME: &str = "moonshot.lock";
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#lock-is-fresh>>[init]
 /// Returns `true` when the lock file exists and is newer than the manifest.
 pub fn is_lock_fresh(lock_path: &Path, manifest_path: &Path) -> bool {
@@ -29,7 +27,6 @@ pub fn is_lock_fresh(lock_path: &Path, manifest_path: &Path) -> bool {
     lock_mtime >= manifest_mtime
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#lock-read>>[init]
 /// Read a lock file and extract the conda records for the given platform.
 ///
@@ -53,7 +50,6 @@ pub fn read_lock_file(lock_path: &Path, platform: Platform) -> miette::Result<Ve
     Ok(records)
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#lock-read-locked>>[init]
 /// Read existing locked packages from the lock file, if it exists.
 ///
@@ -70,7 +66,6 @@ pub fn read_locked_packages(
     }
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#lock-write>>[init]
 /// Write a lock file containing the solved packages.
 ///
@@ -107,7 +102,6 @@ pub fn write_lock_file(
     Ok(())
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#lock-tests>>[init]
 #[cfg(test)]
 mod tests {

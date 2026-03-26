@@ -12,7 +12,6 @@ pub fn spinner_style() -> ProgressStyle {
         // braille dots feel snappy even at 10 fps
         .tick_strings(&["⠋", "⠙", "⠸", "⠴", "⠦", "⠇", "⠋"])
 }
-
 // ~/~ begin <<book/src/ch04-search.md#with-spinner>>[init]
 pub async fn with_spinner<T, F>(msg: impl Into<Cow<'static, str>>, fut: F) -> T
 where
@@ -27,7 +26,6 @@ where
     result
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#with-spinner-sync>>[init]
 pub fn with_spinner_sync<T, F: FnOnce() -> T>(msg: impl Into<Cow<'static, str>>, f: F) -> T {
     let pb = ProgressBar::new_spinner();

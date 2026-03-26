@@ -20,7 +20,6 @@ use crate::manifest::{Manifest, MANIFEST_FILENAME};
 use crate::project::Project;
 use crate::session::Session;
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#build-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -31,7 +30,6 @@ pub struct Args {
     pub output_dir: PathBuf,
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#build-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
     let project = Project::discover()?;
@@ -95,25 +93,24 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         build_prefix: build_prefix.clone(),
     };
     backend.run_build(&ctx).await?;
-
-    // ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[init]
+// ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[init]
     write_package_metadata(&install_prefix, manifest).context("writing package metadata")?;
-    
+
     let output_dir = std::path::absolute(&args.output_dir)
         .into_diagnostic()
         .context("resolving output directory")?;
-    
+
     let subdir_dir = output_dir.join(manifest.subdir());
     std::fs::create_dir_all(&subdir_dir)
         .into_diagnostic()
         .context("creating output subdir")?;
-    
+
     let filename = manifest.package_filename()?;
     let output_path = subdir_dir.join(&filename);
-    
+
     pack_conda(&install_prefix, &output_path, manifest)?;
-    // ~/~ end
-    // ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[1]
+// ~/~ end
+// ~/~ begin <<book/src/ch10-build.md#pack-and-index>>[1]
     println!(
         "  {} Indexing channel at {}",
         console::style("→").blue(),
@@ -132,7 +129,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     .await
     .map_err(|e| miette::miette!("{e:#}"))
     .context("indexing output channel")?;
-    
+
     println!(
         "{} Built {}",
         console::style("✔").green(),
@@ -140,39 +137,38 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     );
     println!("  package → {}", output_path.display());
     println!("  channel → {}", output_dir.display());
-    
+
     Ok(())
-    // ~/~ end
+// ~/~ end
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#build-write-metadata>>[init]
 fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette::Result<()> {
-    // ~/~ begin <<book/src/ch10-build.md#create-index-json>>[init]
+// ~/~ begin <<book/src/ch10-build.md#create-index-json>>[init]
     let info_dir = install_prefix.join("info");
     std::fs::create_dir_all(&info_dir)
         .into_diagnostic()
         .context("creating info/ directory")?;
-    
+
     let build_config = manifest
         .build
         .as_ref()
         .expect("[build] section validated in execute()");
-    
+
     let noarch = if build_config.noarch {
         NoArchType::generic()
     } else {
         NoArchType::default()
     };
-    
+
     let subdir = if build_config.noarch {
         Some("noarch".to_string())
     } else {
         Some(rattler_conda_types::Platform::current().to_string())
     };
-    
+
     let version_str = manifest.project.version.as_deref().unwrap_or("0.0.0");
-    
+
     let index = IndexJson {
         name: PackageName::from_str(&manifest.project.name)
             .into_diagnostic()
@@ -199,8 +195,8 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
             rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now()),
         ),
     };
-    // ~/~ end
-    // ~/~ begin <<book/src/ch10-build.md#write-meta-files>>[init]
+// ~/~ end
+// ~/~ begin <<book/src/ch10-build.md#write-meta-files>>[init]
     let index_path = install_prefix.join(IndexJson::package_path());
     let index_json = serde_json::to_string_pretty(&index)
         .into_diagnostic()
@@ -208,9 +204,9 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
     std::fs::write(&index_path, index_json)
         .into_diagnostic()
         .context("writing info/index.json")?;
-    
+
     let paths = collect_paths_json(install_prefix).context("building paths.json")?;
-    
+
     let paths_path = install_prefix.join(PathsJson::package_path());
     let paths_json = serde_json::to_string_pretty(&paths)
         .into_diagnostic()
@@ -218,12 +214,11 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
     std::fs::write(&paths_path, paths_json)
         .into_diagnostic()
         .context("writing info/paths.json")?;
-    
+
     Ok(())
-    // ~/~ end
+// ~/~ end
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#build-collect-paths>>[init]
 fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
     let mut entries = Vec::new();
@@ -260,7 +255,6 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
     })
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#build-sha256>>[init]
 fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u64)> {
     use std::io::Read;
@@ -282,7 +276,6 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
     Ok((hasher.finalize(), size))
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#build-pack-conda>>[init]
 fn pack_conda(
     install_prefix: &Path,

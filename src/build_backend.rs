@@ -6,7 +6,6 @@ use miette::{Context, IntoDiagnostic};
 
 use crate::manifest::Manifest;
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#build-context-struct>>[init]
 /// Context passed to a [`BuildBackend`] when executing a build.
 pub struct BuildContext<'a> {
@@ -16,7 +15,6 @@ pub struct BuildContext<'a> {
     pub build_prefix: PathBuf,
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#build-backend-trait>>[init]
 /// A pluggable build backend.
 ///
@@ -34,16 +32,13 @@ pub trait BuildBackend {
     ) -> impl std::future::Future<Output = miette::Result<()>> + Send;
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#lua-backend-const>>[init]
 const BUILD_PRELUDE: &str = include_str!("build_prelude.lua");
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#lua-backend-struct>>[init]
 /// The default build backend — runs a Lua build script.
 pub struct LuaBuildBackend;
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#lua-backend-impl>>[init]
 impl BuildBackend for LuaBuildBackend {
     fn name(&self) -> &str {
@@ -86,7 +81,6 @@ impl BuildBackend for LuaBuildBackend {
     }
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#lua-find-lua>>[init]
 fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
     let bin_dirs: &[&str] = if cfg!(windows) {
@@ -120,7 +114,6 @@ fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
     )
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch10-build.md#lua-run-build-script>>[init]
 async fn run_build_script(
     lua_bin: &Path,

@@ -78,7 +78,7 @@ multiple environments can share the same inodes because nobody writes to
 them.
 </details>
 
-From the cache, files are linked into the target prefix. On most systems,
+From the cache, files are linked into the target prefix. If possible on the system,
 [rattler] uses **reflinks** (copy-on-write clones) when the filesystem supports
 them (APFS on macOS, Btrfs and XFS on Linux). A reflink shares the underlying
 data blocks without sharing the inode, so writing to one copy doesn't affect
@@ -90,7 +90,7 @@ cross-volume), it copies the file.
 This means:
 
 - An environment takes almost no disk space for packages that are already cached.
-- Creating a new environment is very fast (linking is cheap).
+- Creating a new environment is fast (linking is cheap).
 
 ### Transactions
 
@@ -130,7 +130,6 @@ resolve logic:
 
 ``` {.rust file=src/session.rs}
 <<session-install-packages>>
-
 <<session-resolve-and-install>>
 ```
 
@@ -209,9 +208,6 @@ Setting `with_execute_link_scripts(true)` tells the installer to run conda's
 `<prefix>/etc/conda/activate.d/` that some packages use to set up post-install
 configuration (updating `LUA_PATH`, for example).
 
-Note that `session-install-packages` opens a new `impl Session {` block but
-doesn't close it. The closing brace comes from `session-resolve-and-install`:
-
 #### `resolve_and_install`
 
 This method resolves and installs in one step, without writing a lock file.
@@ -238,9 +234,7 @@ Here is the full file skeleton, with each section defined as we encounter it:
 
 ``` {.rust file=src/commands/install.rs}
 <<install-imports>>
-
 <<install-args>>
-
 <<install-execute>>
 ```
 

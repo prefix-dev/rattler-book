@@ -11,7 +11,6 @@ use rattler_shell::shell::{Bash, ShellEnum};
 
 use crate::project::Project;
 // ~/~ end
-
 // ~/~ begin <<book/src/ch08-shell-hook.md#environment-struct>>[init]
 /// An installed conda environment that can be activated.
 pub struct Environment {
@@ -20,7 +19,6 @@ pub struct Environment {
     pub platform: Platform,
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch08-shell-hook.md#environment-impl>>[init]
 #[allow(dead_code)]
 impl Environment {
@@ -68,7 +66,6 @@ impl Environment {
     }
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch08-shell-hook.md#environment-parse-shell>>[init]
 fn parse_shell(name: Option<&str>) -> miette::Result<ShellEnum> {
     match name {
@@ -90,8 +87,7 @@ impl Environment {
 
         tokio::task::spawn_blocking(move || {
             let shell: ShellEnum = ShellEnum::from_env().unwrap_or_else(|| Bash.into());
-            let activator =
-                Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
+            let activator = Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
             let vars = ActivationVariables::from_env().into_diagnostic()?;
             activator.run_activation(vars, None).into_diagnostic()
         })

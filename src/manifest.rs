@@ -7,12 +7,10 @@ use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
 use serde::{Deserialize, Serialize};
 // ~/~ end
-
 // ~/~ begin <<book/src/ch03-init.md#manifest-filename-const>>[init]
 /// The file name we look for in the current directory.
 pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 // ~/~ end
-
 // ~/~ begin <<book/src/ch03-init.md#manifest-structs>>[init]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
@@ -85,39 +83,36 @@ impl Default for BuildConfig {
     }
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch03-init.md#manifest-impl>>[init]
 impl Manifest {
-    // ~/~ begin <<book/src/ch03-init.md#manifest-from-path>>[init]
+// ~/~ begin <<book/src/ch03-init.md#manifest-from-path>>[init]
     pub fn from_path(path: &Path) -> miette::Result<Self> {
         let content = std::fs::read_to_string(path)
             .into_diagnostic()
             .with_context(|| format!("reading manifest at `{}`", path.display()))?;
-    
+
         let manifest: Self = toml::from_str(&content)
             .into_diagnostic()
             .with_context(|| format!("parsing manifest at `{}`", path.display()))?;
-    
+
         // Validate dependency specs eagerly so typos are caught on load.
         manifest.match_specs()?;
-    
+
         Ok(manifest)
     }
-    // ~/~ end
-
-    // ~/~ begin <<book/src/ch03-init.md#manifest-write>>[init]
+// ~/~ end
+// ~/~ begin <<book/src/ch03-init.md#manifest-write>>[init]
     pub fn write(&self, path: &Path) -> miette::Result<()> {
         let content = toml::to_string_pretty(self)
             .into_diagnostic()
             .context("serializing manifest")?;
-    
+
         std::fs::write(path, content)
             .into_diagnostic()
             .with_context(|| format!("writing manifest to `{}`", path.display()))
     }
-    // ~/~ end
-
-    // ~/~ begin <<book/src/ch03-init.md#manifest-find-in-dir>>[init]
+// ~/~ end
+// ~/~ begin <<book/src/ch03-init.md#manifest-find-in-dir>>[init]
     pub fn find_in_dir(dir: &Path) -> miette::Result<(PathBuf, Self)> {
         let path = dir.join(MANIFEST_FILENAME);
         if !path.exists() {
@@ -130,15 +125,14 @@ impl Manifest {
         let manifest = Self::from_path(&path)?;
         Ok((path, manifest))
     }
-    // ~/~ end
-
-    // ~/~ begin <<book/src/ch10-build.md#manifest-build-helpers>>[init]
+// ~/~ end
+// ~/~ begin <<book/src/ch10-build.md#manifest-build-helpers>>[init]
     /// The build string encoded in the package filename, e.g. `"lua_0"`.
     pub fn build_string(&self) -> String {
         let build_number = self.build.as_ref().map_or(0, |b| b.build_number);
         format!("lua_{}", build_number)
     }
-    
+
     /// The canonical filename of the output package (without directory).
     ///
     /// e.g. `"moonshine-0.3.0-lua_0.conda"`
@@ -153,7 +147,7 @@ impl Manifest {
             self.build_string()
         ))
     }
-    
+
     /// The subdirectory where the package should live in a channel.
     ///
     /// Noarch packages go in `noarch/`; platform-specific packages go in
@@ -164,47 +158,46 @@ impl Manifest {
             _ => rattler_conda_types::Platform::current().as_str(),
         }
     }
-    // ~/~ end
+// ~/~ end
+// ~/~ begin <<book/src/ch03-init.md#manifest-spec-helpers>>[init]
+    /// Parse the `[dependencies]` table into a list of [`MatchSpec`]s.
+    ///
+    /// This is used by both the resolver and the installer to turn the
+    /// human-friendly `name = "version"` pairs into typed specs.
+    pub fn match_specs(&self) -> miette::Result<Vec<MatchSpec>> {
+        let opts = ParseMatchSpecOptions::default();
+        self.dependencies
+            .iter()
+            .map(|(name, version)| {
+                let spec_str = if version == "*" {
+                    name.clone()
+                } else {
+                    format!("{name} {version}")
+                };
+                MatchSpec::from_str(&spec_str, opts)
+                    .into_diagnostic()
+                    .with_context(|| format!("parsing spec `{spec_str}`"))
+            })
+            .collect()
+    }
 
-    // ~/~ begin <<book/src/ch03-init.md#manifest-spec-helpers>>[init]
-        /// Parse the `[dependencies]` table into a list of [`MatchSpec`]s.
-        ///
-        /// This is used by both the resolver and the installer to turn the
-        /// human-friendly `name = "version"` pairs into typed specs.
-        pub fn match_specs(&self) -> miette::Result<Vec<MatchSpec>> {
-            let opts = ParseMatchSpecOptions::default();
-            self.dependencies
-                .iter()
-                .map(|(name, version)| {
-                    let spec_str = if version == "*" {
-                        name.clone()
-                    } else {
-                        format!("{name} {version}")
-                    };
-                    MatchSpec::from_str(&spec_str, opts)
-                        .into_diagnostic()
-                        .with_context(|| format!("parsing spec `{spec_str}`"))
-                })
-                .collect()
-        }
-    
-        /// Format dependencies as `"name version"` strings (or just `"name"`
-        /// when the version is `"*"`).
-        ///
-        /// This is the format expected by conda's `index.json` `depends` field.
-        pub fn dependency_strings(&self) -> Vec<String> {
-            self.dependencies
-                .iter()
-                .map(|(name, spec)| {
-                    if spec == "*" {
-                        name.clone()
-                    } else {
-                        format!("{name} {spec}")
-                    }
-                })
-                .collect()
-        }
-    // ~/~ end
+    /// Format dependencies as `"name version"` strings (or just `"name"`
+    /// when the version is `"*"`).
+    ///
+    /// This is the format expected by conda's `index.json` `depends` field.
+    pub fn dependency_strings(&self) -> Vec<String> {
+        self.dependencies
+            .iter()
+            .map(|(name, spec)| {
+                if spec == "*" {
+                    name.clone()
+                } else {
+                    format!("{name} {spec}")
+                }
+            })
+            .collect()
+    }
+// ~/~ end
 }
 // ~/~ end
 // ~/~ end

@@ -65,11 +65,8 @@ into a dedicated `Environment` struct in `src/environment.rs`:
 
 ``` {.rust file=src/environment.rs}
 <<environment-imports>>
-
 <<environment-struct>>
-
 <<environment-impl>>
-
 <<environment-parse-shell>>
 ```
 

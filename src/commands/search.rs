@@ -13,7 +13,6 @@ use rattler_repodata_gateway::{Gateway, RepoData, SourceConfig};
 use crate::client::build_authenticated_client;
 use crate::progress::with_spinner;
 // ~/~ end
-
 // ~/~ begin <<book/src/ch04-search.md#search-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -25,13 +24,12 @@ pub struct Args {
     pub channel: Vec<String>,
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch04-search.md#search-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
-    // ~/~ begin <<book/src/ch04-search.md#search-parse-channels>>[init]
+// ~/~ begin <<book/src/ch04-search.md#search-parse-channels>>[init]
     let channel_config =
         ChannelConfig::default_with_root_dir(env::current_dir().into_diagnostic()?);
-    
+
     let channels: Vec<Channel> = args
         .channel
         .iter()
@@ -39,24 +37,22 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .collect::<Result<_, _>>()
         .into_diagnostic()
         .context("parsing channels")?;
-    
+
     let spec = MatchSpec::from_str(&args.query, ParseMatchSpecOptions::default())
         .into_diagnostic()
         .with_context(|| format!("parsing search query `{}`", args.query))?;
-    
+
     let cache_dir = rattler::default_cache_dir()
         .map_err(|e| miette::miette!("could not determine cache directory: {e}"))?;
     rattler_cache::ensure_cache_dir(&cache_dir)
         .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
-    // ~/~ end
-
-    // ~/~ begin <<book/src/ch04-search.md#search-http-client>>[init]
+// ~/~ end
+// ~/~ begin <<book/src/ch04-search.md#search-http-client>>[init]
     let client = build_authenticated_client()?;
-    // ~/~ end
-
-    // ~/~ begin <<book/src/ch04-search.md#search-gateway>>[init]
+// ~/~ end
+// ~/~ begin <<book/src/ch04-search.md#search-gateway>>[init]
     let platform = Platform::current();
-    
+
     let gateway = Gateway::builder()
         .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
         .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
@@ -69,9 +65,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             per_channel: HashMap::new(),
         })
         .finish();
-    // ~/~ end
-
-    // ~/~ begin <<book/src/ch04-search.md#search-query>>[init]
+// ~/~ end
+// ~/~ begin <<book/src/ch04-search.md#search-query>>[init]
     let repo_data: Vec<RepoData> = with_spinner(
         "Fetching repodata",
         gateway
@@ -81,9 +76,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     .await
     .into_diagnostic()
     .context("fetching repodata")?;
-    // ~/~ end
-
-    // ~/~ begin <<book/src/ch04-search.md#search-results>>[init]
+// ~/~ end
+// ~/~ begin <<book/src/ch04-search.md#search-results>>[init]
     // Collect and deduplicate results by (name, version), keeping the latest.
     let mut seen: HashMap<(String, String), String> = HashMap::new();
     for repo in &repo_data {
@@ -94,17 +88,17 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             seen.entry(key).or_insert_with(|| name);
         }
     }
-    
+
     if seen.is_empty() {
         println!("No packages found matching `{}`.", args.query);
         return Ok(());
     }
-    // ~/~ end
-    // ~/~ begin <<book/src/ch04-search.md#search-results>>[1]
+// ~/~ end
+// ~/~ begin <<book/src/ch04-search.md#search-results>>[1]
     // Sort by name, then by version descending.
     let mut results: Vec<(String, String)> = seen.into_keys().collect();
     results.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
-    
+
     // Deduplicate by name (show only latest version per package).
     let mut last_name = String::new();
     let mut count = 0usize;
@@ -116,10 +110,10 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         println!("{:<30} {}", console::style(name).cyan(), version);
         count += 1;
     }
-    
+
     println!("\n{} package(s) found.", count);
     Ok(())
-    // ~/~ end
+// ~/~ end
 }
 // ~/~ end
 // ~/~ end

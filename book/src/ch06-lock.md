@@ -235,17 +235,11 @@ check, a reader, and a writer. The lock command will orchestrate them.
 ``` {.rust file=src/lock.rs}
 #![allow(dead_code)]
 <<lock-imports>>
-
 <<lock-filename>>
-
 <<lock-is-fresh>>
-
 <<lock-read>>
-
 <<lock-read-locked>>
-
 <<lock-write>>
-
 <<lock-tests>>
 ```
 
@@ -399,7 +393,6 @@ delegates to the freshness check we just wrote.
 
 ``` {.rust file=src/project.rs}
 <<project-lock-imports>>
-
 <<project-lock-methods>>
 ```
 
@@ -439,17 +432,11 @@ back either a cached lock or a freshly computed one.
 
 ``` {.rust file=src/session.rs}
 <<session-imports>>
-
 <<resolve-status-enum>>
-
 <<session-struct>>
-
 <<session-new>>
-
 <<session-channels>>
-
 <<session-resolve>>
-
 <<session-ensure-resolved>>
 ```
 
@@ -686,9 +673,7 @@ wrapper: discover the project, create a session, and call `ensure_resolved`.
 
 ``` {.rust file=src/commands/lock.rs}
 <<lock-cmd-imports>>
-
 <<lock-cmd-args>>
-
 <<lock-cmd-execute>>
 ```
 

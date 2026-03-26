@@ -7,7 +7,6 @@ use crate::lock::LOCK_FILENAME;
 use crate::project::Project;
 use crate::session::{ResolveStatus, Session};
 // ~/~ end
-
 // ~/~ begin <<book/src/ch07-install.md#install-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -18,7 +17,6 @@ pub struct Args {
     pub prefix: Option<std::path::PathBuf>,
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch07-install.md#install-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
     let project = Project::discover()?;

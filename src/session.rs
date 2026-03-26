@@ -18,7 +18,6 @@ use crate::lock::{read_lock_file, read_locked_packages, write_lock_file};
 use crate::progress::{with_spinner, with_spinner_sync};
 use crate::project::Project;
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#resolve-status-enum>>[init]
 /// The outcome of [`Session::ensure_resolved`].
 pub enum ResolveStatus {
@@ -50,7 +49,6 @@ impl ResolveStatus {
     }
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#session-struct>>[init]
 /// Bundles a [`Project`] with an HTTP client and repodata gateway.
 #[allow(dead_code)]
@@ -62,7 +60,6 @@ pub struct Session {
     pub channel_config: ChannelConfig,
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#session-new>>[init]
 impl Session {
     /// Create a new session from a discovered project.
@@ -97,7 +94,6 @@ impl Session {
         })
     }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#session-channels>>[init]
     /// Parse the manifest channels into typed [`Channel`] values.
     pub fn channels(&self) -> miette::Result<Vec<Channel>> {
@@ -112,7 +108,6 @@ impl Session {
             .context("parsing channels")
     }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#session-resolve>>[init]
     /// Run the full dependency-resolution pipeline.
     pub async fn resolve(
@@ -175,7 +170,6 @@ impl Session {
         Ok((solution, channels, platform))
     }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#session-ensure-resolved>>[init]
     /// Ensure the lock file is up to date, resolving if necessary.
     pub async fn ensure_resolved(&self, force: bool) -> miette::Result<ResolveStatus> {
@@ -242,7 +236,6 @@ impl Session {
         Ok(())
     }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch07-install.md#session-resolve-and-install>>[init]
     /// Resolve and install in one step, without writing a lock file.
     pub async fn resolve_and_install(

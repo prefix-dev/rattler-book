@@ -169,37 +169,37 @@ from the metadata. These append to the `manifest-impl` block from
 [Chapter 3](ch03-init.md):
 
 ``` {.rust #manifest-build-helpers}
-/// The build string encoded in the package filename, e.g. `"lua_0"`.
-pub fn build_string(&self) -> String {
-    let build_number = self.build.as_ref().map_or(0, |b| b.build_number);
-    format!("lua_{}", build_number)
-}
-
-/// The canonical filename of the output package (without directory).
-///
-/// e.g. `"moonshine-0.3.0-lua_0.conda"`
-pub fn package_filename(&self) -> miette::Result<String> {
-    let version = self.project.version.as_deref().ok_or_else(|| {
-        miette::miette!("No `version` in [project]. A version is required to build a package.")
-    })?;
-    Ok(format!(
-        "{}-{}-{}.conda",
-        self.project.name,
-        version,
-        self.build_string()
-    ))
-}
-
-/// The subdirectory where the package should live in a channel.
-///
-/// Noarch packages go in `noarch/`; platform-specific packages go in
-/// e.g. `linux-64/`.
-pub fn subdir(&self) -> &'static str {
-    match &self.build {
-        Some(b) if b.noarch => "noarch",
-        _ => rattler_conda_types::Platform::current().as_str(),
+    /// The build string encoded in the package filename, e.g. `"lua_0"`.
+    pub fn build_string(&self) -> String {
+        let build_number = self.build.as_ref().map_or(0, |b| b.build_number);
+        format!("lua_{}", build_number)
     }
-}
+
+    /// The canonical filename of the output package (without directory).
+    ///
+    /// e.g. `"moonshine-0.3.0-lua_0.conda"`
+    pub fn package_filename(&self) -> miette::Result<String> {
+        let version = self.project.version.as_deref().ok_or_else(|| {
+            miette::miette!("No `version` in [project]. A version is required to build a package.")
+        })?;
+        Ok(format!(
+            "{}-{}-{}.conda",
+            self.project.name,
+            version,
+            self.build_string()
+        ))
+    }
+
+    /// The subdirectory where the package should live in a channel.
+    ///
+    /// Noarch packages go in `noarch/`; platform-specific packages go in
+    /// e.g. `linux-64/`.
+    pub fn subdir(&self) -> &'static str {
+        match &self.build {
+            Some(b) if b.noarch => "noarch",
+            _ => rattler_conda_types::Platform::current().as_str(),
+        }
+    }
 ```
 
 ### The `BuildBackend` trait
@@ -210,19 +210,12 @@ trait that encapsulates how build scripts are executed. This lives in
 
 ``` {.rust file=src/build_backend.rs}
 <<build-backend-imports>>
-
 <<build-context-struct>>
-
 <<build-backend-trait>>
-
 <<lua-backend-const>>
-
 <<lua-backend-struct>>
-
 <<lua-backend-impl>>
-
 <<lua-find-lua>>
-
 <<lua-run-build-script>>
 ```
 
@@ -452,17 +445,11 @@ defined as we encounter it:
 
 ``` {.rust file=src/commands/build.rs}
 <<build-imports>>
-
 <<build-args>>
-
 <<build-execute>>
-
 <<build-write-metadata>>
-
 <<build-collect-paths>>
-
 <<build-sha256>>
-
 <<build-pack-conda>>
 ```
 
@@ -571,8 +558,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         build_prefix: build_prefix.clone(),
     };
     backend.run_build(&ctx).await?;
-
-    <<pack-and-index>>
+<<pack-and-index>>
 }
 ```
 
@@ -586,52 +572,52 @@ We write package metadata, pack the `.conda` archive, and index the output
 channel so other tools can use it.
 
 ``` {.rust #pack-and-index}
-write_package_metadata(&install_prefix, manifest).context("writing package metadata")?;
+    write_package_metadata(&install_prefix, manifest).context("writing package metadata")?;
 
-let output_dir = std::path::absolute(&args.output_dir)
-    .into_diagnostic()
-    .context("resolving output directory")?;
+    let output_dir = std::path::absolute(&args.output_dir)
+        .into_diagnostic()
+        .context("resolving output directory")?;
 
-let subdir_dir = output_dir.join(manifest.subdir());
-std::fs::create_dir_all(&subdir_dir)
-    .into_diagnostic()
-    .context("creating output subdir")?;
+    let subdir_dir = output_dir.join(manifest.subdir());
+    std::fs::create_dir_all(&subdir_dir)
+        .into_diagnostic()
+        .context("creating output subdir")?;
 
-let filename = manifest.package_filename()?;
-let output_path = subdir_dir.join(&filename);
+    let filename = manifest.package_filename()?;
+    let output_path = subdir_dir.join(&filename);
 
-pack_conda(&install_prefix, &output_path, manifest)?;
+    pack_conda(&install_prefix, &output_path, manifest)?;
 ```
 
 ``` {.rust #pack-and-index}
-println!(
-    "  {} Indexing channel at {}",
-    console::style("→").blue(),
-    output_dir.display()
-);
-index_fs(IndexFsConfig {
-    channel: output_dir.clone(),
-    target_platform: None, // discover all subdirs automatically
-    repodata_patch: None,
-    write_zst: true,
-    write_shards: true,
-    force: false, // incremental (only index new packages)
-    max_parallel: 4,
-    multi_progress: None,
-})
-.await
-.map_err(|e| miette::miette!("{e:#}"))
-.context("indexing output channel")?;
+    println!(
+        "  {} Indexing channel at {}",
+        console::style("→").blue(),
+        output_dir.display()
+    );
+    index_fs(IndexFsConfig {
+        channel: output_dir.clone(),
+        target_platform: None, // discover all subdirs automatically
+        repodata_patch: None,
+        write_zst: true,
+        write_shards: true,
+        force: false, // incremental (only index new packages)
+        max_parallel: 4,
+        multi_progress: None,
+    })
+    .await
+    .map_err(|e| miette::miette!("{e:#}"))
+    .context("indexing output channel")?;
 
-println!(
-    "{} Built {}",
-    console::style("✔").green(),
-    console::style(&filename).cyan()
-);
-println!("  package → {}", output_path.display());
-println!("  channel → {}", output_dir.display());
+    println!(
+        "{} Built {}",
+        console::style("✔").green(),
+        console::style(&filename).cyan()
+    );
+    println!("  package → {}", output_path.display());
+    println!("  channel → {}", output_dir.display());
 
-Ok(())
+    Ok(())
 ```
 
 ### The build script prelude
@@ -893,84 +879,84 @@ files: `index.json` (which the solver reads to understand the package) and
 
 ``` {.rust #build-write-metadata}
 fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette::Result<()> {
-    <<create-index-json>>
-    <<write-meta-files>>
+<<create-index-json>>
+<<write-meta-files>>
 }
 ```
 
 ``` {.rust #create-index-json}
-let info_dir = install_prefix.join("info");
-std::fs::create_dir_all(&info_dir)
-    .into_diagnostic()
-    .context("creating info/ directory")?;
-
-let build_config = manifest
-    .build
-    .as_ref()
-    .expect("[build] section validated in execute()");
-
-let noarch = if build_config.noarch {
-    NoArchType::generic()
-} else {
-    NoArchType::default()
-};
-
-let subdir = if build_config.noarch {
-    Some("noarch".to_string())
-} else {
-    Some(rattler_conda_types::Platform::current().to_string())
-};
-
-let version_str = manifest.project.version.as_deref().unwrap_or("0.0.0");
-
-let index = IndexJson {
-    name: PackageName::from_str(&manifest.project.name)
+    let info_dir = install_prefix.join("info");
+    std::fs::create_dir_all(&info_dir)
         .into_diagnostic()
-        .with_context(|| format!("invalid package name `{}`", manifest.project.name))?,
-    version: VersionWithSource::from_str(version_str)
-        .into_diagnostic()
-        .with_context(|| format!("invalid version `{}`", version_str))?,
-    build: manifest.build_string(),
-    build_number: build_config.build_number,
-    subdir,
-    arch: None,
-    platform: None,
-    noarch,
-    depends: manifest.dependency_strings(),
-    constrains: vec![],
-    experimental_extra_depends: Default::default(),
-    features: None,
-    license: manifest.project.license.clone(),
-    license_family: None,
-    purls: None,
-    python_site_packages_path: None,
-    track_features: vec![],
-    timestamp: Some(
-        rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now()),
-    ),
-};
+        .context("creating info/ directory")?;
+
+    let build_config = manifest
+        .build
+        .as_ref()
+        .expect("[build] section validated in execute()");
+
+    let noarch = if build_config.noarch {
+        NoArchType::generic()
+    } else {
+        NoArchType::default()
+    };
+
+    let subdir = if build_config.noarch {
+        Some("noarch".to_string())
+    } else {
+        Some(rattler_conda_types::Platform::current().to_string())
+    };
+
+    let version_str = manifest.project.version.as_deref().unwrap_or("0.0.0");
+
+    let index = IndexJson {
+        name: PackageName::from_str(&manifest.project.name)
+            .into_diagnostic()
+            .with_context(|| format!("invalid package name `{}`", manifest.project.name))?,
+        version: VersionWithSource::from_str(version_str)
+            .into_diagnostic()
+            .with_context(|| format!("invalid version `{}`", version_str))?,
+        build: manifest.build_string(),
+        build_number: build_config.build_number,
+        subdir,
+        arch: None,
+        platform: None,
+        noarch,
+        depends: manifest.dependency_strings(),
+        constrains: vec![],
+        experimental_extra_depends: Default::default(),
+        features: None,
+        license: manifest.project.license.clone(),
+        license_family: None,
+        purls: None,
+        python_site_packages_path: None,
+        track_features: vec![],
+        timestamp: Some(
+            rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now()),
+        ),
+    };
 ```
 
 ``` {.rust #write-meta-files}
-let index_path = install_prefix.join(IndexJson::package_path());
-let index_json = serde_json::to_string_pretty(&index)
-    .into_diagnostic()
-    .context("serializing index.json")?;
-std::fs::write(&index_path, index_json)
-    .into_diagnostic()
-    .context("writing info/index.json")?;
+    let index_path = install_prefix.join(IndexJson::package_path());
+    let index_json = serde_json::to_string_pretty(&index)
+        .into_diagnostic()
+        .context("serializing index.json")?;
+    std::fs::write(&index_path, index_json)
+        .into_diagnostic()
+        .context("writing info/index.json")?;
 
-let paths = collect_paths_json(install_prefix).context("building paths.json")?;
+    let paths = collect_paths_json(install_prefix).context("building paths.json")?;
 
-let paths_path = install_prefix.join(PathsJson::package_path());
-let paths_json = serde_json::to_string_pretty(&paths)
-    .into_diagnostic()
-    .context("serializing paths.json")?;
-std::fs::write(&paths_path, paths_json)
-    .into_diagnostic()
-    .context("writing info/paths.json")?;
+    let paths_path = install_prefix.join(PathsJson::package_path());
+    let paths_json = serde_json::to_string_pretty(&paths)
+        .into_diagnostic()
+        .context("serializing paths.json")?;
+    std::fs::write(&paths_path, paths_json)
+        .into_diagnostic()
+        .context("writing info/paths.json")?;
 
-Ok(())
+    Ok(())
 ```
 
 #### Collecting paths and hashing

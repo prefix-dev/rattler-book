@@ -45,18 +45,14 @@ define it here and extend it with more methods in later chapters.
 
 ``` {.rust file=src/project.rs}
 <<project-imports>>
-
 <<project-struct>>
-
 <<project-impl>>
 ```
 
 ``` {.rust #project-imports}
-use std::path::PathBuf;
-
-use miette::IntoDiagnostic;
-
 use crate::manifest::Manifest;
+use miette::IntoDiagnostic;
+use std::path::PathBuf;
 ```
 
 ``` {.rust #project-struct}
@@ -161,7 +157,6 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     println!("  Run `shot install` to apply changes.");
     Ok(())
 }
-
 <<split-spec>>
 ```
 

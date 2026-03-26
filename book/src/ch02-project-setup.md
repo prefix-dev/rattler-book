@@ -181,11 +181,8 @@ The full `main.rs` is assembled from four named sections:
 
 ``` {.rust file=src/main.rs}
 <<main-imports>>
-
 <<main-cli-struct>>
-
 <<main-fn>>
-
 <<main-async>>
 ```
 

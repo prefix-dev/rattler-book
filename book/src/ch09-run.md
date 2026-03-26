@@ -49,8 +49,7 @@ impl Environment {
 
         tokio::task::spawn_blocking(move || {
             let shell: ShellEnum = ShellEnum::from_env().unwrap_or_else(|| Bash.into());
-            let activator =
-                Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
+            let activator = Activator::from_path(&prefix, shell, platform).into_diagnostic()?;
             let vars = ActivationVariables::from_env().into_diagnostic()?;
             activator.run_activation(vars, None).into_diagnostic()
         })

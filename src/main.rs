@@ -14,7 +14,6 @@ mod progress;
 mod project;
 mod session;
 // ~/~ end
-
 // ~/~ begin <<book/src/ch02-project-setup.md#main-cli-struct>>[init]
 /// A minimal Lua package manager powered by rattler.
 #[derive(Debug, Parser)]
@@ -55,7 +54,6 @@ enum Command {
     Build(commands::build::Args),
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch02-project-setup.md#main-fn>>[init]
 fn main() -> miette::Result<()> {
     let num_cpus = std::thread::available_parallelism()
@@ -72,7 +70,6 @@ fn main() -> miette::Result<()> {
     runtime.block_on(async_main())
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch02-project-setup.md#main-async>>[init]
 async fn async_main() -> miette::Result<()> {
     let cli = Cli::parse();

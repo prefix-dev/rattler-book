@@ -73,11 +73,8 @@ Here is the full `src/manifest.rs` assembled from the pieces we'll walk through:
 
 ``` {.rust file=src/manifest.rs}
 <<manifest-imports>>
-
 <<manifest-filename-const>>
-
 <<manifest-structs>>
-
 <<manifest-impl>>
 ```
 
@@ -184,35 +181,31 @@ The methods live in a single `impl` block:
 
 ``` {.rust #manifest-impl}
 impl Manifest {
-    <<manifest-from-path>>
-
-    <<manifest-write>>
-
-    <<manifest-find-in-dir>>
-
-    <<manifest-build-helpers>>
-
-    <<manifest-spec-helpers>>
+<<manifest-from-path>>
+<<manifest-write>>
+<<manifest-find-in-dir>>
+<<manifest-build-helpers>>
+<<manifest-spec-helpers>>
 }
 ```
 
 Reading TOML:
 
 ``` {.rust #manifest-from-path}
-pub fn from_path(path: &Path) -> miette::Result<Self> {
-    let content = std::fs::read_to_string(path)
-        .into_diagnostic()
-        .with_context(|| format!("reading manifest at `{}`", path.display()))?;
+    pub fn from_path(path: &Path) -> miette::Result<Self> {
+        let content = std::fs::read_to_string(path)
+            .into_diagnostic()
+            .with_context(|| format!("reading manifest at `{}`", path.display()))?;
 
-    let manifest: Self = toml::from_str(&content)
-        .into_diagnostic()
-        .with_context(|| format!("parsing manifest at `{}`", path.display()))?;
+        let manifest: Self = toml::from_str(&content)
+            .into_diagnostic()
+            .with_context(|| format!("parsing manifest at `{}`", path.display()))?;
 
-    // Validate dependency specs eagerly so typos are caught on load.
-    manifest.match_specs()?;
+        // Validate dependency specs eagerly so typos are caught on load.
+        manifest.match_specs()?;
 
-    Ok(manifest)
-}
+        Ok(manifest)
+    }
 ```
 ### Miette for error handling
 
@@ -226,32 +219,32 @@ source context.
 Writing TOML:
 
 ``` {.rust #manifest-write}
-pub fn write(&self, path: &Path) -> miette::Result<()> {
-    let content = toml::to_string_pretty(self)
-        .into_diagnostic()
-        .context("serializing manifest")?;
+    pub fn write(&self, path: &Path) -> miette::Result<()> {
+        let content = toml::to_string_pretty(self)
+            .into_diagnostic()
+            .context("serializing manifest")?;
 
-    std::fs::write(path, content)
-        .into_diagnostic()
-        .with_context(|| format!("writing manifest to `{}`", path.display()))
-}
+        std::fs::write(path, content)
+            .into_diagnostic()
+            .with_context(|| format!("writing manifest to `{}`", path.display()))
+    }
 ```
 
 Commands other than `init` need to *find* the manifest, not create it:
 
 ``` {.rust #manifest-find-in-dir}
-pub fn find_in_dir(dir: &Path) -> miette::Result<(PathBuf, Self)> {
-    let path = dir.join(MANIFEST_FILENAME);
-    if !path.exists() {
-        miette::bail!(
-            "No `{MANIFEST_FILENAME}` found in `{}`. \
-             Run `shot init` to create one.",
-            dir.display()
-        );
+    pub fn find_in_dir(dir: &Path) -> miette::Result<(PathBuf, Self)> {
+        let path = dir.join(MANIFEST_FILENAME);
+        if !path.exists() {
+            miette::bail!(
+                "No `{MANIFEST_FILENAME}` found in `{}`. \
+                 Run `shot init` to create one.",
+                dir.display()
+            );
+        }
+        let manifest = Self::from_path(&path)?;
+        Ok((path, manifest))
     }
-    let manifest = Self::from_path(&path)?;
-    Ok((path, manifest))
-}
 ```
 
 It returns a tuple `(PathBuf, Manifest)` because callers sometimes need to

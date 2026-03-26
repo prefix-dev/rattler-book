@@ -6,7 +6,6 @@ use crate::lock::LOCK_FILENAME;
 use crate::project::Project;
 use crate::session::{ResolveStatus, Session};
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#lock-cmd-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
@@ -15,7 +14,6 @@ pub struct Args {
     pub force: bool,
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#lock-cmd-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
     let project = Project::discover()?;

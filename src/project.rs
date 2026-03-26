@@ -1,12 +1,9 @@
 // ~/~ begin <<book/src/ch05-add.md#src/project.rs>>[init]
 // ~/~ begin <<book/src/ch05-add.md#project-imports>>[init]
-use std::path::PathBuf;
-
-use miette::IntoDiagnostic;
-
 use crate::manifest::Manifest;
+use miette::IntoDiagnostic;
+use std::path::PathBuf;
 // ~/~ end
-
 // ~/~ begin <<book/src/ch05-add.md#project-struct>>[init]
 /// A discovered project on disk.
 ///
@@ -22,7 +19,6 @@ pub struct Project {
     pub manifest: Manifest,
 }
 // ~/~ end
-
 // ~/~ begin <<book/src/ch05-add.md#project-impl>>[init]
 impl Project {
     /// Discover the project from the current working directory.
@@ -56,7 +52,6 @@ impl Project {
 // ~/~ begin <<book/src/ch06-lock.md#project-lock-imports>>[init]
 use crate::lock::{is_lock_fresh, LOCK_FILENAME};
 // ~/~ end
-
 // ~/~ begin <<book/src/ch06-lock.md#project-lock-methods>>[init]
 impl Project {
     /// Path to the lock file (`moonshot.lock`).

@@ -53,7 +53,6 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     println!("  Run `shot install` to apply changes.");
     Ok(())
 }
-
 // ~/~ begin <<book/src/ch05-add.md#split-spec>>[init]
 fn split_spec(spec: &str) -> (&str, &str) {
     // Respect quoted strings and handle the common "name version" pattern.
