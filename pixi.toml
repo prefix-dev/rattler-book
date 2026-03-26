@@ -30,6 +30,13 @@ mkdocs-print-site-plugin = ">=2.0"
 mkdocs-panzoom-plugin = ">=0.5"
 
 [feature.book.tasks]
+_strip-markers = { cmd = """python -c "
+import pathlib, re
+for f in pathlib.Path('src').rglob('*.rs'):
+    t = f.read_text()
+    t2 = re.sub(r'[ ]*// ~/~ [^\\n]*\\n', '', t)
+    if t2 != t: f.write_text(t2); print(f'  stripped {f}')
+" """, description = "Remove // ~/~ marker comments from source files" }
 book-build = { cmd = "mkdocs build", cwd = "book" }
 book-serve = { cmd = "mkdocs serve --livereload --watch-theme -w src/stylesheets", cwd = "book" }
 _tangle = { cmd = "entangled tangle --force", description = "Extract code blocks from the book into source files" }
@@ -39,6 +46,9 @@ watch = { cmd = "entangled watch", description = "Watch for changes and keep boo
 [tasks]
 # Tangle source from book (do NOT fmt after tangle — the book is the source of truth)
 tangle = { depends-on = [{ task = "_tangle", environment = "book" }], description = "Tangle source from book" }
+
+# Strip entangled markers (cosmetic, one-way — breaks stitch)
+strip-markers = { depends-on = [{ task = "_strip-markers", environment = "book" }], description = "Remove // ~/~ marker comments from source files" }
 
 # Build
 build = "cargo build"

@@ -235,4 +235,48 @@ Most chapters include programming exercises. They are marked by difficulty:
     :   Your comparison function agrees with `Version::from_str` ordering for all
         pairs in a test suite of at least ten version strings.
 
+### Exercises with an AI tutor
+
+The repository includes `TUTOR.md`, a system prompt that turns any coding agent
+into a guided tutor for the exercises. The tutor will never write code for you.
+Instead, it asks questions, points you to relevant files, and reveals hints
+one step at a time as you work through each exercise.
+
+Before you start an exercise, the tutor will ask how comfortable you are with
+Rust. If you are learning Rust alongside this book, the tutor will explain
+language concepts and link to documentation as they come up. If you already know
+Rust, it will focus on the rattler APIs and the moonshot codebase.
+
+To start a tutoring session, load `TUTOR.md` as a system prompt in your agent
+of choice:
+
+**Claude Code**
+
+```bash
+claude --append-system-prompt-file TUTOR.md
+```
+
+**Cursor**
+
+Create `.cursor/rules/tutor.mdc` with `alwaysApply: true` in the frontmatter
+and paste the contents of `TUTOR.md` as the body.
+
+**GitHub Copilot**
+
+Copy the contents of `TUTOR.md` into `.github/copilot-instructions.md` at the
+repository root.
+
+**OpenAI Codex CLI**
+
+Copy the contents of `TUTOR.md` into `.codex/instructions.md` at the
+repository root.
+
+**Other agents**
+
+Copy the contents of `TUTOR.md` into your agent's system prompt or custom
+instructions field.
+
+Once the session starts, tell the tutor which exercise you want to work on
+(e.g., "exercise 3.1") and it will guide you from there.
+
 Let's get started.
