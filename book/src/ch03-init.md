@@ -1,6 +1,6 @@
 # Chapter 3: The `init` Command
 
-<span class="newthought">Every moonshot project</span> starts with `shot init`. This command creates
+<span class="newthought">Let's create our first command</span> `shot init`. This command will create a
 `moonshot.toml`, the manifest that describes which packages you want and
 from which channels to fetch them.
 
@@ -22,13 +22,13 @@ channels = ["conda-forge"]
 lua = ">=5.4"
 ```
 
-We'll use this project throughout the book. In Chapter 10 we'll build an image
-processing library and install it here.
+We'll use this project throughout the book. In [Chapter 10](ch10-build.md) we'll build a library
+that can process an image and install it here.
 
-The command accepts an optional project name (defaults to the current directory
+The command will accept an optional project name (defaults to the current directory
 name) and one or more `--channel` flags. Pass `--library` to scaffold a
 buildable package (adds a `[build]` section and `version`). If `moonshot.toml`
-already exists, it refuses to overwrite.
+already exists, it will refuse to overwrite.
 
 ## Configuration: `moonshot.toml`
 
@@ -42,7 +42,7 @@ lua      = ">=5.4"
 luarocks = "*"
 ```
 
-The `[project]` section contains metadata; `[dependencies]` maps package names
+The `[project]` section will contain the metadata: `[dependencies]` maps package names
 to version constraints.  Version specs follow the conda MatchSpec mini-language:
 
 | Spec          | Meaning                           |
@@ -52,28 +52,18 @@ to version constraints.  Version specs follow the conda MatchSpec mini-language:
 | `"5.4.*"`     | any 5.4.x release                 |
 | `">=5.4,<6"`  | 5.4 series, exclusive upper bound |
 
-A manifest records your intent: which packages you want and from which channels. It's distinct from a lock file, which records the exact versions the solver chose, including transitive dependencies. The manifest says "I want `lua >=5.4`"; a lock file says "install `lua 5.4.7 build h5eee18b_0` from conda-forge, plus these 12 transitive dependencies at these exact versions." We implement both in moonshot: the manifest here and the lock file in [Chapter 6](ch06-lock.md).
+The manifest will record what your intent is when requesting packages: which packages you want and from which channels. In this way it is distinct from a lock file, which records the exact versions the solver chose, including transitive dependencies. 
 
-## Concepts
+The manifest says:
 
-### serde for configuration files
+> I want `lua >=5.4`
 
-We model the manifest as nested Rust structs that derive `Serialize` and
-`Deserialize`. [serde] handles the conversion between [TOML] text and Rust values
-in both directions.
+A lock file says:
 
-We chose TOML because it's readable without documentation, preserves comments on round-trip (with the right library), and has strict typing that catches mistakes like quoting a number.
+> Install `lua 5.4.7 build h5eee18b_0` from conda-forge, plus these 12 transitive dependencies at these exact versions.
 
-The `#[serde(default)]` annotations make `[dependencies]` optional (defaults to
-an empty map), and `#[serde(default = "default_channels")]` on `channels` falls
-back to `["conda-forge"]` when omitted.
+We will implement both in moonshot: the manifest here and the lock file in [Chapter 6](ch06-lock.md).
 
-### miette for error handling
-
-`std::fs::read_to_string` returns `Result<String, std::io::Error>`.  We convert
-that to `miette::Result` with `into_diagnostic()`, then attach a context message
-with `with_context`. [miette] renders these as user-friendly error messages with
-source context.
 
 ## Implementation
 
@@ -125,7 +115,24 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build: Option<BuildConfig>,
 }
+```
 
+### Serde for configuration files
+
+We model the manifest as nested Rust structs that derive `Serialize` and
+`Deserialize`. [Serde] handles the conversion between [TOML] text and Rust values
+in both directions.
+
+1. Using `#[serde(default)]` annotations make `[dependencies]` and others that use it optional.
+2. `#[serde(default = "default_channels")]` on `channels` falls
+back to `["conda-forge"]` when omitted.
+<details class="margin-note" markdown>
+<summary>Why default to conda-forge?</summary>
+
+[conda-forge](https://conda-forge.org/) is the largest community conda channel and contains a lot of packages, so
+it is a good default for getting started. </details>
+
+```{.rust #manifest-structs}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectMetadata {
     pub name: String,
@@ -151,7 +158,9 @@ fn default_channels() -> Vec<String> {
 }
 ```
 
-We model the manifest as nested Rust structs. `Manifest` maps directly to the
+
+
+`Manifest` maps directly to the
 top-level TOML, and `ProjectMetadata` maps to the `[project]` section. The
 `name` field is used only for display; it does not affect resolution or
 installation.
@@ -168,14 +177,6 @@ manifest-read time rather than later during resolution.
 
 We list channels in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine doesn't silently pick up a different channel list.
 
-<details class="margin-note" markdown>
-<summary>Why default to conda-forge?</summary>
-
-conda-forge is the largest community channel and covers most packages, so
-it is the right default for getting started. A real package manager
-might require an explicit channel list to avoid surprises, but for moonshot
-the convenience outweighs the risk.
-</details>
 
 #### Methods
 
@@ -213,6 +214,14 @@ pub fn from_path(path: &Path) -> miette::Result<Self> {
     Ok(manifest)
 }
 ```
+### Miette for error handling
+
+`std::fs::read_to_string` returns `Result<String, std::io::Error>`.  We convert
+that to `miette::Result` with `into_diagnostic()`, then attach a context message
+with `with_context`. [Miette] renders these as user-friendly error messages with
+source context.
+
+### Writing
 
 Writing TOML:
 
@@ -255,10 +264,7 @@ installing).
 `find_in_dir` only looks in the directory you pass it. An alternative
 design, used by Cargo and npm, walks up the directory tree until it finds a
 manifest. Walk-up is convenient when you run commands from a subdirectory,
-but it introduces ambiguity: which manifest did the tool find? For moonshot we
-chose current-directory-only because it is simpler to reason about and
-avoids accidentally operating on a parent project.
-</details>
+but it introduces ambiguity: which manifest did the tool find? </details>
 
 ### Parsing dependencies as match specs
 
@@ -417,12 +423,12 @@ lua = ">=5.4"
 ## Summary
 
 - `Manifest` is a plain Rust struct derived from `Serialize`/`Deserialize`.
-- `serde` handles TOML reading and writing.
-- `miette` provides friendly error messages with context.
+- `Serde` handles TOML reading and writing.
+- `Miette` provides friendly error messages with context.
 
-[serde]: https://serde.rs
+[Serde]: https://serde.rs
 [TOML]: https://toml.io
-[miette]: https://docs.rs/miette
+[Miette]: https://docs.rs/miette
 [console]: https://crates.io/crates/console
 [rattler_conda_types]: https://crates.io/crates/rattler_conda_types
 
@@ -435,7 +441,7 @@ lua = ">=5.4"
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    The value is a version constraint, not a full match spec. Prepend `"lua "` to build a valid spec for `MatchSpec::from_str`. Use a serde rename so the TOML key keeps its hyphen. See `Manifest::match_specs()` for the parsing pattern.
+    The value is a version constraint, not a full match spec. Prepend `"lua "` to build a valid spec for `MatchSpec::from_str`. Use a Serde rename so the TOML key keeps its hyphen. See `Manifest::match_specs()` for the parsing pattern.
     </details>
 
     Acceptance criteria

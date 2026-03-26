@@ -49,7 +49,7 @@ nav:
     - "5. The `add` Command": ch05-add.md
     - "6. The `lock` Command": ch06-lock.md
     - "7. The `install` Command": ch07-install.md
-    - "8. The `shell` Command": ch08-shell-hook.md
+    - "8. The `shell-hook` Command": ch08-shell-hook.md
     - "9. The `run` Command": ch09-run.md
     - "10. The `build` Command": ch10-build.md
   - Rattler and Conda Deep Dives:

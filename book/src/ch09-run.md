@@ -1,6 +1,6 @@
 # Chapter 9: The `run` Command
 
-`shot shell` requires you to evaluate shell-specific output. That works for interactive use but creates two problems: it's awkward in scripts and CI pipelines, and it ties you to a specific shell dialect. `shot run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether you use Bash, Fish, PowerShell, or no shell at all.
+`shot shell-hook` requires you to evaluate shell-specific output. That works for interactive use but creates two problems: it's awkward in scripts and CI pipelines, and it ties you to a specific shell dialect. `shot run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether you use Bash, Fish, PowerShell, or no shell at all.
 
 ## Design
 

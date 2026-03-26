@@ -19,7 +19,7 @@ $ shot install
 ✔ Wrote moonshot.lock (5 packages)
   Downloading and extracting packages...
 ✔ Environment updated in 2.1s
-  Activate with:  eval $(shot shell)
+  Activate with:  eval $(shot shell-hook)
 ```
 
 When the lock is fresh, the resolve step is skipped entirely:
@@ -178,7 +178,7 @@ impl Session {
                 console::style("✔").green(),
                 start_install.elapsed().as_secs_f64()
             );
-            println!("  Activate with:  eval $(shot shell)");
+            println!("  Activate with:  eval $(shot shell-hook)");
         }
 
         Ok(())
@@ -327,7 +327,7 @@ $ shot install
 ✔ Wrote moonshot.lock (5 packages)
   Downloading and extracting packages...
 ✔ Environment updated in 2.1s
-  Activate with:  eval $(shot shell)
+  Activate with:  eval $(shot shell-hook)
 ```
 
 Try it right away:

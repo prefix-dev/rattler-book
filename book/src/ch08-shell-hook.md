@@ -1,4 +1,4 @@
-# Chapter 8: The `shell` Command
+# Chapter 8: The `shell-hook` Command
 
 <span class="newthought">After installing</span> packages into `.env/`, you need to be able to *use* them.
 That means getting `lua`, `luarocks`, and any other installed binaries onto
@@ -7,21 +7,21 @@ your `PATH`, and setting any environment variables that packages declare.
 ## Design
 
 ```bash
-eval $(shot shell)         # bash / zsh
-shot shell | source        # fish
+eval $(shot shell-hook)         # bash / zsh
+shot shell-hook | source        # fish
 ```
 
-The `eval` trick runs the output of `shot shell` as shell code in the current
+The `eval` trick runs the output of `shot shell-hook` as shell code in the current
 process, which *can* modify `PATH`.
 
 You can pass an optional `--shell` flag to override the detected shell
 dialect and `--prefix` to override the environment location.
 
 <details class="margin-note" markdown>
-<summary>`shell` vs `run`</summary>
+<summary>`shell-hook` vs `run`</summary>
 
-`shot shell` and `shot run` ([Chapter 9](ch09-run.md)) represent a design fork.
-`shell` generates a script the user evaluates, which means it must know the
+`shot shell-hook` and `shot run` ([Chapter 9](ch09-run.md)) represent a design fork.
+`shell-hook` generates a script the user evaluates, which means it must know the
 user's shell dialect. `run` spawns a child process with the right
 environment variables, which is shell-agnostic but only lasts for one
 command. Most package managers end up needing both.
@@ -34,7 +34,7 @@ command. Most package managers end up needing both.
 Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. [conda] uses eval-based activation: the tool prints a shell script and you evaluate it in your current shell. This gives packages full control over the environment (including `PATH`, `LD_LIBRARY_PATH`, `LUA_PATH`, and other variables), at the cost of being shell-dependent.
 
 A child process cannot modify the environment of its parent.  That's a Unix
-rule with no exceptions.  So when you run `shot shell`, it can't just set
+rule with no exceptions.  So when you run `shot shell-hook`, it can't just set
 `PATH` for you; it has to print a script that you evaluate in your shell.
 
 ### Shell dialects and nesting
@@ -58,7 +58,8 @@ This sounds simple, but several complications arise:
 
 ### The `Environment` struct
 
-Both `shot shell` and `shot run` need to work with an installed environment.
+Both `shot shell-hook` and `shot run` need to work with an installed environment.
+
 Rather than duplicating prefix-handling and activation logic, we extract it
 into a dedicated `Environment` struct in `src/environment.rs`:
 
@@ -165,11 +166,11 @@ fn parse_shell(name: Option<&str>) -> miette::Result<ShellEnum> {
 }
 ```
 
-### The shell command
+### The shell-hook command
 
-With `Environment` in place, the shell command becomes very thin:
+With `Environment` in place, the shell-hook command becomes very thin:
 
-``` {.rust file=src/commands/shell.rs}
+``` {.rust file=src/commands/shell_hook.rs}
 use clap::Parser;
 
 use crate::environment::Environment;
@@ -270,7 +271,7 @@ handles both the "no active env" case and the "replacing an existing env" case.
 
 ## What the generated script looks like
 
-For Bash, `shot shell` might print something like:
+For Bash, `shot shell-hook` might print something like:
 
 ```bash
 export PATH="/home/user/my-app/.env/bin:$PATH"
@@ -301,7 +302,7 @@ compatibility.
 
 !!! exercise-easy "Show Activation Environment Variables"
 
-    Add a `--show-env` flag to `shot shell` that prints the environment variables activation would set, instead of the activation script. Use `Environment::activation_env()` and compare against `std::env::vars()` to show only changed variables.
+    Add a `--show-env` flag to `shot shell-hook` that prints the environment variables activation would set, instead of the activation script. Use `Environment::activation_env()` and compare against `std::env::vars()` to show only changed variables.
 
     <details class="margin-note" markdown>
     <summary>Hint</summary>
@@ -310,14 +311,14 @@ compatibility.
     </details>
 
     Acceptance criteria
-    :   - `shot shell --show-env` prints lines like `PATH=/path/to/env/bin:...`
+    :   - `shot shell-hook --show-env` prints lines like `PATH=/path/to/env/bin:...`
         - Only variables that differ from the current environment are shown
         - Variables are sorted alphabetically
         - Count of modified variables printed at the end
 
 !!! exercise-intermediate "Generate Dotenv File from Activation"
 
-    Add `shot shell --dotenv [path]` that writes the activation environment to a dotenv file. This lets other tools (Docker, systemd, IDE run configs) consume the environment without shell-specific activation. Use the `Activator` to compute the full environment, diff against the current env, and write only the changed variables.
+    Add `shot shell-hook --dotenv [path]` that writes the activation environment to a dotenv file. This lets other tools (Docker, systemd, IDE run configs) consume the environment without shell-specific activation. Use the `Activator` to compute the full environment, diff against the current env, and write only the changed variables.
 
     <details class="margin-note" markdown>
     <summary>Hint</summary>
@@ -326,14 +327,14 @@ compatibility.
     </details>
 
     Acceptance criteria
-    :   - `shot shell --dotenv` writes `moonshot.env` in the project root (not `.env`, which is the conda prefix directory)
-        - `shot shell --dotenv /tmp/my.env` writes to the specified path
+    :   - `shot shell-hook --dotenv` writes `moonshot.env` in the project root (not `.env`, which is the conda prefix directory)
+        - `shot shell-hook --dotenv /tmp/my.env` writes to the specified path
         - File format: `KEY=VALUE` per line, values quoted if they contain spaces
         - Only activation-added/changed variables are included (not the full inherited environment)
 
 !!! exercise-hard "Stacked Environment Activation"
 
-    Implement `shot shell --stack /other/env` that generates an activation script layering a second environment on top of the currently active one. Construct `ActivationVariables` from the already-activated environment state, then run the `Activator` for the stacked prefix. The result should have both envs on PATH in the correct order.
+    Implement `shot shell-hook --stack /other/env` that generates an activation script layering a second environment on top of the currently active one. Construct `ActivationVariables` from the already-activated environment state, then run the `Activator` for the stacked prefix. The result should have both envs on PATH in the correct order.
 
     <details class="margin-note" markdown>
     <summary>Hint</summary>
@@ -342,7 +343,7 @@ compatibility.
     </details>
 
     Acceptance criteria
-    :   - `eval $(shot shell)` then `eval $(shot shell --stack /other/env)` puts both envs on PATH
+    :   - `eval $(shot shell-hook)` then `eval $(shot shell-hook --stack /other/env)` puts both envs on PATH
         - Stacked env's `bin/` appears before the base env's `bin/`
         - `CONDA_PREFIX` reflects the top-of-stack environment
         - A `MOONSHOT_STACK_DEPTH` env var tracks nesting level

@@ -50,7 +50,7 @@ self-contained, but the techniques generalize to any ecosystem.
 $ shot init my-app          # scaffold a new project
 $ shot add lua ">=5.4"      # add dependencies
 $ shot install              # fetch, solve, and install
-$ shot shell                # activate the environment
+$ shot shell-hook           # activate the environment
 $ shot run lua script.lua   # run inside the environment
 $ shot build                # build a distributable package
 ```
@@ -190,13 +190,13 @@ That said, conda isn't always the right choice:
 - **One version per package** means dependency resolution is NP-complete and
   requires a SAT solver.  If your ecosystem can tolerate duplicate versions (like
   Go or Nix), you avoid that complexity.
-- **Large binary packages.** Conda packages include compiled artifacts.  If your
-  language is source-only or has a fast compiler, source distribution may be
-  simpler.
+
 [rattler]: https://github.com/conda/rattler
 [repo]: https://github.com/prefix-dev/rattler-book
 [Lua]: https://www.lua.org
 [conda-forge]: https://conda-forge.org
+
+Continue on to the next chapter to get started. Or read below for more details regarding exercises in the book.
 
 ## Exercises
 
@@ -237,8 +237,8 @@ Most chapters include programming exercises. They are marked by difficulty:
 
 ### Exercises with an AI tutor
 
-The repository includes `TUTOR.md`, a system prompt that turns any coding agent
-into a guided tutor for the exercises. The tutor will never write code for you.
+The repository includes `TUTOR.md`, a system prompt that turns a coding agent
+into a guided tutor for the exercises. The tutor will **never** write code for you.
 Instead, it asks questions, points you to relevant files, and reveals hints
 one step at a time as you work through each exercise.
 
@@ -278,5 +278,3 @@ instructions field.
 
 Once the session starts, tell the tutor which exercise you want to work on
 (e.g., "exercise 3.1") and it will guide you from there.
-
-Let's get started.

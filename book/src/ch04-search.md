@@ -1,12 +1,11 @@
 # Chapter 4: The `search` Command
 
-<span class="newthought">Before we can install</span> anything, we need to know what's out there. This chapter
-introduces repodata, channels, and the [rattler] Gateway by building a standalone
-command that lets you search for packages by name.
+<span class="newthought">Before we can install</span> anything, we need to know what's available. In this chapter
+we'll meet repodata, channels, and the [rattler] Gateway by building a search command.
 
 ## Design
 
-`shot search <query>` searches for packages matching a name pattern and prints
+`shot search <query>` will search for packages matching a name pattern and print
 the results:
 
 ```console
@@ -17,7 +16,7 @@ lua-cjson    2.1.0   Fast JSON encoding/decoding for Lua
 …
 ```
 
-The command accepts a `--channel` flag (defaults to conda-forge) and searches
+The command will accept a `--channel` flag (defaulting to conda-forge) and search
 both the current platform and `noarch`.
 
 ## Concepts
@@ -25,7 +24,7 @@ both the current platform and `noarch`.
 ### What is `repodata`?
 
 Every conda channel serves a file called `repodata.json` for each supported
-platform.  The file lists every available package with its metadata:
+platform.  It lists every available package with its metadata:
 
 ```json
 {
@@ -45,43 +44,33 @@ platform.  The file lists every available package with its metadata:
 }
 ```
 
-For a large channel like conda-forge, this file can be **hundreds of megabytes**.
-Loading the whole thing into RAM for every command would be slow.
+For a large channel like conda-forge, this file can be *hundreds* of megabytes.
+You really don't want to load all of that into RAM for every command.
 
-Think of repodata as the contract between server and client. The channel publishes it; our package manager consumes it. How you design this contract determines download speed, caching behavior, and how much work the client has to do before it can start solving.
+Think of repodata as the contract between server and client. The channel publishes it; our package manager consumes it. How this contract is designed determines download speed, caching, and how much work the client has to do before it can even start solving.
 
 ### Channels
 
-A `Channel` is more than a URL string.  It knows whether the string is a named
-channel (`"conda-forge"`) or an explicit URL
-(`"https://conda.anaconda.org/conda-forge"`), and it can construct the sub-URLs
-for different platforms.
+A `Channel` is more than just a URL string.  It knows whether you gave it a named
+channel (`"conda-forge"`) or an explicit URL, and it can construct the sub-URLs
+for each platform.
 
-`ChannelConfig` provides the base URL for named channels, by default
-`https://conda.anaconda.org/`.  You can override it with a local mirror.
+`ChannelConfig` provides the base URL for named channels (by default
+`https://conda.anaconda.org/`).  You can override it to point at a local mirror.
 
 ### `MatchSpec`s: describing what you want
 
-conda calls a package requirement a **MatchSpec**:
-
-```text
-lua >=5.4
-luarocks *
-lua-json =1.3.*
-```
-
-A MatchSpec can specify a package name (required), a version constraint
-(optional), a build string (optional), a channel (optional), and more. The
-full syntax is defined in [CEP-29]. A few things worth knowing:
+We've already seen MatchSpecs in the version constraint table from [Chapter 3](ch03-init.md). A few extra things worth knowing about the [CEP-29] syntax:
 
 - `pkg =1.8` (with `=`) is **fuzzy** -- it matches any `1.8.*` release.
 - `pkg 1.8` (with a space) is **exact** -- it matches only version `1.8`.
 - Bracket syntax lets you filter on any record field: `lua[build_number='>0']`.
 - You can pin a channel: `conda-forge::lua >=5.4`.
+- It even supports regexes: if a value starts with `^` and ends with `$` it's treated as a regular expression, e.g. `lua[build='^h5ee.*$']`.
 
 [CEP-29]: https://conda.org/learn/ceps/cep-0029/
 
-[rattler] parses MatchSpecs into a typed struct:
+[rattler] parses a MatchSpec into a typed struct:
 
 ```rust
 use rattler_conda_types::{MatchSpec, ParseMatchSpecOptions};
@@ -92,23 +81,21 @@ let spec: MatchSpec = MatchSpec::from_str("lua >=5.4", opts)?;
 
 ### The `Gateway`
 
-[rattler_repodata_gateway]'s `Gateway` is the main type for fetching repodata. It
-manages the on-disk repodata cache, a package cache, the HTTP client, and
-per-channel configuration.
+The `Gateway` from [rattler_repodata_gateway] is the main entry point for fetching repodata. It
+manages the on-disk cache, the HTTP client, and per-channel configuration.
 
 ### Why querying is fast: sharded repodata
 
-The naive approach fetches all of `repodata.json` and loads it into RAM. For
-conda-forge that file can exceed 350 MB. That's slow on the first run and wasteful when
-you only need packages starting with `lua`.
+The naive approach would be to fetch all of `repodata.json` and load it into RAM. For
+conda-forge that's over 350 MB. That's painfully slow on first run and wasteful when
+you only care about packages starting with `lua`.
 
 <details class="margin-note" markdown>
 <summary>Why sharding exists</summary>
 
-The full-file approach stopped scaling when conda-forge passed 200,000
-package records (name-version-build combinations). Downloading and parsing
-hundreds of megabytes on every install was the single biggest latency
-bottleneck for conda users. [CEP-16][cep-16] solves this
+The full-file approach stopped scaling once conda-forge passed 200,000
+package records. Downloading and parsing hundreds of megabytes on every
+install was *the* biggest latency bottleneck for conda users. [CEP-16][cep-16] solves this
 by splitting repodata into per-package shards so the client never
 downloads data it will never read.
 </details>
@@ -145,8 +132,8 @@ that only the records you actually query are deserialized.
 [JLAP]: https://conda.org/learn/ceps/cep-0014/
 
 Setting `sharded_enabled: true` on the Gateway tells it to prefer the sharded
-format when a channel supports it. Both [prefix.dev](https://prefix.dev) and
-[anaconda.org](https://anaconda.org) serve sharded repodata for conda-forge.
+format when available. Both [prefix.dev](https://prefix.dev) and
+[anaconda.org](https://anaconda.org) already serve sharded repodata for conda-forge.
 
 <details class="margin-note" markdown>
 <summary>Deep dive</summary>
@@ -157,7 +144,7 @@ authentication, and OCI support, see [Deep Dive: The Networking Stack](deep-dive
 
 ### The cache directory
 
-[rattler] caches repodata on disk so it doesn't re-download on every run.
+[rattler] caches repodata on disk so you don't have to re-download on every run.
 
 `rattler::default_cache_dir()` returns the OS-appropriate location:
 
@@ -166,7 +153,7 @@ authentication, and OCI support, see [Deep Dive: The Networking Stack](deep-dive
 - Windows: `%LOCALAPPDATA%\rattler\cache`
 
 By sharing this cache with [pixi] and [rattler-build], packages are downloaded only
-once across all tools.
+once across all tools. This was a deliberate design choice.
 
 <details class="margin-note" markdown>
 <summary>Content-addressed caching</summary>
@@ -179,16 +166,15 @@ cache hits when a rebuild produces different files.
 
 ### The HTTP client
 
-[rattler] uses [reqwest] for HTTP.  We build a client with authentication and OCI
+[rattler] uses [reqwest] for HTTP.  We'll build a client with authentication and OCI
 support.
 
 ## Implementation
 
 ### `src/client.rs`: shared HTTP client
 
-Several commands need an HTTP client with authentication and OCI support.
-We put this setup in its own module so we can reuse it in the search, lock,
-and install commands without repeating the same boilerplate.
+Several commands will need an HTTP client with auth and OCI support, so we put
+this setup in its own module.
 
 ``` {.rust file=src/client.rs}
 use std::sync::Arc;
@@ -221,7 +207,7 @@ pub fn build_authenticated_client() -> miette::Result<reqwest_middleware::Client
 }
 ```
 
-The `.no_gzip()` call disables reqwest's automatic gzip decompression. Repodata files are already served as `.json.zst` or `.json.bz2` by the channel, and rattler handles that decompression itself. If we let reqwest also decompress, we'd either double-decompress or interfere with rattler's streaming parser.
+The `.no_gzip()` call disables reqwest's automatic gzip decompression. Repodata is already served compressed by the channel and rattler handles that decompression itself. Letting reqwest also decompress would interfere.
 
 `reqwest_middleware` wraps `reqwest::Client` to allow pluggable middleware.
 Each middleware intercepts every request and response:
@@ -231,12 +217,9 @@ Each middleware intercepts every request and response:
 - **OciMiddleware**: translates `oci://` URLs to the OCI registry
   API so you can use container registries as conda channels
 
-Web frameworks use the same pattern: a chain of handlers, each calling
-`next.run(request)` to pass to the next one.
-
 ### `src/commands/search.rs`
 
-This file is new. It implements the search command:
+Let's create a new file for the search command:
 
 ``` {.rust file=src/commands/search.rs}
 <<search-imports>>
@@ -279,9 +262,8 @@ pub struct Args {
 
 #### Execute
 
-The execute function walks through the same networking setup that
-`resolve_from_manifest` will reuse in [Chapter 6](ch06-lock.md): parse channels, build an HTTP client with
-authentication middleware, configure the Gateway, then query repodata.
+The execute function walks through the networking setup we'll reuse in [Chapter 6](ch06-lock.md):
+parse channels, build an HTTP client, configure the Gateway, and query repodata.
 
 ``` {.rust #search-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
@@ -299,9 +281,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
 #### Channel and spec parsing
 
-We convert the `--channel` strings into rattler `Channel` objects and parse the
-user's query into a `MatchSpec`. The `ChannelConfig` provides the base URL for
-named channels (defaulting to `https://conda.anaconda.org/`).
+We convert the `--channel` strings into [rattler] `Channel` objects and parse the
+query into a `MatchSpec`.
 
 ``` {.rust #search-parse-channels}
 let channel_config =
@@ -360,9 +341,8 @@ let gateway = Gateway::builder()
 #### Query
 
 `gateway.query(...)` fetches repodata for the requested packages. We set
-`.recursive(false)` because search only needs to show what matches the query,
-not resolve transitive dependencies. This keeps the fetch fast. We query both
-the current platform and `NoArch` to cover pure-Lua packages.
+`.recursive(false)` because we only need direct matches, not transitive
+dependencies. We query both the current platform and `NoArch` to cover pure-Lua packages.
 
 ``` {.rust #search-query}
 let repo_data: Vec<RepoData> = with_spinner(
@@ -425,10 +405,8 @@ Ok(())
 
 ### `src/progress.rs`
 
-The progress module provides spinner wrappers that we'll reuse in both `search`
-and `install`. A more polished tool would use [indicatif]'s `MultiProgress` with a
-custom log writer to prevent tracing output from interleaving with spinners, but
-for our purposes a simple spinner does the job.
+The progress module provides spinner wrappers we'll reuse in search and install.
+A simple spinner does the job for us.
 
 ``` {.rust file=src/progress.rs}
 use std::borrow::Cow;
@@ -494,12 +472,10 @@ luafilesystem                  1.8.0
 
 ## Summary
 
-- Repodata is a channel's package catalog; it can be enormous.
-- MatchSpecs describe what packages to look for.
-- The `Gateway` fetches repodata using CEP-16 sharded format when available,
-  falling back to full JSON or JLAP patches.
-- The `search` command queries with `.recursive(false)` since it only needs
-  direct matches.
+- Repodata is a channel's package catalog, and it can be *huge*.
+- MatchSpecs describe what packages you're looking for.
+- The `Gateway` fetches repodata, preferring the sharded format (CEP-16) when available.
+- For search we query with `.recursive(false)` since we only need direct matches.
 
 ## Exercises
 
@@ -550,7 +526,7 @@ luafilesystem                  1.8.0
         - Build string, size, and timestamp differences are displayed
         - If either version is not found, a clear error is shown
 
-In the next chapter we implement `shot add`, which edits the manifest.
+In the next chapter we'll implement `shot add`, which will let you edit the manifest.
 Then in [Chapter 6](ch06-lock.md) we build `shot lock`, which adds solving
 to the repodata pipeline and records the result.
 

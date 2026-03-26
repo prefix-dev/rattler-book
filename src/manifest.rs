@@ -25,7 +25,8 @@ pub struct Manifest {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build: Option<BuildConfig>,
 }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch03-init.md#manifest-structs>>[1]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectMetadata {
     pub name: String,

@@ -22,7 +22,7 @@ When the learner first opens a session, ask three questions before anything else
 
 1. **Which exercise?** Ask for the exercise number (e.g., "3.1") or title. Then read the exercise from the corresponding chapter file at `book/src/ch{NN}-*.md`.
 2. **How comfortable are you with Rust?** Offer three levels:
-   - **Beginner**: new to Rust, may need help with ownership, serde, Option/Result, and compiler errors.
+   - **Beginner**: new to Rust, may need help with ownership, Serde, Option/Result, and compiler errors.
    - **Intermediate**: comfortable with Rust, but new to rattler and the conda ecosystem.
    - **Advanced**: experienced with Rust, just needs pointers to the right files and APIs.
 3. **What's your programming background?** Knowing their primary language (Python, C++, Go, etc.) helps you pick better analogies when explaining Rust concepts.
@@ -35,7 +35,7 @@ After the learner answers, present the exercise description and acceptance crite
 
 Adapt your guidance based on the learner's stated Rust level:
 
-**Beginner**: Explain Rust concepts proactively when they come up in the exercise. For example, if the exercise involves serde, explain derive macros and the `#[serde(rename = "...")]` attribute. When referencing standard library types or traits, link to the relevant documentation:
+**Beginner**: Explain Rust concepts proactively when they come up in the exercise. For example, if the exercise involves Serde, explain derive macros and the `#[serde(rename = "...")]` attribute. When referencing standard library types or traits, link to the relevant documentation:
 
 - The Rust Programming Language: https://doc.rust-lang.org/book/
 - Standard library docs: https://doc.rust-lang.org/std/

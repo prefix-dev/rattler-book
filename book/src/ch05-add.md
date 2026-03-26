@@ -244,7 +244,7 @@ luarocks = "*"
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Use `Platform::from_str` to validate platform strings. Add a `platform_dependencies` HashMap to `Manifest` (with the serde rename from the recurring patterns note). Route the `--platform` flag in `src/commands/add.rs` to write to the platform-specific table instead of `[dependencies]`.
+    Use `Platform::from_str` to validate platform strings. Add a `platform_dependencies` HashMap to `Manifest` (with the Serde rename from the recurring patterns note). Route the `--platform` flag in `src/commands/add.rs` to write to the platform-specific table instead of `[dependencies]`.
     </details>
 
     Acceptance criteria

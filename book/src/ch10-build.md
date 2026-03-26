@@ -5,13 +5,12 @@ loop: building a new package from source and publishing it so others can install
 it.
 
 Up to now, lumen-app has only consumed packages that someone else built.
-By adding a build command, we can write our own library (`lumen`, a Lua image
-toolkit that wraps ImageMagick), package it, host it on a local channel, and
+By adding a build command, we can write our own library (`lumen`, a smalll Lua library
+that wraps ImageMagick), package it, host it on a local channel, and
 install it into lumen-app with the same tool.
 
-This is how pyproject.toml and Cargo.toml work: when you own the source, the
-build configuration lives alongside the project manifest. Separate recipe files
-(like conda-forge feedstocks) exist for packaging code you don't own. For
+This is also how pyproject.toml: the
+build configuration lives alongside the project manifest. For
 moonshot, a single `moonshot.toml` handles both.
 
 ## Design
@@ -67,17 +66,16 @@ consume-only project. Without it, `shot build` refuses to run. The `[project]`
 fields `version`, `license`, and `description` are optional for consume-only
 projects but `version` is required when `[build]` is present.
 
-`[dependencies]` serves double duty: `shot install` installs them into your
-environment, and `shot build` bakes them into the package as runtime
-requirements.
+In our simple package manager `[dependencies]` serve a double duty: `shot install` installs them into your
+environment, and `shot build` puts them into the package as runtime
+requirements. In pixi for example we've actually split these dependency types.
 
 <details class="margin-note" markdown>
 <summary>Dev dependencies</summary>
 
-In a real-world tool you'd want a `[dev-dependencies]` section for packages
+In a real-world tool you might want a `[dev-dependencies]` section for packages
 needed during development (test runners, linters) but that shouldn't ship in
-the final package. Moonshot skips this for simplicity, but the pattern is
-the same as Cargo's or npm's dev dependencies.
+the final package. Moonshot skips this for simplicity.
 </details>
 
 The Rust struct that maps to the `[build]` section lives in `manifest.rs`
@@ -154,12 +152,10 @@ For a detailed reference on what's inside a `.conda` archive, including
 
 ### `noarch` packages
 
-When `noarch` is true (as it is for pure-Lua packages), the package is built
-once and works on all platforms, stored under the `noarch/` subdirectory. When
+When `noarch` is true (as it is for pure-Lua packages or pure Python ones for that matter), 
+the package is built once and works on all platforms, stored under the `noarch/` subdirectory. When
 false, the package is platform-specific and must be built separately for each
-target. Choosing `noarch` where possible reduces build and hosting costs, but
-any package containing compiled code or platform-specific paths must be built
-per-platform.
+target.
 
 ## Implementation
 

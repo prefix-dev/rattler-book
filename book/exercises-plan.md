@@ -233,7 +233,7 @@ Implement `shot add --platform linux-64 lua` which adds the dependency to a plat
 **Hints:**
 - `rattler_conda_types::Platform::from_str("linux-64")` to parse and validate
 - `Gateway::query(channels, [target_platform, Platform::NoArch], specs)` for platform-specific query
-- Modify `src/manifest.rs` (add `platform_dependencies` field with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the serde rename from the recurring patterns note)
+- Modify `src/manifest.rs` (add `platform_dependencies` field with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the Serde rename from the recurring patterns note)
 - Modify `src/commands/add.rs` (add `--platform` flag, route to correct table)
 
 **Dependencies:** None (implements its own manifest change)
@@ -295,7 +295,7 @@ Add a `[virtual-packages]` table to `moonshot.toml` where users can override det
 - `shot lock` reads the table and applies overrides before solving
 
 **Hints:**
-- Add `virtual_packages: HashMap<String, String>` to `Manifest` with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the serde rename from the recurring patterns note
+- Add `virtual_packages: HashMap<String, String>` to `Manifest` with `#[serde(default, skip_serializing_if = "HashMap::is_empty")]` and the Serde rename from the recurring patterns note
 - `GenericVirtualPackage { name: PackageName::from_str("__glibc"), version: Version::from_str("2.17"), build_string: "0".to_string() }`
 - `VirtualPackage::detect(...)` for defaults, then replace matching names with manifest overrides
 - `SolverTask { virtual_packages, ... }` in `src/session.rs`
@@ -374,10 +374,10 @@ Implement `shot reinstall` that removes the existing environment prefix and re-i
 
 ### 8.1 Show Activation Environment Variables (Easy)
 
-Add a `--show-env` flag to `shot shell` that prints the environment variables activation would set, instead of the activation script. Use `Environment::activation_env()` and compare against `std::env::vars()` to show only changed variables.
+Add a `--show-env` flag to `shot shell-hook` that prints the environment variables activation would set, instead of the activation script. Use `Environment::activation_env()` and compare against `std::env::vars()` to show only changed variables.
 
 **Acceptance criteria:**
-- `shot shell --show-env` prints lines like `PATH=/path/to/env/bin:...`
+- `shot shell-hook --show-env` prints lines like `PATH=/path/to/env/bin:...`
 - Only variables that differ from the current environment are shown
 - Variables are sorted alphabetically
 - Count of modified variables printed at the end
@@ -385,18 +385,18 @@ Add a `--show-env` flag to `shot shell` that prints the environment variables ac
 **Hints:**
 - `Environment::activation_env()` in `src/environment.rs`
 - `std::env::vars()` for current environment comparison
-- Modify `src/commands/shell.rs` (add flag, call activation_env instead of activate_script)
+- Modify `src/commands/shell_hook.rs` (add flag, call activation_env instead of activate_script)
 - Note: `activation_env` is async; the shell command may need to become async
 
 **Dependencies:** None
 
 ### 8.2 Generate Dotenv File from Activation (Intermediate)
 
-Add `shot shell --dotenv [path]` that writes the activation environment to a dotenv file. This lets other tools (Docker, systemd, IDE run configs) consume the environment without shell-specific activation. Use the `Activator` to compute the full environment, diff against the current env, and write only the changed variables.
+Add `shot shell-hook --dotenv [path]` that writes the activation environment to a dotenv file. This lets other tools (Docker, systemd, IDE run configs) consume the environment without shell-specific activation. Use the `Activator` to compute the full environment, diff against the current env, and write only the changed variables.
 
 **Acceptance criteria:**
-- `shot shell --dotenv` writes `moonshot.env` in the project root (not `.env`, which is the conda prefix directory)
-- `shot shell --dotenv /tmp/my.env` writes to the specified path
+- `shot shell-hook --dotenv` writes `moonshot.env` in the project root (not `.env`, which is the conda prefix directory)
+- `shot shell-hook --dotenv /tmp/my.env` writes to the specified path
 - File format: `KEY=VALUE` per line, values quoted if they contain spaces
 - Only activation-added/changed variables are included (not the full inherited environment)
 
@@ -404,16 +404,16 @@ Add `shot shell --dotenv [path]` that writes the activation environment to a dot
 - `Environment::activation_env()` returns `Result<HashMap<String, String>>` and is async, so `execute` must become async (update `src/main.rs` to add `.await`)
 - Compare with `std::env::vars()` to find the diff
 - Dotenv format: `KEY="value with spaces"` or `KEY=simple_value`
-- Modify `src/commands/shell.rs`
+- Modify `src/commands/shell_hook.rs`
 
 **Dependencies:** None
 
 ### 8.3 Stacked Environment Activation (Hard)
 
-Implement `shot shell --stack /other/env` that generates an activation script layering a second environment on top of the currently active one. Construct `ActivationVariables` from the already-activated environment state, then run the `Activator` for the stacked prefix. The result should have both envs on PATH in the correct order.
+Implement `shot shell-hook --stack /other/env` that generates an activation script layering a second environment on top of the currently active one. Construct `ActivationVariables` from the already-activated environment state, then run the `Activator` for the stacked prefix. The result should have both envs on PATH in the correct order.
 
 **Acceptance criteria:**
-- `eval $(shot shell)` then `eval $(shot shell --stack /other/env)` puts both envs on PATH
+- `eval $(shot shell-hook)` then `eval $(shot shell-hook --stack /other/env)` puts both envs on PATH
 - Stacked env's `bin/` appears before the base env's `bin/`
 - `CONDA_PREFIX` reflects the top-of-stack environment
 - A `MOONSHOT_STACK_DEPTH` env var tracks nesting level
@@ -423,7 +423,7 @@ Implement `shot shell --stack /other/env` that generates an activation script la
 - Use `rattler_shell::activation::prefix_path_entries` to get the path entries for the base prefix
 - `Activator::from_path(stacked_prefix, shell, platform)` and `activator.activation(vars)` to generate the stacked script
 - Set `PathModificationBehavior::Prepend` so the stacked env appears first on PATH
-- Modify `src/environment.rs` and `src/commands/shell.rs`
+- Modify `src/environment.rs` and `src/commands/shell_hook.rs`
 
 **Dependencies:** None
 

@@ -28,6 +28,8 @@ When writing or editing book chapters, avoid common LLM prose tells. The full re
 
 **"Production"**: Avoid using "production" (e.g. "production-ready", "production code"). It sounds out of place in a book about Lua packaging.
 
+**Rust crates**: Feel free to capitalize Rust crate names in prose for readability.
+
 
 # Literate programming
 

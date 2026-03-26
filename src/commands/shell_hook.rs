@@ -1,4 +1,4 @@
-// ~/~ begin <<book/src/ch08-shell-hook.md#src/commands/shell.rs>>[init]
+// ~/~ begin <<book/src/ch08-shell-hook.md#src/commands/shell_hook.rs>>[init]
 use clap::Parser;
 
 use crate::environment::Environment;

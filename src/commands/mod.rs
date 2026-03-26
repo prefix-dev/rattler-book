@@ -6,5 +6,5 @@ pub mod install;
 pub mod lock;
 pub mod run;
 pub mod search;
-pub mod shell;
+pub mod shell_hook;
 // ~/~ end

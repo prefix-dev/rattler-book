@@ -940,7 +940,7 @@ satisfied together.
     <details class="margin-note" markdown>
     <summary>Hint</summary>
 
-    Add a `virtual_packages` HashMap to `Manifest` (with the serde rename from the recurring patterns note). Build `GenericVirtualPackage` values from the table entries. Start from `VirtualPackage::detect(...)` defaults, then replace matching names with the manifest overrides. Wire the result into `SolverTask` in `src/session.rs`.
+    Add a `virtual_packages` HashMap to `Manifest` (with the Serde rename from the recurring patterns note). Build `GenericVirtualPackage` values from the table entries. Start from `VirtualPackage::detect(...)` defaults, then replace matching names with the manifest overrides. Wire the result into `SolverTask` in `src/session.rs`.
     </details>
 
     Acceptance criteria

@@ -5,7 +5,7 @@ CLI skeleton with [Clap].  By the end of the chapter `shot --help` works, even
 though none of the commands do anything yet.
 
 ## Creating the project
-
+Let's create a new Rust project first.
 ```console
 cargo new moonshot
 cd moonshot
@@ -13,7 +13,7 @@ cd moonshot
 
 ## Dependencies
 
-Open `Cargo.toml` and add the following.  We'll explain each crate as we use it.
+Open the `Cargo.toml` and add the following.  We'll explain some of the crates as we use them.
 
 ``` {.toml file=Cargo.toml}
 <<cargo-header>>
@@ -47,8 +47,7 @@ rustls-tls = [
 ]
 ```
 
-The dependencies start with the core [rattler] crates. These implement the conda
-specification. Each is fine-grained so you only pull in what you need.
+The dependencies start with the core [rattler] crates.
 
 ``` {.toml #cargo-deps}
 [dependencies]
@@ -116,17 +115,16 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 ```
 
-The [rattler] crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) implement the conda specification. The rest of the dependency list is general-purpose infrastructure: `clap` for CLI parsing, `tokio` for async I/O, [reqwest] for HTTP, and so on.
+The [rattler] crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) interact with the conda ecosystem. The rest of the dependency list is general-purpose infrastructure: `clap` for CLI parsing, `tokio` for async I/O, [reqwest] for HTTP, and so on.
 
 <details class="margin-note" markdown>
-<summary>Why so many rattler crates?</summary>
+<summary>Why split into different crates?</summary>
 
 [rattler] is split into fine-grained crates so you can depend on only the
-parts you need.  A tool that only needs to solve dependencies doesn't have
-to pull in the HTTP stack.  We use most of them, so the list is long.
+parts you need.  A tool that searches through conda channels, does not need a solver.
 </details>
 
-A package manager surfaces errors from many sources (network, filesystem, solver conflicts, malformed metadata), so we pull in [miette] with `features = ["fancy"]` early. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string.
+A package manager can surface errors from a lot of sources (network, filesystem, solver conflicts, malformed metadata), so we pull in [miette] with `features = ["fancy"]`. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string. I can highly recommend it for most CLI applications.
 
 Notice that we declare [reqwest] with `features = ["stream"]` for streaming downloads. TLS is handled at the crate level through the `[features]` section, where our `rustls-tls` feature propagates `reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots` (along with matching features for the [rattler] crates). This gives us a pure-Rust TLS implementation via [rustls], without linking against the system's OpenSSL.
 
@@ -154,7 +152,7 @@ Here is how the project is structured:
           <li class="file"><span class="name">add.rs</span></li>
           <li class="file"><span class="name">install.rs</span></li>
           <li class="file"><span class="name">lock.rs</span></li>
-          <li class="file"><span class="name">shell.rs</span></li>
+          <li class="file"><span class="name">shell_hook.rs</span></li>
           <li class="file"><span class="name">run.rs</span></li>
           <li class="file"><span class="name">build.rs</span></li>
         </ul>
@@ -176,7 +174,7 @@ pub mod install;
 pub mod lock;
 pub mod run;
 pub mod search;
-pub mod shell;
+pub mod shell_hook;
 ```
 
 The full `main.rs` is assembled from four named sections:
@@ -254,7 +252,7 @@ enum Command {
     Lock(commands::lock::Args),
 
     /// Print a shell activation script.
-    Shell(commands::shell::Args),
+    ShellHook(commands::shell_hook::Args),
 
     /// Run a command inside the activated environment.
     Run(commands::run::Args),
@@ -303,7 +301,7 @@ network requests.
 
 `async_main` parses the CLI arguments, sets up logging, and dispatches to the
 right subcommand handler. We route all log output to stderr, leaving stdout
-clean for machine-readable output (like `shot shell`, which prints a shell
+clean for machine-readable output (like `shot shell-hook`, which prints a shell
 script). The `--verbose` flag raises the log level to `DEBUG`; users can also
 set `RUST_LOG=debug` for more control.
 
@@ -333,7 +331,7 @@ async fn async_main() -> miette::Result<()> {
         Command::Add(args) => commands::add::execute(args).await,
         Command::Install(args) => commands::install::execute(args).await,
         Command::Lock(args) => commands::lock::execute(args).await,
-        Command::Shell(args) => commands::shell::execute(args),
+        Command::ShellHook(args) => commands::shell_hook::execute(args),
         Command::Run(args) => commands::run::execute(args).await,
         Command::Build(args) => commands::build::execute(args).await,
     }

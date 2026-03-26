@@ -46,7 +46,7 @@ enum Command {
     Lock(commands::lock::Args),
 
     /// Print a shell activation script.
-    Shell(commands::shell::Args),
+    ShellHook(commands::shell_hook::Args),
 
     /// Run a command inside the activated environment.
     Run(commands::run::Args),
@@ -99,7 +99,7 @@ async fn async_main() -> miette::Result<()> {
         Command::Add(args) => commands::add::execute(args).await,
         Command::Install(args) => commands::install::execute(args).await,
         Command::Lock(args) => commands::lock::execute(args).await,
-        Command::Shell(args) => commands::shell::execute(args),
+        Command::ShellHook(args) => commands::shell_hook::execute(args),
         Command::Run(args) => commands::run::execute(args).await,
         Command::Build(args) => commands::build::execute(args).await,
     }
