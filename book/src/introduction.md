@@ -6,21 +6,32 @@ Here is what using the finished tool will look like:
 
 ```console
 $ shot init my-app --channel conda-forge --channel ../channel
-$ shot add lumen imagemagick
+$ shot add lumen
 $ shot install
-✔ Installed 12 packages
+  1523 repodata records loaded
+  Solved 12 packages in 0.3s
+✔ Wrote moonshot.lock (12 packages)
+✔ Environment updated in 2.1s
+  Activate with:  eval $(shot shell-hook)
 
 $ shot run lua -e "require('lumen').thumbnail('photo.jpg', 128)"
 ```
 
-`lumen` is a Lua library we wrote ourselves. ImageMagick is a C library with
-dozens of native dependencies. Both were solved, installed, and activated by
-our package manager. Where did `lumen` come from? We built it with moonshot's
-other headline command:
+`lumen` is a Lua library we wrote ourselves. It depends on ImageMagick, a C
+library with dozens of native dependencies. Both were solved, installed, and
+activated by our package manager. Where did `lumen` come from? We built it
+with moonshot's other headline command:
 
 ```console
 $ shot build --output-dir ../channel
+Building lumen 0.1.0 (build lua_0)
+  → Installing 1 build dependencies…
+  → Running build script `build.lua`
+  → Packing 2 files…
+  → Indexing channel at ../channel
 ✔ Built lumen-0.1.0-lua_0.conda
+  package → ../channel/noarch/lumen-0.1.0-lua_0.conda
+  channel → ../channel
 ```
 
 By the end of this book, you will have built the tool that did all of that, on

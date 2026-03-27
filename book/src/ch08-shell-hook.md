@@ -269,12 +269,10 @@ handles both the "no active env" case and the "replacing an existing env" case.
 For Bash, `shot shell-hook` might print something like:
 
 ```bash
-export PATH="/home/user/my-app/.env/bin:$PATH"
-export CONDA_PREFIX="/home/user/my-app/.env"
-export CONDA_SHLVL="1"
-export CONDA_DEFAULT_ENV="/home/user/my-app/.env"
-# source activation scripts
-. "/home/user/my-app/.env/etc/conda/activate.d/lua_path.sh"
+export PATH="/home/user/my-app/.env/bin:${PATH}"
+export CONDA_SHLVL=1
+export CONDA_ENV_SHLVL_1_CONDA_PREFIX=''
+export CONDA_PREFIX=/home/user/my-app/.env
 ```
 
 You evaluate this, and from that point on `lua`, `luarocks`, etc. are on your

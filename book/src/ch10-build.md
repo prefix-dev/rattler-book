@@ -19,6 +19,11 @@ moonshot, a single `moonshot.toml` handles both.
 dependencies into a temporary prefix, runs a Lua build script, packs the result
 into a `.conda` archive, and indexes the output directory as a local channel.
 
+We've also designed [ratter-build] for more general purpose package building, its both
+a cli and a library, but I figured that using lua to build is more fun in this case.
+
+[ratler-build]: https://rattler-build.prefix.dev/latest/
+
 ```console
 $ shot build
 Building moonshine 0.3.0 (build lua_0)
@@ -32,9 +37,9 @@ Building moonshine 0.3.0 (build lua_0)
 ```
 
 You can pass `--output-dir` to control where the built `.conda` file lands
-(defaults to `./output/`).
+(defaults to `./output/`). This directory is then automatically indexed as a conda channel.
 
-Remember `shot init`? With `--library`, it scaffolds a buildable project:
+Using `shot init` with `--library`, scaffolds a buildable project:
 
 ```console
 $ shot init moonshine --library
