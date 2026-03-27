@@ -69,14 +69,12 @@ many environments use it. Content-addressed keys (rather than name-plus-version)
 
 ### Hard links and reflinks
 
-<details class="margin-note" markdown>
-<summary>Why hard-linking is safe</summary>
-
+/// margin-note
 Packages in the cache are immutable after extraction. No tool or environment
 modifies them in place. This invariant is what makes hard-linking safe:
 multiple environments can share the same inodes because nobody writes to
 them.
-</details>
+///
 
 From the cache, files are linked into the target prefix. If possible on the system,
 [rattler] uses **reflinks** (copy-on-write clones) when the filesystem supports
@@ -94,14 +92,12 @@ This means:
 
 ### Transactions
 
-<details class="margin-note" markdown>
-<summary>Partial installs</summary>
-
+/// margin-note
 A naive package manager that unpacks files one by one can leave an
 environment half-installed if the process is interrupted. Partial installs
 are one of the most common failure modes in package management and often
 require manual cleanup.
-</details>
+///
 
 The Installer computes a **transaction**, a diff between the currently-installed
 state and the desired state, and applies only the changes:
@@ -113,12 +109,10 @@ state and the desired state, and applies only the changes:
 This makes `shot install` idempotent: running it twice with the same manifest
 is a no-op.
 
-<details class="margin-note" markdown>
-<summary>Deep dive</summary>
-
+/// margin-note
 For a detailed look at the .conda archive format, inner archives, and
 content-addressed storage, see [Deep Dive: The conda Package Format](deep-dive-package-format.md).
-</details>
+///
 
 ## Implementation
 
@@ -189,15 +183,13 @@ to transitive dependencies) via `with_requested_specs`. It records this in the
 `conda-meta/*.json` files so that future updates can correctly distinguish
 "you asked for this" from "installed because something else needed it".
 
-<details class="margin-note" markdown>
-<summary>Tracking direct vs transitive</summary>
-
+/// margin-note
 This distinction drives automatic cleanup: when a direct dependency is
 removed, the installer can garbage-collect its transitive dependencies that
 nothing else needs. Both [npm] and [pip] added this tracking late in their
 development, and the lack of it caused years of accumulated orphan packages
 in user environments.
-</details>
+///
 
 `IndicatifReporter` is a [rattler]-provided reporter backed by [indicatif] that shows per-package
 progress bars during download and extraction. If you want custom progress
@@ -386,11 +378,9 @@ hashes. You can inspect these to see exactly what's in your environment.
 
     Add a `shot list` command that reads the installed prefix and lists all packages. Use `PrefixRecord::collect_from_prefix` to discover installed packages, then display each one's name, version, and build string.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Use `PrefixRecord::collect_from_prefix` to list what is installed. Package fields live under `record.repodata_record.package_record`. Create a new command file and register it in `mod.rs` and `main.rs`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot list` prints all installed packages sorted alphabetically
@@ -401,11 +391,9 @@ hashes. You can inspect these to see exactly what's in your environment.
 
     Add a `--dry-run` flag to `shot install` that resolves dependencies and shows what would be installed without actually downloading or linking anything. Compare the resolved packages against what is already in the prefix (via `PrefixRecord::collect_from_prefix`) and report what would be added, updated, or unchanged.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Resolve to get the solution, then compare against what is already in the prefix. The `size` field on `PackageRecord` is optional. Short-circuit before `install_packages` to avoid any downloads.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot install --dry-run` shows packages that would be installed with their versions and sizes
@@ -417,11 +405,9 @@ hashes. You can inspect these to see exactly what's in your environment.
 
     Implement `shot reinstall` that removes the existing environment prefix and re-installs everything from the lock file. This forces a clean install, useful when the prefix is corrupted or when switching platforms. Read the lock file, remove the prefix directory, then run the full install pipeline. Add a `--relock` flag that also re-resolves before installing.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Remove the prefix with `remove_dir_all`, then read the lock file and call `Session::install_packages` to reinstall. For `--relock`, call `ensure_resolved(true)` first. Create `src/commands/reinstall.rs` (or add a flag to `install.rs`) and register it in `src/main.rs`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot reinstall` removes `.env/`, reads the lock file, and installs all locked packages fresh

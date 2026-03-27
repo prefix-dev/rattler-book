@@ -212,12 +212,10 @@ Most chapters include programming exercises. They are marked by difficulty:
 
 !!! exercise-intermediate "Parse a MatchSpec"
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Look at the `MatchSpec` type in `rattler_conda_types`. The `from_str`
     method does most of the work.
-    </details>
+    ///
 
     Given the string `python >=3.8,<4.0`, write a function that extracts the
     package name and version constraint using `MatchSpec::from_str`.

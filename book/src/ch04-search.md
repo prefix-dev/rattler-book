@@ -90,15 +90,13 @@ The naive approach would be to fetch all of `repodata.json` and load it into RAM
 conda-forge that's over 350 MB. That's painfully slow on first run and wasteful when
 you only care about packages starting with `lua`.
 
-<details class="margin-note" markdown>
-<summary>Why sharding exists</summary>
-
+/// margin-note
 The full-file approach stopped scaling once conda-forge passed 200,000
 package records. Downloading and parsing hundreds of megabytes on every
 install was *the* biggest latency bottleneck for conda users. [CEP-16][cep-16] solves this
 by splitting repodata into per-package shards so the client never
 downloads data it will never read.
-</details>
+///
 
 [CEP-16][cep-16] (sharded repodata) replaces the monolithic file with a
 **content-addressed, per-package** scheme:
@@ -119,15 +117,13 @@ the client never re-downloads shards it already has.
 
 [cep-16]: https://conda.org/learn/ceps/cep-0016/
 
-<details class="margin-note" markdown>
-<summary>Other formats</summary>
-
+/// margin-note
 Besides CEP-16 sharding, [rattler] also supports downloading the full
 `repodata.json` (plain, `.zst`, or `.bz2` compressed) and [JLAP]
 incremental patches for updating a cached copy. When a full file is
 loaded, rattler parses it lazily (internally called "sparse" loading) so
 that only the records you actually query are deserialized.
-</details>
+///
 
 [JLAP]: https://conda.org/learn/ceps/cep-0014/
 
@@ -135,12 +131,10 @@ Setting `sharded_enabled: true` on the Gateway tells it to prefer the sharded
 format when available. Both [prefix.dev](https://prefix.dev) and
 [anaconda.org](https://anaconda.org) already serve sharded repodata for conda-forge.
 
-<details class="margin-note" markdown>
-<summary>Deep dive</summary>
-
+/// margin-note
 For a detailed look at the networking stack, including reqwest middleware,
 authentication, and OCI support, see [Deep Dive: The Networking Stack](deep-dive-networking.md).
-</details>
+///
 
 ### The cache directory
 
@@ -155,14 +149,12 @@ authentication, and OCI support, see [Deep Dive: The Networking Stack](deep-dive
 By sharing this cache with [pixi] and [rattler-build], packages are downloaded only
 once across all tools. This was a deliberate design choice.
 
-<details class="margin-note" markdown>
-<summary>Content-addressed caching</summary>
-
+/// margin-note
 The cache keys are content hashes, not name-plus-version pairs. This
 matters because the same package version can be rebuilt (with a different
 build number or build string), and content-addressed keys prevent stale
 cache hits when a rebuild produces different files.
-</details>
+///
 
 ### The HTTP client
 
@@ -475,11 +467,9 @@ luafilesystem                  1.8.0
 
     Currently `shot search` deduplicates results to show only the latest version per package name. Add a `--all-versions` flag that displays every version found in the repodata. For each version, show the `build` string from `PackageRecord`, giving users visibility into how packages are built.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Each `PackageRecord` has a `build` string and a `version` you can display with `.to_string()`. Adjust the dedup logic in `src/commands/search.rs`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot search lua --all-versions` shows multiple versions (e.g., 5.4.7, 5.4.6, 5.3.5) each with their build string
@@ -490,11 +480,9 @@ luafilesystem                  1.8.0
 
     Add a `--deps` flag to `shot search` that prints the dependency list for each matching package. Access `PackageRecord::depends` (a `Vec<String>` of dependency specs) and display each dependency on its own indented line. Parse each dependency back through `MatchSpec::from_str` to validate it and show the structured name + version constraint.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     The `depends` field on `PackageRecord` is a list of dependency spec strings. Parse each one with `MatchSpec::from_str` to extract the structured name and constraint.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot search lua --deps` shows the latest version of `lua` with its dependencies listed below
@@ -506,11 +494,9 @@ luafilesystem                  1.8.0
 
     Implement `shot search <package> --diff <version1> <version2>` that compares two versions of the same package side by side. Query the gateway for both versions, then diff their `PackageRecord` fields: dependencies added/removed/changed, build string, size, and timestamp.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Add `--diff` as a clap arg taking two version strings. The package name comes from the existing `query` arg. Query the gateway twice with pinned specs like `"lua ==5.4.6"`. Compare `PackageRecord` fields between the two results; for dependencies, build a `HashMap` from each version's `depends` list and diff the maps. Note that `timestamp` is `TimestampMs`, not `DateTime`; call `.datetime()` to convert.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot search lua --diff 5.4.6 5.4.7` shows differences between the two versions

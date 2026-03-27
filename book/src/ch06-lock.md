@@ -73,13 +73,11 @@ ecosystems have structure that makes good heuristics very effective.
 
 [SAT]: https://en.wikipedia.org/wiki/Boolean_satisfiability_problem
 
-<details class="margin-note" markdown>
-<summary>Deep dive</summary>
-
+/// margin-note
 For a detailed look at how resolvo's SAT solver works, including clause
 learning, decision heuristics, and the connection to CDCL, see
 [Deep Dive: The resolvo SAT Solver](deep-dive-resolvo.md).
-</details>
+///
 
 ### Virtual packages
 
@@ -95,12 +93,10 @@ The system is probed for things like:
 Packages can list these as dependencies.  A CUDA-accelerated package might say
 `__cuda >=11.0`; the solver will refuse to install it on a machine without CUDA.
 
-<details class="margin-note" markdown>
-<summary>Deep dive</summary>
-
+/// margin-note
 For more on virtual packages and archspec, see
 [Deep Dive: Virtual Packages](deep-dive-virtual-packages.md).
-</details>
+///
 
 ### Locked vs pinned packages
 
@@ -109,24 +105,20 @@ and pass them to the solver as **locked packages**: versions the solver
 should prefer to keep if possible. This gives stable upgrades; re-solving
 only changes what the new constraints require.
 
-<details class="margin-note" markdown>
-<summary>Why locking matters</summary>
-
+/// margin-note
 Without locking, every resolve could silently upgrade transitive
 dependencies even when the manifest hasn't changed. That kind of drift is a
 common source of "it worked yesterday" bugs. Locking gives you environmental
 stability: the solver only changes what it must to satisfy new or modified
 constraints.
-</details>
+///
 
-<details class="margin-note" markdown>
-<summary>Locked vs pinned</summary>
-
+/// margin-note
 The difference between locked and pinned is important: locked packages are a
 *preference* that the solver may override if constraints demand it, while
 pinned packages are a *hard constraint* that the solver must satisfy or
 report as a conflict.
-</details>
+///
 
 ### Resolver strategy: how conda sorting works
 
@@ -892,11 +884,9 @@ satisfied together.
 
     After resolving, print a formatted table showing every package in the solution. For each `RepoDataRecord`, display: package name, version, build string, and subdir.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Each `RepoDataRecord` has a `package_record` with name, version, build, and subdir fields. Use `as_normalized()` to display package names. Add printing after `ensure_resolved` in `lock.rs`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot lock` prints an aligned table (name, version, build, subdir)
@@ -907,11 +897,9 @@ satisfied together.
 
     When re-locking (lock file already exists), compare the old and new solutions and print a diff. Read the old lock file before resolving, then compare package names and versions between old and new. Show added (+), removed (-), and upgraded/downgraded (~) packages.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Read the old lock file before resolving. Build a HashMap of name-to-version for both old and new solutions, then diff the maps. Note that `PackageName` does not implement `Display`; use `.as_normalized()` for printing.
-    </details>
+    ///
 
     Acceptance criteria
     :   - Adding a dependency then running `shot lock --force` shows `+ newpkg 1.0.0`
@@ -923,11 +911,9 @@ satisfied together.
 
     Add a `[virtual-packages]` table to `moonshot.toml` where users can override detected virtual packages for solving. This lets users target older systems (e.g., `__glibc = "2.17"` for manylinux2014 compatibility). Parse the table, construct `GenericVirtualPackage` values, and inject them into the `SolverTask` instead of auto-detected ones.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Add a `virtual_packages` HashMap to `Manifest` (with the Serde rename from the recurring patterns note). Build `GenericVirtualPackage` values from the table entries. Start from `VirtualPackage::detect(...)` defaults, then replace matching names with the manifest overrides. Wire the result into `SolverTask` in `src/session.rs`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - Adding `[virtual-packages]` with `__glibc = "2.17"` to moonshot.toml makes the solver use glibc 2.17

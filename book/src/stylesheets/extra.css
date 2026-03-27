@@ -413,6 +413,7 @@
 
 .md-typeset h4 {
     font-weight: 400;
+    font-style: italic;
     font-size: var(--rb-h4-size);
     margin-top: 1.4em;
     margin-bottom: 0.4em;
@@ -611,59 +612,53 @@ body.focus-mode .md-sidebar--primary {
 }
 
 /* ===========================================================================
-   Margin notes (Tufte sidenotes via <details class="margin-note">)
+   Margin notes (Tufte sidenotes via /// margin-note block plugin)
    =========================================================================== */
-.md-typeset details.margin-note {
-    display: block;
-    overflow: hidden;
-    border: none;
-    background: transparent;
-    box-shadow: none;
-    padding: 0;
-    margin: 0.5rem 0;
-    font-size: inherit;
-}
-.md-typeset details.margin-note:not([open]) > *:not(summary) {
+
+/* -- Checkbox toggle infrastructure -- */
+.margin-toggle {
     display: none;
 }
-
-.md-typeset details.margin-note > summary {
+.margin-toggle-label {
+    display: inline-block;
+    cursor: pointer;
     font-weight: 600;
     font-style: italic;
     color: var(--rb-text-lighter);
-    cursor: pointer;
-    list-style: none;
-    background: transparent;
-    border: none;
-    padding: 0 0 0.2rem 0;
-    margin: 0;
 }
-/* Hide Material's chevron and icon */
-.md-typeset details.margin-note > summary::after {
-    display: none;
-}
-.md-typeset details.margin-note > summary::-webkit-details-marker {
-    display: none;
-}
-/* Expand indicator on mobile — ⊕ when closed, ⊖ when open */
-.md-typeset details.margin-note > summary::before {
-    content: "⊕";
-    display: inline-block;
+.margin-toggle-label::before {
+    content: "\2295"; /* ⊕ */
     font-style: normal;
     font-size: 0.85em;
     margin-right: 0.3em;
     color: var(--rb-gruvbox-muted);
-    transition: transform 0.2s;
-    background: none;
-    mask-image: none;
-    -webkit-mask-image: none;
-    position: static;
-    width: auto;
-    height: auto;
-    vertical-align: baseline;
 }
-.md-typeset details.margin-note[open] > summary::before {
-    content: "⊖";
+.margin-toggle:checked + .margin-toggle-label::before {
+    content: "\2296"; /* ⊖ */
+}
+
+/* -- Wrapper -- */
+.md-typeset .margin-wrapper {
+    display: block;
+    margin: 0.5rem 0;
+}
+
+/* -- Aside content: hidden by default on narrow screens -- */
+.md-typeset aside.margin-note {
+    display: none;
+    border: none;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
+    margin: 0.3rem 0;
+    font-size: 0.85rem;
+    color: var(--rb-text-lighter);
+    line-height: 1.4;
+}
+
+/* Show when checkbox is checked (narrow screen toggle) */
+.margin-toggle:checked ~ aside.margin-note {
+    display: block;
 }
 
 /* ===========================================================================
@@ -691,33 +686,24 @@ body.focus-mode .md-sidebar--primary {
         margin-left: 2rem;
         margin-right: 0;
     }
-    .md-typeset details.margin-note {
+    /* Margin note: float wrapper into the right margin */
+    .md-typeset .margin-wrapper {
         float: right;
         clear: right;
         margin-right: -18rem;
         width: 15rem;
-        font-size: 0.8rem;
-        line-height: 1.3;
         margin-top: 0.3rem;
         margin-bottom: 0;
-        overflow: visible;
     }
-    .md-typeset details.margin-note > summary {
+    .margin-toggle-label {
         display: none;
     }
-    .md-typeset details.margin-note > summary::before {
-        display: none;
+    .md-typeset aside.margin-note {
+        display: block;
+        font-size: 0.8rem;
+        line-height: 1.3;
     }
-    /* Force content visible on wide screens regardless of [open] attribute */
-    .md-typeset details.margin-note:not([open]) > *:not(summary) {
-        display: block !important;
-    }
-    /* Modern browsers use content-visibility:hidden on ::details-content to hide closed details */
-    .md-typeset details.margin-note::details-content {
-        display: block !important;
-        content-visibility: visible !important;
-    }
-    .md-typeset details.margin-note p {
+    .md-typeset aside.margin-note p {
         margin: 0.3em 0;
     }
 }

@@ -147,12 +147,10 @@ without capturing stdout/stderr.
 
 ### Propagating the exit code
 
-<details class="margin-note" markdown>
-<summary>Exit code propagation</summary>
-
+/// margin-note
 Without exit code propagation, `shot run` is unusable in CI: a failing
 test would appear as a successful pipeline step.
-</details>
+///
 
 If the child fails, we exit with the same code.  This lets you compose
 `shot run` in shell scripts:
@@ -175,11 +173,9 @@ would cause `miette` to print a message, cluttering the output.
 
     Add `shot repl` that launches the Lua REPL in the activated environment with `LUA_PATH` and `LUA_CPATH` auto-configured to point to the correct directories in the prefix. This saves users from manually setting Lua's module search paths.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Get the activation env, then detect the Lua version by running `lua -v` and parsing the output. Set `LUA_PATH` and `LUA_CPATH` before spawning the REPL. Create `src/commands/repl.rs` or extend `run.rs`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot repl` launches `lua` (interactive) with the activated environment
@@ -192,11 +188,9 @@ would cause `miette` to print a message, cluttering the output.
 
     Add `--env KEY=VALUE` flags to `shot run` that inject extra environment variables on top of the activation environment. These are applied after activation, so they can override activation-set values.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Get the activation env, then insert the extra vars on top. Parse each `KEY=VALUE` by splitting on the first `=`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot run --env MY_VAR=hello lua -e "print(os.getenv('MY_VAR'))"` prints `hello`
@@ -208,11 +202,9 @@ would cause `miette` to print a message, cluttering the output.
 
     Make `shot run` check lock freshness and prefix existence before executing. If the lock is stale or the prefix is missing/incomplete, automatically resolve and install. Check installed packages against the lock file using `PrefixRecord::collect_from_prefix` to detect if packages were manually deleted.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Check `Project::is_lock_fresh()` and compare installed packages against the lock file. If anything is missing or stale, run the resolve-and-install pipeline before spawning the command.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot run lua -v` on a fresh project (no `.env/`) automatically resolves, installs, then runs

@@ -128,11 +128,10 @@ in both directions.
 1. Using `#[serde(default)]` annotations make `[dependencies]` and others that use it optional.
 2. `#[serde(default = "default_channels")]` on `channels` falls
 back to `["conda-forge"]` when omitted.
-<details class="margin-note" markdown>
-<summary>Why default to conda-forge?</summary>
-
+/// margin-note
 [conda-forge](https://conda-forge.org/) is the largest community conda channel and contains a lot of packages, so
-it is a good default for getting started. </details>
+it is a good default for getting started.
+///
 
 ```{.rust #manifest-structs}
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -239,11 +238,10 @@ on pixi so that the unknown directory or file at least surfaces.
 `into_diagnostic()`, then optionally attach extra context with `.context()`.
 [Miette] renders these as user-friendly error messages in the terminal.
 
-<details class="margin-note" markdown>
-<summary>Miette Conversion</summary>
-`.into_diagnostic()` confused me at first, but because the `miette::Result` differs from the 
+/// margin-note
+`.into_diagnostic()` confused me at first, but because the `miette::Result` differs from the
 regular `Results` this is a way to convert between the two.
-</details>
+///
 
 [fs_err]: https://docs.rs/fs-err
 
@@ -284,14 +282,12 @@ It returns a tuple `(PathBuf, Manifest)` because callers sometimes need to
 *write back* to the same path (e.g., `shot add` modifies the manifest before
 installing).
 
-<details class="margin-note" markdown>
-<summary>Design choice: no walk-up</summary>
-
+/// margin-note
 `find_in_dir` only looks in the directory you pass it. An alternative
 design, used by Cargo and npm, walks up the directory tree until it finds a
 manifest. Walk-up is convenient when you run commands from a subdirectory,
-but it introduces ambiguity: which manifest did the tool find? 
-</details>
+but it introduces ambiguity: which manifest did the tool find?
+///
 
 ### Parsing dependencies as match specs
 
@@ -468,11 +464,9 @@ lua = ">=5.4"
 
     Add a top-level `requires-lua` field to `moonshot.toml` (similar to `requires-python` in pyproject.toml). This field is more ergonomic than putting the Lua constraint in `[dependencies]` because it expresses the Lua version as a project-level requirement, not a regular dependency. Parse and validate it through `MatchSpec::from_str`. The `shot init` command gets a `--lua-version` flag to set it.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     The value is a version constraint, not a full match spec. Prepend `"lua "` to build a valid spec for `MatchSpec::from_str`. Use a Serde rename so the TOML key keeps its hyphen. See `Manifest::match_specs()` for the parsing pattern.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot init --lua-version ">=5.1,<5.5"` writes `requires-lua = ">=5.1,<5.5"` to `[project]`
@@ -484,11 +478,9 @@ lua = ">=5.4"
 
     At init time, detect the system's virtual packages using `VirtualPackage::detect()` and print them to stdout. Write a `[system]` section into the manifest with the detected values (e.g., `glibc = "2.31"` on Linux, `osx = "15.0"` on macOS). This gives users visibility into what their build host provides, which matters when the project later resolves dependencies (Ch6) or builds platform-specific packages (Ch10).
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Call `VirtualPackage::detect` and convert results to `GenericVirtualPackage`. Note that `__archspec` puts the architecture in `build_string`, not `version`. See `src/session.rs` for the detection pattern. Store results as a `HashMap` in the manifest.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot init` prints detected virtual packages (e.g., `Detected: __glibc=2.31, __archspec=1=x86_64`)
@@ -502,11 +494,9 @@ lua = ">=5.4"
 
     Dependencies: Exercise 3.1 (uses the `requires-lua` field).
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Build an HTTP client (see `src/client.rs`), create a `Gateway`, and query for the lua spec. Follow the gateway pattern in `src/commands/search.rs`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot init --validate` succeeds when `lua >=5.4` exists on conda-forge

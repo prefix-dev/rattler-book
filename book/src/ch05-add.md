@@ -199,11 +199,9 @@ luarocks = "*"
 
     Currently `shot add "lua >=5.3"` silently keeps the existing `>=5.4` constraint because of `or_insert_with`. Change `add` so it warns the user when a package already exists with a *different* version constraint, and add a `--force` flag that overwrites the existing constraint.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Use `entry().and_modify()` or check the existing value before inserting. Add `#[clap(long)]` for the `--force` flag. Print the old and new constraints in the warning.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot add lua` when `lua = ">=5.4"` already exists prints a warning and keeps `>=5.4`
@@ -215,11 +213,9 @@ luarocks = "*"
 
     Make `shot add` query the repodata gateway by default to verify each package exists in the configured channels before adding it. If a package is not found, refuse to add it. Construct a `Session`, query with the parsed `MatchSpec`, and check that at least one matching record comes back. Add `--offline` to skip the check for users without network access.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Create a `Session` to get gateway access and query for the package. Check whether the returned repodata has any records. Follow the pattern in `src/commands/search.rs`. Note that `Session::new` consumes the `Project`, so you may need to re-discover it afterward.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot add lua` queries conda-forge and succeeds (lua exists)
@@ -231,11 +227,9 @@ luarocks = "*"
 
     Implement `shot add --platform linux-64 lua` which adds the dependency to a platform-specific table `[platform-dependencies.linux-64]` instead of the global `[dependencies]`. This requires extending the `Manifest` struct with a `platform_dependencies: HashMap<String, HashMap<String, String>>` field, parsing the target platform with `Platform::from_str`, and optionally validating via the gateway for that specific platform.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Use `Platform::from_str` to validate platform strings. Add a `platform_dependencies` HashMap to `Manifest` (with the Serde rename from the recurring patterns note). Route the `--platform` flag in `src/commands/add.rs` to write to the platform-specific table instead of `[dependencies]`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot add --platform linux-64 lua` writes to `[platform-dependencies.linux-64]`

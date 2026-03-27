@@ -70,13 +70,11 @@ In our simple package manager `[dependencies]` serve a double duty: `shot instal
 environment, and `shot build` puts them into the package as runtime
 requirements. In pixi for example we've actually split these dependency types.
 
-<details class="margin-note" markdown>
-<summary>Dev dependencies</summary>
-
+/// margin-note
 In a real-world tool you might want a `[dev-dependencies]` section for packages
 needed during development (test runners, linters) but that shouldn't ship in
 the final package. Moonshot skips this for simplicity.
-</details>
+///
 
 The Rust struct that maps to the `[build]` section lives in `manifest.rs`
 alongside `Manifest` and `ProjectMetadata` (which we defined in
@@ -142,13 +140,11 @@ The `.conda` format (version 2) is an uncompressed ZIP containing two inner
 [rattler_package_streaming]'s `write_conda_package` function handles creating this
 structure.
 
-<details class="margin-note" markdown>
-<summary>Deep dive</summary>
-
+/// margin-note
 For a detailed reference on what's inside a `.conda` archive, including
 `info/index.json`, `info/paths.json`, and the outer ZIP structure, see
 [Deep Dive: The conda Package Format](deep-dive-package-format.md).
-</details>
+///
 
 ### `noarch` packages
 
@@ -1045,16 +1041,14 @@ channels = ["./output", "conda-forge"]
 moonshine = ">=0.3"
 ```
 
-<details class="margin-note" markdown>
-<summary>Beyond local indexing</summary>
-
+/// margin-note
 For a fully-featured package manager, local indexing is only the first step.
 You would also need a way to push packages to a remote server, sign them so
 consumers can verify authenticity, and define a trust model (who is allowed
 to publish, and how do you revoke a compromised key). These are substantial
 features that we skip in moonshot, but they are the difference between a local
 build tool and a real distribution system.
-</details>
+///
 
 ## Try it
 
@@ -1177,11 +1171,9 @@ conda-forge uses to distribute tens of thousands of packages.
 
     Add `shot build --inspect <file.conda>` that reads an existing `.conda` package and displays its metadata and file listing. Use `rattler_package_streaming` to read the archive, extract `info/index.json` for metadata and `info/paths.json` for the file list.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Use `stream_conda_info` from `rattler_package_streaming` to read the info section as a tar archive. Look for `IndexJson` and `PathsJson` in `rattler_conda_types::package`. Add `--inspect` as an early-return path in `build.rs`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot build --inspect output/noarch/mypkg-0.1.0-lua_0.conda` prints name, version, build, dependencies
@@ -1192,11 +1184,9 @@ conda-forge uses to distribute tens of thousands of packages.
 
     Include `license` and `description` from the manifest in the built package's `IndexJson`, and write an `about.json` file to the package's info directory. Add optional `home` and `dev_url` fields to the manifest's `[project]` section.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     The `license` field is already wired up in `build.rs`. Add `home` and `dev_url` to `ProjectMetadata`, then write an `about.json` file alongside `index.json` in the info directory. Define a simple local struct for serialization; rattler's `AboutJson` type uses `Vec<Url>` which is more than you need here.
-    </details>
+    ///
 
     Acceptance criteria
     :   - Built package's `info/index.json` has the `license` field populated
@@ -1208,11 +1198,9 @@ conda-forge uses to distribute tens of thousands of packages.
 
     Implement `shot build --variant KEY=VALUE` that produces different packages from the same source with different configurations. Each variant combination gets a unique build string (e.g., `lua54_0` vs `lua51_0`). Variant keys are injected as environment variables during the build script and encoded in the build string and `IndexJson`. Building with `--variant lua=5.4` and `--variant lua=5.1` produces two separate `.conda` packages.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Extend `Manifest::build_string()` to accept variant info. Encode variants into the build string by joining key-value pairs (remove dots: `5.4` becomes `54`). Pass each variant as a `VARIANT_*` env var to the build backend. Files to touch: `src/manifest.rs`, `src/commands/build.rs`, `src/build_backend.rs`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot build --variant lua=5.4` produces a package with build string containing `lua54`

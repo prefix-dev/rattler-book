@@ -103,3 +103,4 @@ markdown_extensions:
       permalink: true
   - tables
   - footnotes
+  - plugins.margin_note

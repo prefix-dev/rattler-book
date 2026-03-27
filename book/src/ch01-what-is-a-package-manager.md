@@ -92,15 +92,13 @@ This is a **dependency solving** problem.  When a package manager enforces
 that only one version of each package can be installed at a time, the problem is
 NP-complete.
 
-<details class="margin-note" markdown>
-<summary>Why is this NP-complete?</summary>
-
+/// margin-note
 Russ Cox [proves this][vsat] by reducing [3-SAT] to package
 version selection: each boolean variable becomes a package with two versions,
 each clause becomes a package whose versions depend on the corresponding
 literals, and a root package depends on all clause packages.  If the root is
 installable, the formula is satisfiable.
-</details>
+///
 
 Not every package manager hits this complexity.  If you allow multiple versions
 of the same package to coexist (as [Nix] and [Go modules] do), you can install
@@ -189,10 +187,9 @@ Let's keep `moonshot` intentionally minimal. It will not:
 
 - **Upload to a public channel.** We build packages locally and index them as a local channel instead. Adding this would not be very hard as there are rattler crates to do this.
 - **Handle C extensions.** Supporting compiled extensions means invoking a C compiler, linking against the right libraries, and producing platform-specific artifacts. Our build command targets pure Lua only. This would be more challenging, but the good thing about conda is that the compilers and native libraries are just there for you to start using.
-<details class="margin-note" markdown>
-<summary>Luajit</summary>
+/// margin-note
 [LuaJIT] has an [ffi] interface that allows connecting to C libraries without compilation. Luajit is also available as a conda-forge dependency, see [here](https://prefix.dev/channels/conda-forge/packages/luajit).
-</details>
+///
 [LuaJIT]: https://luajit.org/ 
 [ffi]: https://luajit.org/ext_ffi.html
 

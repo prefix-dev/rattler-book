@@ -17,15 +17,13 @@ process, which *can* modify `PATH`.
 You can pass an optional `--shell` flag to override the detected shell
 dialect and `--prefix` to override the environment location.
 
-<details class="margin-note" markdown>
-<summary>`shell-hook` vs `run`</summary>
-
+/// margin-note
 `shot shell-hook` and `shot run` ([Chapter 9](ch09-run.md)) represent a design fork.
 `shell-hook` generates a script the user evaluates, which means it must know the
 user's shell dialect. `run` spawns a child process with the right
 environment variables, which is shell-agnostic but only lasts for one
 command. Most package managers end up needing both.
-</details>
+///
 
 ## Concepts
 
@@ -282,9 +280,7 @@ export CONDA_DEFAULT_ENV="/home/user/my-app/.env"
 You evaluate this, and from that point on `lua`, `luarocks`, etc. are on your
 PATH.
 
-<details class="margin-note" markdown>
-<summary>Why `CONDA_` variables?</summary>
-
+/// margin-note
 You might notice that a Lua package manager is setting `CONDA_PREFIX` and
 `CONDA_SHLVL`. This is because rattler implements conda's activation
 protocol, and these variables are part of that protocol. The benefit is
@@ -293,7 +289,7 @@ systems, other package managers) will recognize our environment. The cost is
 the naming confusion, since "CONDA" has nothing to do with Lua. A more
 polished tool could alias these variables, but you would lose the ecosystem
 compatibility.
-</details>
+///
 
 ## Exercises
 
@@ -301,11 +297,9 @@ compatibility.
 
     Add a `--show-env` flag to `shot shell-hook` that prints the environment variables activation would set, instead of the activation script. Use `Environment::activation_env()` and compare against `std::env::vars()` to show only changed variables.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Call `activation_env()` and compare with the current environment to find changed variables. Note that `activation_env` is async, so `execute` will need to become async too.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot shell-hook --show-env` prints lines like `PATH=/path/to/env/bin:...`
@@ -317,11 +311,9 @@ compatibility.
 
     Add `shot shell-hook --dotenv [path]` that writes the activation environment to a dotenv file. This lets other tools (Docker, systemd, IDE run configs) consume the environment without shell-specific activation. Use the `Activator` to compute the full environment, diff against the current env, and write only the changed variables.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Same async `activation_env()` as the previous exercise. Diff against the current env and write only changed variables in dotenv format. Remember to update `main.rs` to `.await` the now-async `execute`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `shot shell-hook --dotenv` writes `moonshot.env` in the project root (not `.env`, which is the conda prefix directory)
@@ -333,11 +325,9 @@ compatibility.
 
     Implement `shot shell-hook --stack /other/env` that generates an activation script layering a second environment on top of the currently active one. Construct `ActivationVariables` from the already-activated environment state, then run the `Activator` for the stacked prefix. The result should have both envs on PATH in the correct order.
 
-    <details class="margin-note" markdown>
-    <summary>Hint</summary>
-
+    /// margin-note
     Build `ActivationVariables` with `conda_prefix: None` and the base env's paths in the `path` vec. (Setting `conda_prefix: Some(...)` would deactivate the base env instead.) Use `prefix_path_entries` from `rattler_shell::activation` to get the base paths, then `Activator::from_path` and `activator.activation(vars)` for the stacked script. Set `PathModificationBehavior::Prepend`.
-    </details>
+    ///
 
     Acceptance criteria
     :   - `eval $(shot shell-hook)` then `eval $(shot shell-hook --stack /other/env)` puts both envs on PATH

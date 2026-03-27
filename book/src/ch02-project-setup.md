@@ -121,12 +121,10 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 
 The [rattler] crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) interact with the conda ecosystem. The rest of the dependency list is general-purpose infrastructure: `clap` for CLI parsing, `tokio` for async I/O, [reqwest] for HTTP, and so on.
 
-<details class="margin-note" markdown>
-<summary>Why split into different crates?</summary>
-
+/// margin-note
 [rattler] is split into fine-grained crates so you can depend on only the
 parts you need.  A tool that searches through conda channels, does not need a solver.
-</details>
+///
 
 A package manager can surface errors from a lot of sources (network, filesystem, solver conflicts, malformed metadata), so we pull in [miette] with `features = ["fancy"]`. It renders structured diagnostics with source spans, which makes dependency conflicts and parse errors much easier to read than a plain error string. I can highly recommend it for most CLI applications.
 
@@ -287,16 +285,14 @@ fn main() -> miette::Result<()> {
 }
 ```
 
-<details class="margin-note" markdown>
-<summary>Thread pool sizing</summary>
-
+/// margin-note
 The runtime configuration splits available CPU cores between two pools.
 `worker_threads` handles async work (HTTP requests, futures polling), while
 `max_blocking_threads` handles synchronous operations that would stall the
 async scheduler (file I/O, archive extraction, solver runs). Giving the
 blocking pool more threads prevents slow disk operations from starving
 network requests.
-</details>
+///
 
 ### The async entry point
 
