@@ -18,7 +18,7 @@ pub struct Args {
     #[clap(short, long, default_value = "conda-forge")]
     pub channel: Vec<String>,
 
-    /// Scaffold a buildable library (adds [build] section and version).
+    /// Scaffold a library project (adds [build] section and version).
     #[clap(long)]
     pub library: bool,
 }

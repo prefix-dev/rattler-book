@@ -24,7 +24,7 @@ pub struct Manifest {
     #[serde(default)]
     pub dependencies: HashMap<String, NamelessMatchSpec>,
 
-    /// Present only for buildable packages.
+    /// Present only for library projects.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build: Option<BuildConfig>,
 }
