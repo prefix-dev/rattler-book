@@ -157,7 +157,13 @@ impl Session {
             .await
             .into_diagnostic()
             .context("installing packages")?;
+```
 
+After the installer finishes, we check whether it actually changed anything.
+An empty transaction means the prefix already matches the solution, so we skip
+the "updated" message.
+
+``` {.rust #session-install-packages}
         if result.transaction.operations.is_empty() {
             println!(
                 "{} Environment already up to date",
@@ -268,7 +274,13 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .into_diagnostic()
         .context("creating prefix directory")?;
     let prefix = std::path::absolute(prefix).into_diagnostic()?;
+```
 
+With the prefix ready, we check the lock file and resolve if needed. The
+`ResolveStatus` tells us whether the solver ran so we can print the right
+message.
+
+``` {.rust #install-execute}
     let status = session.ensure_resolved(false).await?;
 
     match &status {

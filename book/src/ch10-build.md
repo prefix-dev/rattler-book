@@ -390,7 +390,13 @@ async fn run_build_script(
     fs::write(&wrapper_path, &wrapper_src)
         .into_diagnostic()
         .context("writing build wrapper")?;
+```
 
+With the wrapper file in place, we prepend `build_prefix/bin` to `PATH` so the
+build script can call any tool installed as a build dependency. On Windows we
+also add `Library/bin`, which is where conda packages place DLLs and executables.
+
+``` {.rust #lua-run-build-script}
     let original_path = std::env::var("PATH").unwrap_or_default();
     let path_sep = if cfg!(windows) { ";" } else { ":" };
     let new_path = if cfg!(windows) {
@@ -522,7 +528,13 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         version,
         manifest.build_string(),
     );
+```
 
+Next we create the two isolated prefixes in a temporary directory and resolve
+the source directory to an absolute path. This keeps all build artifacts out of
+the project tree.
+
+``` {.rust #build-execute}
     let work_dir = tempfile::tempdir()
         .into_diagnostic()
         .context("creating temporary build directory")?;
@@ -548,7 +560,12 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         );
         session.resolve_and_install(build_prefix.clone()).await?;
     }
+```
 
+Finally we construct a `BuildContext`, hand it to the Lua backend, and fall
+through to packing and indexing.
+
+``` {.rust #build-execute}
     let backend = LuaBuildBackend;
     let ctx = BuildContext {
         manifest,
@@ -587,6 +604,9 @@ channel so other tools can use it.
 
     pack_conda(&install_prefix, &output_path, manifest)?;
 ```
+
+With the `.conda` file written, we index the output directory so it becomes a
+usable conda channel with a `repodata.json`.
 
 ``` {.rust #pack-and-index}
     println!(
@@ -671,7 +691,14 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
     };
 
     let version_str = manifest.project.version.as_deref().unwrap_or("0.0.0");
+```
 
+Now we populate an `IndexJson` struct. This is the metadata the solver reads
+when deciding whether a package satisfies a dependency. The identity fields
+(name, version, build string) come from the manifest; `depends` lists the
+runtime dependencies; and `noarch`/`subdir` control platform targeting.
+
+``` {.rust #create-index-json}
     let index = IndexJson {
         name: PackageName::from_str(&manifest.project.name)
             .into_diagnostic()

@@ -30,7 +30,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .into_diagnostic()
         .context("creating prefix directory")?;
     let prefix = std::path::absolute(prefix).into_diagnostic()?;
-
+// ~/~ end
+// ~/~ begin <<book/src/ch07-install.md#install-execute>>[1]
     let status = session.ensure_resolved(false).await?;
 
     match &status {

@@ -43,7 +43,8 @@ impl Environment {
             platform: Platform::current(),
         })
     }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch08-shell-hook.md#environment-impl>>[1]
     /// Bail if the prefix directory does not exist.
     pub fn ensure_exists(&self) -> miette::Result<()> {
         if !self.prefix.exists() {
@@ -54,7 +55,8 @@ impl Environment {
         }
         Ok(())
     }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch08-shell-hook.md#environment-impl>>[2]
     /// Generate the shell activation script as a string.
     pub fn activate_script(&self, shell_name: Option<&str>) -> miette::Result<String> {
         let shell = parse_shell(shell_name)?;

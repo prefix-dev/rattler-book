@@ -26,7 +26,8 @@ struct Cli {
     #[clap(short, long, global = true)]
     verbose: bool,
 }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch02-project-setup.md#main-cli-struct>>[1]
 #[derive(Debug, clap::Subcommand)]
 enum Command {
     /// Create a new moonshot.toml in the current directory.

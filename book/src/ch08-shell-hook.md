@@ -94,7 +94,9 @@ pub struct Environment {
 }
 ```
 
-The methods handle construction, validation, and script generation:
+`from_project` creates an environment from a discovered project, using the
+default `.env/` prefix unless overridden. `with_prefix` is used when the
+caller already knows the exact path (e.g. for a temporary build prefix):
 
 ``` {.rust #environment-impl}
 #[allow(dead_code)]
@@ -120,7 +122,13 @@ impl Environment {
             platform: Platform::current(),
         })
     }
+```
 
+Before activating or running commands, we check that `shot install` has
+actually created the prefix. This gives a clear error instead of a confusing
+"file not found" later:
+
+``` {.rust #environment-impl}
     /// Bail if the prefix directory does not exist.
     pub fn ensure_exists(&self) -> miette::Result<()> {
         if !self.prefix.exists() {
@@ -131,7 +139,13 @@ impl Environment {
         }
         Ok(())
     }
+```
 
+`activate_script` is the core of `shot shell-hook`. It detects the user's
+shell, builds an `Activator` from the prefix, and returns the activation
+script as a string that `eval` can execute:
+
+``` {.rust #environment-impl}
     /// Generate the shell activation script as a string.
     pub fn activate_script(&self, shell_name: Option<&str>) -> miette::Result<String> {
         let shell = parse_shell(shell_name)?;
@@ -143,11 +157,6 @@ impl Environment {
     }
 }
 ```
-
-`from_project` resolves the prefix from the project root (defaulting to
-`.env/`). `ensure_exists` provides a clear error message when the environment
-hasn't been created yet. `activate_script` generates the shell-specific
-activation script.
 
 A small helper resolves the shell dialect from an explicit name or the environment:
 

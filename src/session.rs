@@ -30,7 +30,8 @@ pub enum ResolveStatus {
         platform: Platform,
     },
 }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch06-lock.md#resolve-status-enum>>[1]
 #[allow(dead_code)]
 impl ResolveStatus {
     /// Extract the solution regardless of which variant we are.
@@ -71,7 +72,8 @@ impl Session {
 
         let client = build_authenticated_client()?;
         let channel_config = ChannelConfig::default_with_root_dir(project.root.clone());
-
+// ~/~ end
+// ~/~ begin <<book/src/ch06-lock.md#session-new>>[1]
         let gateway = Gateway::builder()
             .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
             .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
@@ -137,7 +139,8 @@ impl Session {
             "  {} repodata records loaded",
             console::style(total_records).cyan()
         );
-
+// ~/~ end
+// ~/~ begin <<book/src/ch06-lock.md#session-resolve>>[1]
         let virtual_packages: Vec<GenericVirtualPackage> =
             rattler_virtual_packages::VirtualPackage::detect(
                 &rattler_virtual_packages::VirtualPackageOverrides::default(),
@@ -147,7 +150,8 @@ impl Session {
             .into_iter()
             .map(|v| v.into())
             .collect();
-
+// ~/~ end
+// ~/~ begin <<book/src/ch06-lock.md#session-resolve>>[2]
         let solver_task = SolverTask {
             locked_packages,
             virtual_packages,
@@ -218,7 +222,8 @@ impl Session {
             .await
             .into_diagnostic()
             .context("installing packages")?;
-
+// ~/~ end
+// ~/~ begin <<book/src/ch07-install.md#session-install-packages>>[1]
         if result.transaction.operations.is_empty() {
             println!(
                 "{} Environment already up to date",

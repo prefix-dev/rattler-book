@@ -142,7 +142,8 @@ async fn run_build_script(
     fs::write(&wrapper_path, &wrapper_src)
         .into_diagnostic()
         .context("writing build wrapper")?;
-
+// ~/~ end
+// ~/~ begin <<book/src/ch10-build.md#lua-run-build-script>>[1]
     let original_path = std::env::var("PATH").unwrap_or_default();
     let path_sep = if cfg!(windows) { ";" } else { ":" };
     let new_path = if cfg!(windows) {

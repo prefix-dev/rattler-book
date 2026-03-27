@@ -314,7 +314,13 @@ or re-parsing is needed. `dependency_strings` formats them as
             })
             .collect()
     }
+```
 
+The second helper formats dependencies as `"name version"` strings for conda's
+`index.json`. We use this in [Chapter 10](ch10-build.md) when writing package
+metadata.
+
+``` {.rust #manifest-spec-helpers}
     /// Format dependencies as `"name version"` strings (or just `"name"`
     /// when there is no version constraint).
     ///
@@ -336,6 +342,15 @@ or re-parsing is needed. `dependency_strings` formats them as
 ### `src/commands/init.rs`
 
 ``` {.rust file=src/commands/init.rs}
+<<init-imports>>
+<<init-args>>
+<<init-execute>>
+```
+
+The imports pull in clap for argument parsing and the manifest types we just
+defined:
+
+``` {.rust #init-imports}
 use std::collections::HashMap;
 
 use clap::Parser;
@@ -343,7 +358,12 @@ use miette::IntoDiagnostic;
 use rattler_conda_types::NamelessMatchSpec;
 
 use crate::manifest::{BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME};
+```
 
+The `Args` struct uses clap's derive macros. The `--library` flag controls
+whether a `[build]` section is scaffolded:
+
+``` {.rust #init-args}
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Name of the project.  Defaults to the current directory name.
@@ -357,7 +377,12 @@ pub struct Args {
     #[clap(long)]
     pub library: bool,
 }
+```
 
+The execute function first checks that no manifest exists yet, then resolves
+the project name (from the argument or the directory name):
+
+``` {.rust #init-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
     let cwd = std::env::current_dir().into_diagnostic()?;
     let manifest_path = cwd.join(MANIFEST_FILENAME);
@@ -377,7 +402,13 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             .unwrap_or("my-lua-project")
             .to_string()
     });
+```
 
+With the name resolved, we construct a starter `Manifest` with Lua pre-filled
+so the user has something to work with immediately. When `--library` is set we
+also add a version and a default `BuildConfig`:
+
+``` {.rust #init-execute}
     // Build a starter manifest with Lua pre-filled so the user has something
     // to work with immediately.
     let manifest = Manifest {
@@ -402,7 +433,11 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             None
         },
     };
+```
 
+Finally we write the manifest and print a short guide for the user:
+
+``` {.rust #init-execute}
     manifest.write(&manifest_path)?;
 
     println!(

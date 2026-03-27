@@ -1,18 +1,21 @@
 // ~/~ begin <<book/src/ch05-add.md#src/commands/add.rs>>[init]
+// ~/~ begin <<book/src/ch05-add.md#add-imports>>[init]
 use clap::Parser;
 use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::NamelessMatchSpec;
 
 use crate::manifest::MANIFEST_FILENAME;
 use crate::project::Project;
-
+// ~/~ end
+// ~/~ begin <<book/src/ch05-add.md#add-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Packages to add, e.g. `luarocks` or `"lua >=5.4"`.
     #[clap(required = true)]
     pub packages: Vec<String>,
 }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch05-add.md#add-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
     let mut project = Project::discover()?;
 
@@ -29,7 +32,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             Ok((name, spec))
         })
         .collect::<miette::Result<_>>()?;
-
+// ~/~ end
+// ~/~ begin <<book/src/ch05-add.md#add-execute>>[1]
     let mut added = 0usize;
     for (name, spec) in parsed {
         project
@@ -48,6 +52,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     println!("  Run `shot install` to apply changes.");
     Ok(())
 }
+// ~/~ end
 // ~/~ begin <<book/src/ch05-add.md#split-spec>>[init]
 fn split_spec(spec: &str) -> (&str, &str) {
     // Respect quoted strings and handle the common "name version" pattern.

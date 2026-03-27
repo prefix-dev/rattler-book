@@ -84,7 +84,8 @@ pub fn write_lock_file(
             used_env_vars: vec![],
         })
         .collect();
-
+// ~/~ end
+// ~/~ begin <<book/src/ch06-lock.md#lock-write>>[1]
     let mut builder = LockFile::builder();
     builder.set_channels("default", lock_channels);
 
@@ -139,7 +140,8 @@ mod tests {
                 .into(),
         }
     }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch06-lock.md#lock-tests>>[1]
     #[test]
     fn write_then_read_roundtrip() {
         let dir = tempfile::tempdir().unwrap();
@@ -160,7 +162,8 @@ mod tests {
             PackageName::from_str("lua").unwrap()
         );
     }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch06-lock.md#lock-tests>>[2]
     #[test]
     fn freshness_check() {
         let dir = tempfile::tempdir().unwrap();

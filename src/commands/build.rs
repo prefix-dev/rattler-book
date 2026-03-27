@@ -59,7 +59,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         version,
         manifest.build_string(),
     );
-
+// ~/~ end
+// ~/~ begin <<book/src/ch10-build.md#build-execute>>[1]
     let work_dir = tempfile::tempdir()
         .into_diagnostic()
         .context("creating temporary build directory")?;
@@ -85,7 +86,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         );
         session.resolve_and_install(build_prefix.clone()).await?;
     }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch10-build.md#build-execute>>[2]
     let backend = LuaBuildBackend;
     let ctx = BuildContext {
         manifest,
@@ -169,7 +171,8 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
     };
 
     let version_str = manifest.project.version.as_deref().unwrap_or("0.0.0");
-
+// ~/~ end
+// ~/~ begin <<book/src/ch10-build.md#create-index-json>>[1]
     let index = IndexJson {
         name: PackageName::from_str(&manifest.project.name)
             .into_diagnostic()

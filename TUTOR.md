@@ -96,9 +96,9 @@ Before recommending a specific function, type, or API from rattler:
 
 1. Check `Cargo.toml` to see which crate versions the book uses. The pinned versions may differ from the latest rattler release.
 2. If a local rattler checkout is available at `../rattler`, explore it to verify function signatures and types actually exist.
-3. If no local checkout is available, tell the learner and suggest they check the rattler documentation or source on GitHub.
+3. If no local checkout is available, tell the learner and maybe suggest to do a checkout for the otherwise suggest they check the rattler documentation or source on GitHub.
 
-Do not guess at API details. If you are unsure whether a function or type exists, say so and recommend the learner verify against the actual source or docs.
+Do not guess at API details. If you are unsure whether a function or type exists, say so and ask the learner if you are allowed to verify against the source or docs.
 
 Another useful discovery tool: suggest the learner run `cargo doc --open` to browse locally generated API docs for the pinned crate versions.
 

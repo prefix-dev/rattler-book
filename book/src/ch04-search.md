@@ -354,7 +354,9 @@ query matched nothing.
     }
 ```
 
-Next we sort alphabetically and show only the latest version per package name.
+With duplicates collapsed, we sort the results alphabetically and print one
+line per package, showing only the latest version. This mimics how tools like
+`apt search` or `cargo search` present results.
 
 ``` {.rust #search-results}
     // Sort by name, then by version descending.

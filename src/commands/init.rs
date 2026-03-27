@@ -1,4 +1,5 @@
 // ~/~ begin <<book/src/ch03-init.md#src/commands/init.rs>>[init]
+// ~/~ begin <<book/src/ch03-init.md#init-imports>>[init]
 use std::collections::HashMap;
 
 use clap::Parser;
@@ -6,7 +7,8 @@ use miette::IntoDiagnostic;
 use rattler_conda_types::NamelessMatchSpec;
 
 use crate::manifest::{BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME};
-
+// ~/~ end
+// ~/~ begin <<book/src/ch03-init.md#init-args>>[init]
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Name of the project.  Defaults to the current directory name.
@@ -20,7 +22,8 @@ pub struct Args {
     #[clap(long)]
     pub library: bool,
 }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch03-init.md#init-execute>>[init]
 pub async fn execute(args: Args) -> miette::Result<()> {
     let cwd = std::env::current_dir().into_diagnostic()?;
     let manifest_path = cwd.join(MANIFEST_FILENAME);
@@ -40,7 +43,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             .unwrap_or("my-lua-project")
             .to_string()
     });
-
+// ~/~ end
+// ~/~ begin <<book/src/ch03-init.md#init-execute>>[1]
     // Build a starter manifest with Lua pre-filled so the user has something
     // to work with immediately.
     let manifest = Manifest {
@@ -65,7 +69,8 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             None
         },
     };
-
+// ~/~ end
+// ~/~ begin <<book/src/ch03-init.md#init-execute>>[2]
     manifest.write(&manifest_path)?;
 
     println!(
@@ -80,4 +85,5 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     Ok(())
 }
+// ~/~ end
 // ~/~ end

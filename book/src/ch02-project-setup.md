@@ -232,7 +232,13 @@ struct Cli {
     #[clap(short, long, global = true)]
     verbose: bool,
 }
+```
 
+The `Command` enum maps each subcommand to a variant that carries the
+command's argument struct. We add one variant per chapter as we build out the
+tool:
+
+``` {.rust #main-cli-struct}
 #[derive(Debug, clap::Subcommand)]
 enum Command {
     /// Create a new moonshot.toml in the current directory.

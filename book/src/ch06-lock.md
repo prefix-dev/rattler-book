@@ -346,7 +346,13 @@ pub fn write_lock_file(
             used_env_vars: vec![],
         })
         .collect();
+```
 
+With the channels converted, we feed each solved record into a `LockFileBuilder`.
+The builder deduplicates packages by content hash, so repeated solves produce
+identical lock files.
+
+``` {.rust #lock-write}
     let mut builder = LockFile::builder();
     builder.set_channels("default", lock_channels);
 
@@ -467,7 +473,13 @@ pub enum ResolveStatus {
         platform: Platform,
     },
 }
+```
 
+Two convenience methods extract the solution regardless of which variant we
+have. `solution()` borrows it; `into_solution()` consumes the enum to avoid a
+clone when ownership is available.
+
+``` {.rust #resolve-status-enum}
 #[allow(dead_code)]
 impl ResolveStatus {
     /// Extract the solution regardless of which variant we are.
@@ -514,7 +526,13 @@ impl Session {
 
         let client = build_authenticated_client()?;
         let channel_config = ChannelConfig::default_with_root_dir(project.root.clone());
+```
 
+The `Gateway` is the central piece: it fetches, caches, and serves repodata.
+We enable sharded repodata by default, which lets the gateway fetch only the
+subset of packages that match our query instead of downloading the full index.
+
+``` {.rust #session-new}
         let gateway = Gateway::builder()
             .with_cache_dir(cache_dir.join(REPODATA_CACHE_DIR))
             .with_package_cache(PackageCache::new(cache_dir.join(PACKAGE_CACHE_DIR)))
@@ -589,7 +607,13 @@ write the lock file.
             "  {} repodata records loaded",
             console::style(total_records).cyan()
         );
+```
 
+Before we can solve, we need to know what the current system provides.
+Virtual packages like `__linux`, `__glibc`, and `__cuda` let the solver
+exclude packages that need features the host doesn't have.
+
+``` {.rust #session-resolve}
         let virtual_packages: Vec<GenericVirtualPackage> =
             rattler_virtual_packages::VirtualPackage::detect(
                 &rattler_virtual_packages::VirtualPackageOverrides::default(),
@@ -599,7 +623,13 @@ write the lock file.
             .into_iter()
             .map(|v| v.into())
             .collect();
+```
 
+Now we assemble a `SolverTask` and hand it to resolvo. The `locked_packages`
+field seeds the solver with previous solutions as preferences, which makes
+re-solves faster and more stable.
+
+``` {.rust #session-resolve}
         let solver_task = SolverTask {
             locked_packages,
             virtual_packages,
@@ -747,7 +777,12 @@ mod tests {
                 .into(),
         }
     }
+```
 
+The first test writes a lock file with one package and reads it back, checking
+that the name survives the roundtrip:
+
+``` {.rust #lock-tests}
     #[test]
     fn write_then_read_roundtrip() {
         let dir = tempfile::tempdir().unwrap();
@@ -768,7 +803,12 @@ mod tests {
             PackageName::from_str("lua").unwrap()
         );
     }
+```
 
+The second test exercises the timestamp-based freshness logic, stepping through
+each state: no files, only manifest, lock newer, manifest newer.
+
+``` {.rust #lock-tests}
     #[test]
     fn freshness_check() {
         let dir = tempfile::tempdir().unwrap();

@@ -179,7 +179,8 @@ impl Manifest {
             })
             .collect()
     }
-
+// ~/~ end
+// ~/~ begin <<book/src/ch03-init.md#manifest-spec-helpers>>[1]
     /// Format dependencies as `"name version"` strings (or just `"name"`
     /// when there is no version constraint).
     ///

@@ -71,6 +71,11 @@ pub struct Project {
 }
 ```
 
+`discover()` walks up from the current directory to find `moonshot.toml`
+(using `Manifest::find_in_dir` from [Chapter 3](ch03-init.md)).
+`default_prefix()` returns the `.env/` directory relative to the project root,
+and `save()` writes the manifest back after modifications like `shot add`:
+
 ``` {.rust #project-impl}
 impl Project {
     /// Discover the project from the current working directory.
@@ -103,20 +108,35 @@ impl Project {
 ### `src/commands/add.rs`
 
 ``` {.rust file=src/commands/add.rs}
+<<add-imports>>
+<<add-args>>
+<<add-execute>>
+<<split-spec>>
+```
+
+``` {.rust #add-imports}
 use clap::Parser;
 use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::NamelessMatchSpec;
 
 use crate::manifest::MANIFEST_FILENAME;
 use crate::project::Project;
+```
 
+``` {.rust #add-args}
 #[derive(Debug, Parser)]
 pub struct Args {
     /// Packages to add, e.g. `luarocks` or `"lua >=5.4"`.
     #[clap(required = true)]
     pub packages: Vec<String>,
 }
+```
 
+The execute function validates all specs up front before modifying anything.
+This ensures a typo in the third package doesn't leave the first two already
+written to disk:
+
+``` {.rust #add-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
     let mut project = Project::discover()?;
 
@@ -133,7 +153,12 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             Ok((name, spec))
         })
         .collect::<miette::Result<_>>()?;
+```
 
+With all specs validated, we insert them into the manifest's dependency map
+and save:
+
+``` {.rust #add-execute}
     let mut added = 0usize;
     for (name, spec) in parsed {
         project
@@ -152,7 +177,6 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     println!("  Run `shot install` to apply changes.");
     Ok(())
 }
-<<split-spec>>
 ```
 
 ### Parsing package specs

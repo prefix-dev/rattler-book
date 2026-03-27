@@ -77,6 +77,12 @@ process internally. The [tokio] runtime manages the blocking thread pool.
 With `Environment` handling activation, the run command becomes straightforward:
 
 ``` {.rust file=src/commands/run.rs}
+<<run-imports>>
+<<run-args>>
+<<run-execute>>
+```
+
+``` {.rust #run-imports}
 use std::process::Stdio;
 
 use clap::Parser;
@@ -85,7 +91,12 @@ use tokio::process::Command;
 
 use crate::environment::Environment;
 use crate::project::Project;
+```
 
+The `Args` struct uses `trailing_var_arg` so everything after `run` is passed
+through to the child process verbatim:
+
+``` {.rust #run-args}
 #[derive(Debug, Parser)]
 pub struct Args {
     /// The command to run (and its arguments).
@@ -98,7 +109,13 @@ pub struct Args {
     #[clap(long)]
     pub prefix: Option<std::path::PathBuf>,
 }
+```
 
+The execute function discovers the project, activates the environment to get
+the modified environment variables, and then spawns the child process with
+those variables overlaid:
+
+``` {.rust #run-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {
     let project = Project::discover()?;
     let env = Environment::from_project(&project, args.prefix)?;
@@ -107,7 +124,14 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let activation_env = env.activation_env().await?;
 
     let (program, rest_args) = args.command.split_first().expect("clap ensures non-empty");
+```
 
+We use [tokio]'s async `Command` to launch the child. `.envs()` overlays the
+activation variables on top of the inherited environment, and `Stdio::inherit()`
+connects all three standard streams so the child can interact with the terminal
+directly:
+
+``` {.rust #run-execute}
     let status = Command::new(program)
         .args(rest_args)
         .envs(&activation_env)
