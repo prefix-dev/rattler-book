@@ -60,16 +60,10 @@ Creates a directory and all parent directories (like `mkdir -p`). On Windows,
 `mkdir` already creates parents by default, so we suppress the "already exists"
 error with `2>nul`.
 
-### `cp(src, dst)`, `mv(src, dst)`
+### `cp(src, dst)`
 
-Copy and move files. `cp` creates the destination directory first. `src` can
+Copy files. `cp` creates the destination directory first. `src` can
 contain shell globs on POSIX systems.
-
-### `exists(path)`, `is_file(path)`
-
-Portable file-existence checks using `io.open()`. `exists` returns true for
-any path that can be opened for reading. `is_file` opens in binary mode and
-returns true only for regular files.
 
 ### `log(msg)`
 
@@ -99,16 +93,6 @@ This is the function you'll use most for pure-Lua packages.
 Copies executables into `PREFIX/bin/` and makes them executable on POSIX
 systems. The `chmod +x` call is needed because `cp` doesn't preserve the
 execute bit by default.
-
-### `install_lib(src)`
-
-Copies files into `PREFIX/lib/`. Intended for shared libraries (`.so`,
-`.dylib`, `.dll`).
-
-### `install_share(src, name)`
-
-Copies files into `PREFIX/share/<name>/`. Useful for data files,
-documentation, or anything that doesn't fit the other categories.
 
 ## Summary
 

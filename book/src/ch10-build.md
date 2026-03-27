@@ -628,7 +628,7 @@ Writing a build script that manually uses `os.execute("cp ...")` works but is
 tedious. So we embed a Lua prelude that provides helper functions. The prelude
 runs before every build script, setting up globals (`PREFIX`, `SRC_DIR`,
 `BUILD_PREFIX`, `PKG_NAME`, `PKG_VERSION`, `PKG_BUILD_NUM`) and providing
-file-system helpers (`mkdir`, `cp`, `install_lua`, `install_bin`, and more).
+file-system helpers (`mkdir`, `cp`, `install_lua`, `install_bin`).
 
 For a detailed walkthrough of each function, see
 [Deep Dive: The Build Script API](deep-dive-build-script-api.md).
@@ -652,33 +652,6 @@ Here is the complete `src/build_prelude.lua`:
 ``` {.lua #prelude-header}
 -- moonshot build prelude
 -- Automatically sourced before every build.lua by `shot build`.
---
--- You do NOT need to require() this file; everything below is already
--- in scope when your build script runs.
---
--- Available globals
--- -----------------
---   PREFIX        Where the package should be installed
---   SRC_DIR       Root of your source tree
---   BUILD_PREFIX  Where build-time dependencies live (e.g. lua itself)
---   PKG_NAME      Package name from moonshot.toml
---   PKG_VERSION   Package version from moonshot.toml
---   PKG_BUILD_NUM Build number (integer)
---
--- Available functions
--- -------------------
---   mkdir(path)
---   cp(src, dst)
---   mv(src, dst)
---   install(src, subdir)      copies src into PREFIX/subdir/
---   install_bin(src)          copies src into PREFIX/bin/
---   install_lua(src, ver)     copies src into PREFIX/share/lua/<ver>/
---   install_lib(src)          copies src into PREFIX/lib/
---   install_share(src, name)  copies src into PREFIX/share/<name>/
---   path_join(...)            joins path segments with "/"
---   exists(path)              returns true if path exists
---   is_file(path)             returns true if path is a regular file
---   log(msg)                  prints "[moonshot] msg" to stderr
 ```
 
 ``` {.lua #prelude-globals}
@@ -751,30 +724,6 @@ function cp(src, dst)
     end
 end
 
---- Move `src` to `dst`.
-function mv(src, dst)
-    if IS_WINDOWS then
-        shell("move /Y " .. q(src) .. " " .. q(dst))
-    else
-        shell("mv " .. q(src) .. " " .. q(dst))
-    end
-end
-
---- Return true if `path` exists.
-function exists(path)
-    local f = io.open(path, "r")
-    if f then f:close(); return true end
-    return false
-end
-
---- Return true if `path` is a regular file.
-function is_file(path)
-    -- Portable check: open for reading succeeds only for files.
-    local f = io.open(path, "rb")
-    if f then f:close(); return true end
-    return false
-end
-
 --- Print an informational message to stderr, prefixed with "[moonshot]".
 function log(msg)
     io.stderr:write("[moonshot] " .. tostring(msg) .. "\n")
@@ -842,21 +791,6 @@ function install_lua(src, ver)
     install(src, path_join("share", "lua", ver))
 end
 
---- Install files into `PREFIX/lib/`.
----
---- Example:
----   install_lib("build/*.so")
-function install_lib(src)
-    install(src, "lib")
-end
-
---- Install files into `PREFIX/share/<name>/`.
----
---- Example:
----   install_share("docs/", "lumen")
-function install_share(src, name)
-    install(src, path_join("share", name))
-end
 ```
 
 ``` {.lua #prelude-done}
