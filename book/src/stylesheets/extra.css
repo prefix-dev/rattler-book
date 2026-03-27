@@ -682,7 +682,7 @@ body.focus-mode .md-sidebar--primary {
    =========================================================================== */
 @media (min-width: 1400px) {
     .md-grid {
-        max-width: calc(100vw - 2rem - 18rem);
+        max-width: min(var(--rb-grid-max-width), calc(100vw - 2rem - 18rem));
         margin-left: 2rem;
         margin-right: 0;
     }
