@@ -53,4 +53,8 @@ book/Cargo.lock
 
 # playwright
 
+# Generated source manifest for book viewer
+book/src/source-manifest.json
+
 .playwright-cli/
+**/__pycache__/**

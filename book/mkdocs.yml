@@ -63,9 +63,11 @@ nav:
 extra_css:
   - stylesheets/extra.css
   - stylesheets/exercises.css
+  - stylesheets/source-viewer.css
 
 extra_javascript:
   - javascripts/extra.js
+  - javascripts/source-viewer.js
 
 plugins:
   - search

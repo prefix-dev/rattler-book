@@ -38,8 +38,9 @@ for f in pathlib.Path('src').rglob('*.rs'):
     if t2 != t: f.write_text(t2); print(f'  stripped {f}')
 " """, description = "Remove // ~/~ marker comments from source files" }
 _fix-markers = { cmd = "python scripts/fix-markers.py", description = "Restore entangled marker indentation after cargo fmt" }
-book-build = { cmd = "mkdocs build", cwd = "book", env = { PYTHONPATH = "." } }
-book-serve = { cmd = "mkdocs serve --livereload --watch-theme -w src/stylesheets", cwd = "book", env = { PYTHONPATH = "." } }
+_generate-manifest = { cmd = "python scripts/generate_source_manifest.py", inputs = ["scripts/generate_source_manifest.py", "book/src/**/*.md", "src/**/*.rs", "src/**/*.lua", "Cargo.toml", "examples/**/*"], outputs = ["book/src/source-manifest.json"], description = "Generate source code manifest for file viewer" }
+book-build = { cmd = "mkdocs build", cwd = "book", env = { PYTHONPATH = "." }, depends-on = ["_tangle", "_generate-manifest"] }
+book-serve = { cmd = "mkdocs serve --livereload --watch-theme -w src/stylesheets", cwd = "book", env = { PYTHONPATH = "." }, depends-on = ["_tangle", "_generate-manifest"] }
 _tangle = { cmd = "entangled tangle --force", description = "Extract code blocks from the book into source files" }
 stitch = { cmd = "entangled stitch", description = "Update the book from source file edits" }
 watch = { cmd = "entangled watch", description = "Watch for changes and keep book and source files in sync" }
