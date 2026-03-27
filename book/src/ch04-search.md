@@ -219,7 +219,7 @@ Let's create a new file for the search command:
 <<search-execute>>
 ```
 
-#### Imports
+We pull in the networking and repodata crates:
 
 ``` {.rust #search-imports}
 use std::collections::HashMap;
@@ -236,7 +236,7 @@ use crate::client::build_authenticated_client;
 use crate::progress::with_spinner;
 ```
 
-#### Args
+The command takes a query string and optional channel flags:
 
 ``` {.rust #search-args}
 #[derive(Debug, Parser)]
@@ -250,8 +250,6 @@ pub struct Args {
 }
 ```
 
-#### Execute
-
 The execute function walks through the networking setup we'll reuse in [Chapter 6](ch06-lock.md):
 parse channels, build an HTTP client, configure the Gateway, and query repodata.
 
@@ -264,8 +262,6 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 <<search-results>>
 }
 ```
-
-#### Channel and spec parsing
 
 We convert the `--channel` strings into [rattler] `Channel` objects and parse the
 query into a `MatchSpec`.
@@ -292,16 +288,12 @@ query into a `MatchSpec`.
         .map_err(|e| miette::miette!("could not create cache directory: {e}"))?;
 ```
 
-#### HTTP client
-
 We call the shared helper from `src/client.rs` to build an authenticated HTTP
 client. See the section above for the full implementation.
 
 ``` {.rust #search-http-client}
     let client = build_authenticated_client()?;
 ```
-
-#### `Gateway`
 
 The Gateway builder takes the cache directory, HTTP client, and channel
 configuration. Setting `sharded_enabled: true` tells it to prefer the fast
@@ -324,8 +316,6 @@ sharded format when a channel supports it.
         .finish();
 ```
 
-#### Query
-
 `gateway.query(...)` fetches repodata for the requested packages. We set
 `.recursive(false)` because we only need direct matches, not transitive
 dependencies. We query both the current platform and `NoArch` to cover pure-Lua packages.
@@ -341,8 +331,6 @@ dependencies. We query both the current platform and `NoArch` to cover pure-Lua 
     .into_diagnostic()
     .context("fetching repodata")?;
 ```
-
-#### Result formatting
 
 The query returns a `Vec<RepoData>`, one per channel/platform combination. We
 flatten the records, deduplicate by (name, version), and bail early when the

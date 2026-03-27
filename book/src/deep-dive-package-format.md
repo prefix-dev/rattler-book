@@ -74,23 +74,13 @@ Because ZIP stores a central directory at the end, tools can `mmap` the file,
 seek to the directory, and jump directly to the `info-*.tar.zst` without reading
 the payload.
 
-#### `metadata.json`
+The three members each serve a distinct purpose. `metadata.json` is a sentinel confirming this is a v2 package:
 
 ```json
 {"conda_pkg_format_version": 2}
 ```
 
-A sentinel file confirming this is a v2 package.
-
-#### `info-*.tar.zst`
-
-Contains only `info/` files.  Useful for tools that only need metadata (solvers,
-indexers, search tools).
-
-#### `pkg-*.tar.zst`
-
-Contains the actual payload files.  Useful for installers that already have
-metadata and only need to extract files.
+`info-*.tar.zst` contains only the `info/` files -- useful for tools that only need metadata (solvers, indexers, search tools). `pkg-*.tar.zst` contains the actual payload files -- useful for installers that already have metadata and only need to extract files.
 
 ## The `info/index.json`
 

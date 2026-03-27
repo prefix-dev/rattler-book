@@ -235,7 +235,7 @@ check, a reader, and a writer. The lock command will orchestrate them.
 <<lock-tests>>
 ```
 
-#### Imports
+We start with the file-operation and lock-format imports:
 
 ``` {.rust #lock-imports}
 use std::path::Path;
@@ -245,14 +245,12 @@ use rattler_conda_types::{Channel, Platform, RepoDataRecord};
 use rattler_lock::LockFile;
 ```
 
-#### The lock filename
+A single constant keeps the lock filename consistent:
 
 ``` {.rust #lock-filename}
 /// The name of the lock file written alongside `moonshot.toml`.
 pub const LOCK_FILENAME: &str = "moonshot.lock";
 ```
-
-#### Freshness check
 
 We compare modification times to decide whether our lock is still valid.
 
@@ -276,7 +274,7 @@ pub fn is_lock_fresh(lock_path: &Path, manifest_path: &Path) -> bool {
 If either file is missing or the OS doesn't support modification times, we
 conservatively return `false` (re-solve).
 
-#### Reading a lock file
+Reading a lock file extracts the conda records for the current platform:
 
 ``` {.rust #lock-read}
 /// Read a lock file and extract the conda records for the given platform.
@@ -307,8 +305,6 @@ pub fn read_lock_file(lock_path: &Path, platform: Platform) -> miette::Result<Ve
 `conda_repodata_records` converts the locked packages back into
 `RepoDataRecord`s that the `Installer` understands.
 
-#### Reading existing locked packages
-
 Before resolving, both `shot lock` and `shot install` read any existing lock
 file to extract locked packages. If the file is missing or unreadable, an
 empty vector is returned so the solver starts fresh.
@@ -330,7 +326,7 @@ pub fn read_locked_packages(
 }
 ```
 
-#### Writing a lock file
+Finally, writing the lock file serializes the solved packages to YAML:
 
 ``` {.rust #lock-write}
 /// Write a lock file containing the solved packages.
@@ -432,7 +428,7 @@ back either a cached lock or a freshly computed one.
 <<session-ensure-resolved>>
 ```
 
-#### Imports
+The session needs the full resolution stack (HTTP, repodata, and the solver):
 
 ``` {.rust #session-imports}
 use std::collections::HashMap;
@@ -453,8 +449,6 @@ use crate::lock::{read_lock_file, read_locked_packages, write_lock_file};
 use crate::progress::{with_spinner, with_spinner_sync};
 use crate::project::Project;
 ```
-
-#### ResolveStatus
 
 The `ensure_resolved` method returns a `ResolveStatus` so that callers can
 distinguish between a cached result and a fresh solve. The lock command uses
@@ -493,7 +487,7 @@ impl ResolveStatus {
 }
 ```
 
-#### The Session struct
+The struct itself bundles a project with its networking resources:
 
 ``` {.rust #session-struct}
 /// Bundles a [`Project`] with an HTTP client and repodata gateway.
@@ -507,7 +501,7 @@ pub struct Session {
 }
 ```
 
-#### Creating a Session
+Creating a session sets up the cache, HTTP client, and gateway:
 
 ``` {.rust #session-new}
 impl Session {
@@ -544,7 +538,7 @@ impl Session {
     }
 ```
 
-#### Parsing channels
+A helper parses the manifest's channel strings into typed values:
 
 ``` {.rust #session-channels}
     /// Parse the manifest channels into typed [`Channel`] values.
@@ -560,8 +554,6 @@ impl Session {
             .context("parsing channels")
     }
 ```
-
-#### The resolve method
 
 `resolve` runs the full dependency-resolution pipeline: parse specs from the
 manifest, fetch repodata recursively, detect virtual packages, and run the
@@ -631,8 +623,6 @@ write the lock file.
     }
 ```
 
-#### Ensuring the lock is up to date
-
 `ensure_resolved` is the main entry point for commands that need a solved
 environment. It checks freshness, reads any existing lock records as solver
 preferences, resolves if needed, and writes the lock file.
@@ -669,7 +659,7 @@ wrapper: discover the project, create a session, and call `ensure_resolved`.
 <<lock-cmd-execute>>
 ```
 
-#### Imports
+The lock command's imports are minimal since it delegates to `Session`:
 
 ``` {.rust #lock-cmd-imports}
 use clap::Parser;
@@ -679,7 +669,7 @@ use crate::project::Project;
 use crate::session::{ResolveStatus, Session};
 ```
 
-#### Args
+A single `--force` flag controls whether to re-solve unconditionally:
 
 ``` {.rust #lock-cmd-args}
 #[derive(Debug, Parser)]
@@ -690,7 +680,7 @@ pub struct Args {
 }
 ```
 
-#### The execute function
+The execute function discovers the project, creates a session, and delegates:
 
 ``` {.rust #lock-cmd-execute}
 pub async fn execute(args: Args) -> miette::Result<()> {

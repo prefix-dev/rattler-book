@@ -68,7 +68,7 @@ into a dedicated `Environment` struct in `src/environment.rs`:
 <<environment-parse-shell>>
 ```
 
-#### Imports
+We bring in the activation and shell types from rattler:
 
 ``` {.rust #environment-imports}
 use std::collections::HashMap;
@@ -83,7 +83,7 @@ use rattler_shell::shell::{Bash, ShellEnum};
 use crate::project::Project;
 ```
 
-#### The struct
+The struct holds the prefix path and target platform:
 
 ``` {.rust #environment-struct}
 /// An installed conda environment that can be activated.
@@ -94,7 +94,7 @@ pub struct Environment {
 }
 ```
 
-#### Methods
+The methods handle construction, validation, and script generation:
 
 ``` {.rust #environment-impl}
 #[allow(dead_code)]
@@ -149,7 +149,7 @@ impl Environment {
 hasn't been created yet. `activate_script` generates the shell-specific
 activation script.
 
-#### Shell parsing helper
+A small helper resolves the shell dialect from an explicit name or the environment:
 
 ``` {.rust #environment-parse-shell}
 fn parse_shell(name: Option<&str>) -> miette::Result<ShellEnum> {

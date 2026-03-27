@@ -127,9 +127,7 @@ resolve logic:
 <<session-resolve-and-install>>
 ```
 
-#### `install_packages`
-
-This method takes a solved set of packages and links them into a prefix.
+The `install_packages` method takes a solved set of packages and links them into a prefix.
 It scans the prefix for already-installed packages (to compute a minimal
 transaction) and runs the `Installer` with progress bars.
 
@@ -200,9 +198,7 @@ Setting `with_execute_link_scripts(true)` tells the installer to run conda's
 `<prefix>/etc/conda/activate.d/` that some packages use to set up post-install
 configuration (updating `LUA_PATH`, for example).
 
-#### `resolve_and_install`
-
-This method resolves and installs in one step, without writing a lock file.
+The `resolve_and_install` method resolves and installs in one step, without writing a lock file.
 We'll reuse it in the build command ([Chapter 10](ch10-build.md)) to install
 build-time dependencies into a temporary prefix.
 
@@ -230,7 +226,8 @@ Here is the full file skeleton, with each section defined as we encounter it:
 <<install-execute>>
 ```
 
-#### Imports
+The imports are light because the install command delegates to `Session` for both
+resolving and installing:
 
 ``` {.rust #install-imports}
 use clap::Parser;
@@ -242,10 +239,7 @@ use crate::project::Project;
 use crate::session::{ResolveStatus, Session};
 ```
 
-The imports are much lighter now: the install command delegates to `Session`
-for both resolving and installing.
-
-#### Args
+An optional `--prefix` flag overrides the default install location:
 
 ``` {.rust #install-args}
 #[derive(Debug, Parser)]
@@ -257,8 +251,6 @@ pub struct Args {
     pub prefix: Option<std::path::PathBuf>,
 }
 ```
-
-#### The execute function
 
 The `execute` function is our entry point for `shot install`. It uses
 `Session::ensure_resolved` to check the lock file and resolve if needed,

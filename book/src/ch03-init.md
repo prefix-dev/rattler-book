@@ -78,7 +78,7 @@ Here is the full `src/manifest.rs` assembled from the pieces we'll walk through:
 <<manifest-impl>>
 ```
 
-#### Imports
+We begin with the standard imports for file handling, serialization, and conda types:
 
 ``` {.rust #manifest-imports}
 use std::collections::HashMap;
@@ -92,16 +92,14 @@ use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 ```
 
-#### The manifest filename
+A single constant keeps the filename consistent across all commands:
 
 ``` {.rust #manifest-filename-const}
 /// The file name we look for in the current directory.
 pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 ```
 
-A single constant for the filename keeps it consistent across all commands.
-
-#### Structs
+The core data structures map directly to the TOML layout:
 
 ``` {.rust #manifest-structs}
 #[serde_as]
@@ -193,8 +191,6 @@ does not introduce a new transitive dependency.
 
 We list channels in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine doesn't silently pick up a different channel list.
 
-
-#### Methods
 
 The methods live in a single `impl` block:
 

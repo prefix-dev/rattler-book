@@ -220,7 +220,7 @@ trait that encapsulates how build scripts are executed. This lives in
 <<lua-run-build-script>>
 ```
 
-#### Imports
+We start with the file-operation imports:
 
 ``` {.rust #build-backend-imports}
 use std::path::{Path, PathBuf};
@@ -231,7 +231,7 @@ use miette::{Context, IntoDiagnostic};
 use crate::manifest::Manifest;
 ```
 
-#### The `BuildContext` struct
+The `BuildContext` bundles the paths and metadata a backend needs:
 
 ``` {.rust #build-context-struct}
 /// Context passed to a [`BuildBackend`] when executing a build.
@@ -243,7 +243,7 @@ pub struct BuildContext<'a> {
 }
 ```
 
-#### The trait
+The trait itself is generic over the build-script language:
 
 ``` {.rust #build-backend-trait}
 /// A pluggable build backend.
@@ -266,14 +266,14 @@ pub trait BuildBackend {
 The trait is generic over the build-script language. Today we only have Lua,
 but the design allows adding Python, shell, or other backends later.
 
-#### The Lua backend
+Today we only have one backend -- Lua. It loads a prelude script before running the user's build script:
 
 ``` {.rust #lua-backend-const}
 const BUILD_PRELUDE: &str = include_str!("build_prelude.lua");
 ```
 
 ``` {.rust #lua-backend-struct}
-/// The default build backend — runs a Lua build script.
+/// The default build backend: runs a Lua build script.
 pub struct LuaBuildBackend;
 ```
 
@@ -320,7 +320,7 @@ impl BuildBackend for LuaBuildBackend {
 }
 ```
 
-#### Finding the Lua interpreter
+Finding the Lua interpreter requires checking several possible binary names and locations:
 
 ``` {.rust #lua-find-lua}
 fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
@@ -355,8 +355,6 @@ fn find_lua(prefix: &Path) -> miette::Result<PathBuf> {
     )
 }
 ```
-
-#### Running the build script
 
 We locate the Lua interpreter in the build prefix and run the build script
 through a wrapper that loads the prelude first. We use a wrapper file rather
@@ -455,7 +453,7 @@ defined as we encounter it:
 <<build-pack-conda>>
 ```
 
-#### Imports
+The build command pulls in packaging, hashing, and indexing crates:
 
 ``` {.rust #build-imports}
 use std::io::{BufReader, BufWriter};
@@ -480,7 +478,7 @@ use crate::project::Project;
 use crate::session::Session;
 ```
 
-#### CLI arguments
+An `--output-dir` flag controls where the built package lands:
 
 ``` {.rust #build-args}
 #[derive(Debug, Parser)]
@@ -492,8 +490,6 @@ pub struct Args {
     pub output_dir: PathBuf,
 }
 ```
-
-#### The `execute` function
 
 The build has five stages: discover the project, set up working directories,
 install dependencies, run the build script via the backend, and pack the result.
@@ -808,8 +804,6 @@ Once the build script finishes, we turn the install prefix into a `.conda`
 archive. This involves writing metadata files, collecting file hashes, packing
 the archive, and indexing the output channel.
 
-#### Writing package metadata
-
 Every conda package contains an `info/` directory with metadata. We need two
 files: `index.json` (which the solver reads to understand the package) and
 `paths.json` (which lists every file with its checksum).
@@ -896,8 +890,6 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
     Ok(())
 ```
 
-#### Collecting paths and hashing
-
 We walk the install prefix using [walkdir], hash every file with [sha2]'s SHA-256, and record each path
 in a `PathsJson` manifest:
 
@@ -959,8 +951,6 @@ fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u
     Ok((hasher.finalize(), size))
 }
 ```
-
-#### Packing into `.conda`
 
 We pass the install prefix and its file list to `write_conda_package`, which
 separates `info/` files from payload files, compresses each group into a
@@ -1024,8 +1014,6 @@ fn pack_conda(
     Ok(())
 }
 ```
-
-#### Indexing the channel
 
 After packing, the output directory isn't yet a valid conda channel. It has
 packages but no `repodata.json`. The `index_fs` call inside `execute` scans
