@@ -16,7 +16,7 @@ This chapter explains how that stack is assembled and how each piece works.
 
 Key features we rely on:
 
-- **TLS**: we use `rustls-tls` (pure-Rust TLS, no OpenSSL dependency)
+- **TLS**: we use `rustls-tls` (pure-Rust TLS, no OpenSSL dependency). We found that targeting rustls makes it easier to build, especially in containers using Alpine Linux for example, although with pixi pulling in an OpenSSL dependency is really easy!
 - **Connection pooling**: persistent connections are reused across requests
 - **Response streaming**: response bodies can be read as streams without
   buffering the whole response

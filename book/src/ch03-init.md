@@ -2,7 +2,7 @@
 
 <span class="newthought">Let's create our first command</span> `shot init`. This command will create a
 `moonshot.toml`, the manifest that describes which packages you want and
-from which channels to fetch them.
+from which channels to fetch them. It's convenient to start with an init command, so that we can use it for testing and easily running the project.
 
 ## Design
 
@@ -27,7 +27,7 @@ that can process an image and install it here.
 
 The command will accept an optional project name (defaults to the current directory
 name) and one or more `--channel` flags. Pass `--library` to scaffold a
-buildable package (adds a `[build]` section and `version`). If `moonshot.toml`
+library project (adds a `[build]` section and `version`). If `moonshot.toml`
 already exists, it will refuse to overwrite.
 
 ## Configuration: `moonshot.toml`
@@ -43,7 +43,9 @@ luarocks = "*"
 ```
 
 The `[project]` section will contain the metadata: `[dependencies]` maps package names
-to version constraints.  Version specs follow the conda MatchSpec mini-language:
+to version constraints.  Version Requirements follow the conda MatchSpec mini-language, which evolved in conjunction with Python's Version and Requirements syntax. It does offers a couple of crazy features like matching on regexes, md5 hashes (with a regex even, never seen that being used!), and globs:
+
+Some simple most-commonly used cases:
 
 | Spec          | Meaning                           |
 |---------------|-----------------------------------|
@@ -111,7 +113,7 @@ pub struct Manifest {
     #[serde(default)]
     pub dependencies: HashMap<String, NamelessMatchSpec>,
 
-    /// Present only for buildable packages.
+    /// Present only for library projects.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub build: Option<BuildConfig>,
 }
@@ -157,8 +159,6 @@ fn default_channels() -> Vec<String> {
 }
 ```
 
-
-
 `Manifest` maps directly to the
 top-level TOML, and `ProjectMetadata` maps to the `[project]` section. The
 `name` field is used only for display; it does not affect resolution or
@@ -166,7 +166,7 @@ installation.
 
 The `version`, `license`, and `description` fields are all optional. The
 `build` field references `BuildConfig`, which we define in
-[Chapter 10](ch10-build.md) when we implement `shot build`. A consume-only
+[Chapter 10](ch10-build.md) when we implement `shot build`. An application
 project can leave all of these out.
 
 ### `serde_with` and `DisplayFromStr`
@@ -189,7 +189,7 @@ separate validation step afterward. If the spec string is malformed,
 `rattler_conda_types` already uses `serde_with` internally, so adding it here
 does not introduce a new transitive dependency.
 
-We list channels in the manifest rather than in a global config file. This means each project pins its own package sources, so moving the project to another machine doesn't silently pick up a different channel list.
+We list channels in the manifest rather than in a global config file. Historically in conda and pip, a lot of config lives in your global configuration. One of the visions we have with pixi is that global config impedes reproducibility, so we try to cram as much into the manifest as possible. Although with your own package manager you are free to decide of course.
 
 
 The methods live in a single `impl` block:
@@ -257,7 +257,7 @@ Writing TOML:
     }
 ```
 
-Commands other than `init` need to *find* the manifest, not create it:
+Commands other than `init` need to *find* the manifest, not create it, so lets have a method for it:
 
 ``` {.rust #manifest-find-in-dir}
     pub fn find_in_dir(dir: &Path) -> miette::Result<(PathBuf, Self)> {
@@ -373,7 +373,7 @@ pub struct Args {
     #[clap(short, long, default_value = "conda-forge")]
     pub channel: Vec<String>,
 
-    /// Scaffold a buildable library (adds [build] section and version).
+    /// Scaffold a library project (adds [build] section and version).
     #[clap(long)]
     pub library: bool,
 }
@@ -491,6 +491,13 @@ lua = ">=5.4"
 
 ## Exercises
 
+Before we start, there is a small thing to take into account when starting:
+
+**Recurring patterns in exercises.** Two patterns come up in many exercises throughout this book:
+
+1. TOML conventions use hyphens (`requires-lua`), but Rust fields use underscores (`requires_lua`). Add `#[serde(rename = "requires-lua")]` to bridge the two whenever an exercise adds a hyphenated key to `moonshot.toml`. 
+2. When you add a field to `Manifest` or `ProjectMetadata`, the compiler will point you to every place that constructs the struct. The most common one is `src/commands/init.rs`. Later exercises will not always remind you of this; follow the compiler errors.
+
 !!! exercise-easy "Add a `requires-lua` Field"
 
     Add a top-level `requires-lua` field to `moonshot.toml` (similar to `requires-python` in pyproject.toml). This field is more ergonomic than putting the Lua constraint in `[dependencies]` because it expresses the Lua version as a project-level requirement, not a regular dependency. Parse and validate it through `MatchSpec::from_str`. The `shot init` command gets a `--lua-version` flag to set it.
@@ -535,7 +542,6 @@ lua = ">=5.4"
         - Without `--validate`, init works offline as before
         - The channels from `--channel` flags (or the default) are used for the query
 
-**Recurring patterns in exercises.** Two patterns come up in many exercises throughout this book. (1) TOML conventions use hyphens (`requires-lua`), but Rust fields use underscores (`requires_lua`). Add `#[serde(rename = "requires-lua")]` to bridge the two whenever an exercise adds a hyphenated key to `moonshot.toml`. (2) When you add a field to `Manifest` or `ProjectMetadata`, the compiler will point you to every place that constructs the struct. The most common one is `src/commands/init.rs`. Later exercises will not always remind you of this; follow the compiler errors.
 
 In the next chapter we'll implement `shot search`, which queries a channel for
 available packages.

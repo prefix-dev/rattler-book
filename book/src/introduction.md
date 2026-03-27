@@ -53,9 +53,38 @@ You don't need to know anything about conda, packaging, or the Lua programming
 language.  We use [Lua] as the target language because it's small and
 self-contained, but the techniques generalize to any ecosystem.
 
+## Who am I?
+
+This book was mostly produced by me, [Tim de Jager](https://github.com/tdejager/). Make sure to read [this](#note-on-generative-ai-usage) section though. 
+
+I'm a main contributor on [pixi] and [rattler] and I work for [prefix.dev](https://prefix.dev/). Previously I worked
+in both robotics and gaming before switching to package managing. 
+
+We are very bullishly convinced that conda can serve as not only a good base for building libraries and applications,
+but also for package managers in general. A conda environment is basically an isolated linux-prefix! So we really
+wanted to start sharing this with the world.
+
+## How this book is organized
+
+**Part I** will build `moonshot` from scratch. Each chapter will implement one
+command from start to finish. Mostly following the following order: first the design, then configuration changes,
+then concepts, then implementation.
+
+**Part II** allows you to dive deeper into the rattler library itself: the package
+format, the SAT solver, the networking stack. These chapters stand alone; you
+can read them in any order.
+
+## Note on Generative AI usage
+Generative AI, namely: Claude Opus, was extensively used during the production of this book for, and was also used to verify that 
+the excercies where doable, by using agent teams. Claude has also been used for writing both code and prose. I did try to set my own rules for the use of
+it and I have done, many, many iterations. I have also heavily edited, appended and changed prose. I have tried really hard, to edit it in such a way so that we get to the point and do not waste your time as a reader.
+
+I want to be honest w.r.t to this fact so that you as a reader can decide yourself how you would like to proceed here.
+This section has been written by hand, any other way would feel disingenuous to me.
+
 ## What we will build
 
-`moonshot`, a minimal Lua package manager. By the final chapter it will be able to:
+We are going to build `moonshot`, a minimal Lua package manager. By the final chapter it will be able to:
 
 ```console
 $ shot init my-app          # scaffold a new project
@@ -69,15 +98,68 @@ $ shot build                # build a distributable package
 The full source code lives in the `src/` directory alongside this book in the
 [rattler-book repository][repo].
 
-## How this book is organized
 
-**Part I** will build `moonshot` from scratch. Each chapter will implement one
-command from start to finish: first the design, then configuration changes,
-then concepts, then implementation.
+## Running the examples
 
-**Part II** will dive deeper into the rattler library itself: the package
-format, the SAT solver, the networking stack. These chapters stand alone; you
-can read them in any order.
+The easiest way to get started is with [pixi](https://pixi.prefix.dev/latest/installation/), which manages the Rust toolchain
+and all dependencies for you:
+
+```bash
+pixi install
+pixi run build
+```
+
+I know it can be a hassle to install a new tool, I really do! But using pixi can famliarize you with what rattler can empower to build.
+Additionally, it will hopefully convince you that its a very useful tool as well.
+
+The `run` command utilizes pixi's tasks system to run tasks. In a way the task system is similar to [mise](https://mise.jdx.dev/tasks/) or [just](https://github.com/casey/just). 
+
+In out project we use a [`[dev]`](https://pixi.prefix.dev/latest/build/dev/) table in `pixi.toml` to pull in the Rust compiler and
+all build dependencies automatically via the `pixi-build-rust` backend.
+These can then be used in conjunction with `run`.
+No manual Rust installation required.
+
+You can also build a distributable conda package:
+
+```bash
+pixi build
+```
+
+You can also install `moonshot` globally
+
+```bash
+pixi global install --path .
+```
+
+Again, pixi automatically figures out what to install and how to build it.
+
+To test things its easy to run:
+```bash
+pixi r shot <cmd>
+# e.g
+pixi r shot init
+```
+
+[pixi]: https://pixi.sh
+
+### Without pixi
+
+If you prefer to manage Rust yourself, you need Rust 1.82 or later.  Install it
+with [rustup]:
+
+```bash
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
+Then clone the repository and build:
+
+```bash
+git clone https://github.com/prefix-dev/rattler-book
+cd rattler-book
+cargo build
+```
+
+[rustup]: https://rustup.rs
 
 ## Literate programming
 
@@ -85,7 +167,7 @@ This book uses [Entangled], a literate programming tool. The code blocks in
 each chapter are the actual source code. Entangled extracts them from the
 Markdown into real files that compile and run.
 
-Code blocks that produce a file carry a `file=` attribute. Here is a small
+Code blocks that produce a file carry a `file=` attribute. Here is a small (fake)
 program we will use to show how it works:
 
 ``` {.rust file=examples/intro/hello.rs}
@@ -100,6 +182,9 @@ The `<<intro-prompt-greet>>` placeholder refers to a named block. When the same
 name appears on multiple code blocks, Entangled appends them in order. This
 lets us explain each piece separately while they end up as one continuous block
 in the tangled output.
+
+Do you also see the small <button class="source-link-btn" data-path="examples/intro/hello.rs" title="View full file" aria-label="View examples/intro/hello.rs in source viewer">&lt;/&gt;</button>
+in the heading? Click that to go the file directly, using a built-in file browser.
 
 The imports bring in `std::io` for reading from stdin:
 
@@ -141,46 +226,6 @@ pixi run stitch
 
 [Entangled]: https://entangled.github.io/
 
-## Running the examples
-
-The easiest way to get started is with [pixi], which manages the Rust toolchain
-and all dependencies for you:
-
-```bash
-pixi install
-pixi run build
-```
-
-pixi uses the `[dev]` table in `pixi.toml` to pull in the Rust compiler and
-all build/host dependencies automatically via the `pixi-build-rust` backend.
-No manual Rust installation required.
-
-You can also build a distributable conda package:
-
-```bash
-pixi build
-```
-
-[pixi]: https://pixi.sh
-
-### Without pixi
-
-If you prefer to manage Rust yourself, you need Rust 1.82 or later.  Install it
-with [rustup]:
-
-```bash
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-Then clone the repository and build:
-
-```bash
-git clone https://github.com/prefix-dev/rattler-book
-cd rattler-book
-cargo build
-```
-
-[rustup]: https://rustup.rs
 
 ## Why build on conda?
 
@@ -188,12 +233,12 @@ Here's why we chose conda as the foundation:
 
 - **Existing packages.** [conda-forge] has thousands of packages across Python,
   R, C++, Fortran, etc.  Your language's packages can depend on native libraries
-  that are already packaged.
-- **Binary distribution.** Packages ship as prebuilt binaries per platform.  No
+  that are already packaged on conda-forge.
+- **Binary distribution.** Packages ship as prebuilt binaries per platform. There is no
   compilation on the user's machine.
-- **Consistent environments.** One version per package per environment.  All
-  binaries link against the same set of libraries.
-- **Mature tooling.** rattler provides a solver, installer, networking stack, and
+- **Isolated environments.** Environments can be isolated from each other, 
+  think of python `.venv` for example but with more native dependency types.
+- **Mature tooling.** [rattler] provides a solver, installer, networking stack, and
   shell activation in reusable Rust crates.
 
 That said, conda isn't always the right choice:
@@ -211,7 +256,7 @@ Continue on to the next chapter to get started. Or read below for more details r
 
 ## Exercises
 
-Most chapters include programming exercises. They are marked by difficulty:
+Most chapters include programming exercises. These are marked by difficulty, the following are examples:
 
 !!! exercise-easy "Hello, rattler"
 
@@ -250,6 +295,9 @@ The repository includes `TUTOR.md`, a system prompt that turns a coding agent
 into a guided tutor for the exercises. The tutor will **never** write code for you.
 Instead, it asks questions, points you to relevant files, and reveals hints
 one step at a time as you work through each exercise.
+/// margin-note
+You need to start talking to the agent, before it can start using the system-prompt
+///
 
 Before you start an exercise, the tutor will ask how comfortable you are with
 Rust. If you are learning Rust alongside this book, the tutor will explain

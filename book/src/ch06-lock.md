@@ -42,6 +42,8 @@ As discussed in [Chapter 1](ch01-what-is-a-package-manager.md), conda enforces t
 
 ### Why solving is hard
 
+Dependency solving is one of those problems that seems trivial until you hit a real conflict. We previously worked on [rip](https://github.com/prefix-dev/rip), a project that would solve PyPI dependencies directly, and we found weird backtracking behaviors and certain combinations of decisions made by library authors that cause really long solve times. The combination of `boto3` and `urllib3` being a [notorious one](https://github.com/prefix-dev/rip/issues/191) in the Python world.
+
 Imagine you ask for two packages:
 
 ```toml
@@ -68,7 +70,7 @@ Now `web-server 2.0` is incompatible with `legacy-plugin`.  The solver has to
 backtrack and try `web-server 1.0` + `json-lib 1.9` + `legacy-plugin`.
 
 In the general case, dependency solving is equivalent to
-[SAT] (Boolean satisfiability), which is NP-hard.  In practice, real package
+[SAT] (Boolean satisfiability), which is NP-hard. SAT is actually the "OG" NP problem via the [Cook-Levin theorem](https://en.wikipedia.org/wiki/Cook%E2%80%93Levin_theorem). In practice, real package
 ecosystems have structure that makes good heuristics very effective.
 
 [SAT]: https://en.wikipedia.org/wiki/Boolean_satisfiability_problem
@@ -107,10 +109,7 @@ only changes what the new constraints require.
 
 /// margin-note
 Without locking, every resolve could silently upgrade transitive
-dependencies even when the manifest hasn't changed. That kind of drift is a
-common source of "it worked yesterday" bugs. Locking gives you environmental
-stability: the solver only changes what it must to satisfy new or modified
-constraints.
+dependencies even when the manifest hasn't changed. While working in robotics I had situations where an install could work on my machine but the moment a co-worker ran the same installation the program failed because newer apt versions were pulled in. Locking eliminates this entire class of bug.
 ///
 
 /// margin-note
@@ -142,7 +141,7 @@ through a scoring system, not a separate post-processing step. Without the "pref
 Without a lock file, the solver picks the best solution *at the time you run
 it*. A lock file records the *exact* solution: every package name, version,
 build string, and download URL. Replaying the lock gives you the same
-environment every time.
+environment every time. We are pretty bullish on locking and it was something we spent a lot of time on with pixi to get right; we are already at the 7th version of our lock file format.
 
 Every serious package manager converges on this pattern:
 
@@ -866,7 +865,7 @@ $ shot lock
 
 ## When the solver says no
 
-Not every set of dependencies has a solution. Suppose you write this manifest:
+Not every set of dependencies has a solution. Getting solver errors that are both understandable and actionable is really important, but also pretty challenging. For a deep look at the complexity involved, see [this blog post on managing conflicts with mamba](https://medium.com/@AntoineProuvost/managing-conflicts-with-mamba-6a5fa10ed6a). Suppose you write this manifest:
 
 ```toml
 [dependencies]

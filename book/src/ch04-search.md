@@ -45,9 +45,9 @@ platform.  It lists every available package with its metadata:
 ```
 
 For a large channel like conda-forge, this file can be *hundreds* of megabytes.
-You really don't want to load all of that into RAM for every command.
+You really don't want to download all of that for every command.
 
-Think of repodata as the contract between server and client. The channel publishes it; our package manager consumes it. How this contract is designed determines download speed, caching, and how much work the client has to do before it can even start solving.
+Think of repodata as a catalog of the packages that exist, which a client can choose from. How this catalog is designed determines download speed, caching, and how much work the client has to do before it can even start solving.
 
 ### Channels
 
@@ -147,7 +147,7 @@ authentication, and OCI support, see [Deep Dive: The Networking Stack](deep-dive
 - Windows: `%LOCALAPPDATA%\rattler\cache`
 
 By sharing this cache with [pixi] and [rattler-build], packages are downloaded only
-once across all tools. This was a deliberate design choice.
+once across all tools.
 
 /// margin-note
 The cache keys are content hashes, not name-plus-version pairs. This

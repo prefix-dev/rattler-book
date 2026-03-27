@@ -1,6 +1,6 @@
 # Chapter 7: The `install` Command
 
-<span class="newthought">Now we get to the heart</span> of moonshot: the install command. It reads the manifest,
+<span class="newthought">Okay now let's get to the meat of it:</span> the install command. It reads the manifest,
 checks the lock file, resolves if needed, and installs packages into a local
 prefix. The lock file (produced by [Chapter 6](ch06-lock.md)'s `shot lock`) is
 our source of truth: if it's fresh, `shot install` replays it without touching
@@ -91,13 +91,6 @@ This means:
 - Creating a new environment is fast (linking is cheap).
 
 ### Transactions
-
-/// margin-note
-A naive package manager that unpacks files one by one can leave an
-environment half-installed if the process is interrupted. Partial installs
-are one of the most common failure modes in package management and often
-require manual cleanup.
-///
 
 The Installer computes a **transaction**, a diff between the currently-installed
 state and the desired state, and applies only the changes:
@@ -202,7 +195,7 @@ display, you can implement your own; it's a trait, not a concrete type.
 Setting `with_execute_link_scripts(true)` tells the installer to run conda's
 **link scripts** after installation. These are scripts in
 `<prefix>/etc/conda/activate.d/` that some packages use to set up post-install
-configuration (updating `LUA_PATH`, for example).
+configuration (updating `PKG_CONFIG_PATH`, for example).
 
 The `resolve_and_install` method resolves and installs in one step, without writing a lock file.
 We'll reuse it in the build command ([Chapter 10](ch10-build.md)) to install

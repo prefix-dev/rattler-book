@@ -27,9 +27,22 @@ command. Most package managers end up needing both.
 
 ## Concepts
 
-### Why activation is non-trivial
+### Why activation is necessary
 
-Package managers handle activation in different ways. Some use shims (small wrapper executables that redirect to the right version), others use wrapper scripts that set `PATH` before invoking the tool. [conda] uses eval-based activation: the tool prints a shell script and you evaluate it in your current shell. This gives packages full control over the environment (including `PATH`, `LD_LIBRARY_PATH`, `LUA_PATH`, and other variables), at the cost of being shell-dependent.
+A lot of programs read data from environment variables. Beyond just `PATH`, packages may need `PKG_CONFIG_PATH`, `LD_LIBRARY_PATH`, compiler flags, and other variables to function correctly. Activation is the mechanism that sets all of these up.
+
+Different package managers handle this in different ways:
+
+1. **conda**: a shell function `eval`s generated shell code, prepending `bin/` to PATH, setting `CONDA_PREFIX`/`CONDA_SHLVL`, and sourcing any scripts packages ship in `activate.d/`.
+2. **Nix**: `nix develop` starts a new shell with PATH rebuilt entirely from `/nix/store` paths, sets build variables like `NIX_CFLAGS_COMPILE` and `PKG_CONFIG_PATH`, and runs the derivation's `shellHook`.
+3. **npm**: symlinks binaries into `node_modules/.bin/`. `npm run` temporarily prepends that to PATH and sets `npm_package_*` and `npm_config_*` variables for the duration of the script.
+4. **cargo**: places compiled binaries in `~/.cargo/bin`. You add that to PATH once during `rustup` setup. `rustup` itself uses shims to delegate to the right toolchain version.
+5. **pyenv/rbenv**: lightweight shim scripts on PATH intercept calls to `python`/`ruby` and delegate to the correct version based on `.python-version` files or environment variables.
+6. **Homebrew**: symlinks from a versioned Cellar directory into `/opt/homebrew/bin`. `eval "$(brew shellenv)"` sets PATH, `HOMEBREW_PREFIX`, `MANPATH`, and `INFOPATH`.
+7. **uv**: `uv tool install` symlinks executables into `~/.local/bin`. Virtual environment activation sets PATH and `VIRTUAL_ENV`. `uv run` sets env vars on the subprocess directly without sourcing activate scripts.
+8. **pixi**: conda-compatible activation. `pixi run` prepends `bin/` to PATH, sets `CONDA_PREFIX` and `PIXI_*` variables, and runs the full activation sequence including `activate.d/` scripts. `pixi shell-hook` prints an eval-able script.
+
+[conda] uses eval-based activation: the tool prints a shell script and you evaluate it in your current shell. This gives packages full control over the environment, at the cost of being shell-dependent. This is the approach we use for moonshot.
 
 A child process cannot modify the environment of its parent.  That's a Unix
 rule with no exceptions.  So when you run `shot shell-hook`, it can't just set
@@ -37,7 +50,7 @@ rule with no exceptions.  So when you run `shot shell-hook`, it can't just set
 
 ### Shell dialects and nesting
 
-This sounds simple, but several complications arise:
+For people to have a native experience they probably want to keep using their shell of choice, which is why popular projects often include multiple shell dialects for their scripts. Several complications arise:
 
 - **Different shells** have different syntax for setting variables, exporting
   them, and sourcing scripts.  Bash uses `export FOO=bar`; fish uses
@@ -287,16 +300,6 @@ export CONDA_PREFIX=/home/user/my-app/.env
 You evaluate this, and from that point on `lua`, `luarocks`, etc. are on your
 PATH.
 
-/// margin-note
-You might notice that a Lua package manager is setting `CONDA_PREFIX` and
-`CONDA_SHLVL`. This is because rattler implements conda's activation
-protocol, and these variables are part of that protocol. The benefit is
-compatibility: any tool that understands conda environments (editors, CI
-systems, other package managers) will recognize our environment. The cost is
-the naming confusion, since "CONDA" has nothing to do with Lua. A more
-polished tool could alias these variables, but you would lose the ecosystem
-compatibility.
-///
 
 ## Exercises
 

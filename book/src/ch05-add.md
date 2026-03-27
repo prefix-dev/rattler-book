@@ -1,7 +1,6 @@
 # Chapter 5: The `add` Command
 
-`add` is the most common way to grow your dependency list. It modifies the
-manifest so you can then run `shot install` to apply the changes.
+We want the `add` command for moonshot to be a convenient way to add packages using the command line. In pixi, we coupled this with an automatic install; package managers like npm or pnpm don't do this. We'll also not do so here because it is a bit more complicated and I tried to keep the code shorter.
 
 ## Design
 
@@ -24,9 +23,9 @@ run `shot install` afterward to fetch and install the new packages.
 
 ## Concepts
 
-### Idempotent manifest updates
+### Minimal manifest changes
 
-If the package is already in `[dependencies]`, `add` skips it (uses
+The `add` command tries to do the least amount of changes. If the package is already in `[dependencies]`, `add` skips it (uses
 `entry().or_insert_with()`). Running `shot add lua` twice does not create a
 duplicate entry or change the existing version constraint.
 

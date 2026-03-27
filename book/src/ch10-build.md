@@ -1,6 +1,6 @@
 # Chapter 10: The `build` Command
 
-<span class="newthought">We've covered</span> installing packages from existing channels. Now let's close the
+<span class="newthought">A package manager</span> only starts feeling like a real package manager if it can install packages it has actually built itself. Now let's close the
 loop: building a new package from source and publishing it so others can install
 it.
 
@@ -39,7 +39,7 @@ Building moonshine 0.3.0 (build lua_0)
 You can pass `--output-dir` to control where the built `.conda` file lands
 (defaults to `./output/`). This directory is then automatically indexed as a conda channel.
 
-Using `shot init` with `--library`, scaffolds a buildable project:
+Using `shot init` with `--library`, scaffolds a library project:
 
 ```console
 $ shot init moonshine --library
@@ -66,9 +66,9 @@ noarch = true
 build_number = 0
 ```
 
-The `[build]` section is what distinguishes a buildable package from a
-consume-only project. Without it, `shot build` refuses to run. The `[project]`
-fields `version`, `license`, and `description` are optional for consume-only
+The `[build]` section is what distinguishes a library from an
+application project. Without it, `shot build` refuses to run. The `[project]`
+fields `version`, `license`, and `description` are optional for application
 projects but `version` is required when `[build]` is present.
 
 In our simple package manager `[dependencies]` serve a double duty: `shot install` installs them into your
@@ -1061,8 +1061,7 @@ conda-forge uses to distribute tens of thousands of packages.
 
 ## Summary
 
-- The `[build]` section in `moonshot.toml` turns a project into a buildable
-  package.
+- The `[build]` section in `moonshot.toml` turns a project into a library.
 - Dependencies are installed into a temporary build prefix, keeping build tools
   separate from the final package.
 - `paths.json` lists every file with its [sha2] SHA-256 hash.

@@ -1,6 +1,6 @@
 # Chapter 9: The `run` Command
 
-`shot shell-hook` requires you to evaluate shell-specific output. That works for interactive use but creates two problems: it's awkward in scripts and CI pipelines, and it ties you to a specific shell dialect. `shot run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether you use Bash, Fish, PowerShell, or no shell at all.
+With pixi, we tried to get users to use `run` exclusively because you often forget to deactivate a shell when moving out of a folder. I noticed this myself a lot when using Python venvs. `shot shell-hook` requires you to evaluate shell-specific output. That works for interactive use but creates two problems: it's awkward in scripts and CI pipelines, and it ties you to a specific shell dialect. `shot run` solves both. It computes the activated environment internally and spawns the command as a child process, so it works the same way regardless of whether you use Bash, Fish, PowerShell, or no shell at all.
 
 ## Design
 
@@ -24,7 +24,7 @@ environment of a child process.  The trick is:
 
 The child inherits the modified environment; the parent is untouched. This is the same pattern [pixi] uses for `pixi run`.
 
-This uses the same activation logic from [Chapter 8](ch08-shell-hook.md), but instead of printing a script it captures the resulting environment as a map of variable names to values. Because [rattler]'s `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` and `LUA_PATH` are picked up automatically.
+This uses the same activation logic from [Chapter 8](ch08-shell-hook.md), but instead of printing a script it captures the resulting environment as a map of variable names to values. Because [rattler]'s `run_activation` executes the full activation sequence (including any `activate.d` scripts that packages ship), dynamic environment variables like `PKG_CONFIG_PATH` are picked up automatically.
 
 ## Implementation
 
@@ -170,11 +170,6 @@ and write to it directly; `lua` works interactively.
 without capturing stdout/stderr.
 
 ### Propagating the exit code
-
-/// margin-note
-Without exit code propagation, `shot run` is unusable in CI: a failing
-test would appear as a successful pipeline step.
-///
 
 If the child fails, we exit with the same code.  This lets you compose
 `shot run` in shell scripts:
