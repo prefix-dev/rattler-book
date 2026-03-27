@@ -242,6 +242,7 @@ Here is the full file skeleton, with each section defined as we encounter it:
 
 ``` {.rust #install-imports}
 use clap::Parser;
+use fs_err as fs;
 use miette::{Context, IntoDiagnostic};
 
 use crate::lock::LOCK_FILENAME;
@@ -279,7 +280,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
     let prefix = args
         .prefix
         .unwrap_or_else(|| session.project.default_prefix());
-    std::fs::create_dir_all(&prefix)
+    fs::create_dir_all(&prefix)
         .into_diagnostic()
         .context("creating prefix directory")?;
     let prefix = std::path::absolute(prefix).into_diagnostic()?;

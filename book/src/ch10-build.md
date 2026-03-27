@@ -224,6 +224,7 @@ trait that encapsulates how build scripts are executed. This lives in
 ``` {.rust #build-backend-imports}
 use std::path::{Path, PathBuf};
 
+use fs_err as fs;
 use miette::{Context, IntoDiagnostic};
 
 use crate::manifest::Manifest;
@@ -377,7 +378,7 @@ async fn run_build_script(
         .context("creating wrapper temp dir")?;
 
     let prelude_path = wrapper_dir.path().join("prelude.lua");
-    std::fs::write(&prelude_path, BUILD_PRELUDE)
+    fs::write(&prelude_path, BUILD_PRELUDE)
         .into_diagnostic()
         .context("writing build prelude")?;
 
@@ -387,7 +388,7 @@ async fn run_build_script(
         script = script.to_string_lossy(),
     );
     let wrapper_path = wrapper_dir.path().join("wrapper.lua");
-    std::fs::write(&wrapper_path, &wrapper_src)
+    fs::write(&wrapper_path, &wrapper_src)
         .into_diagnostic()
         .context("writing build wrapper")?;
 
@@ -456,12 +457,13 @@ defined as we encounter it:
 #### Imports
 
 ``` {.rust #build-imports}
-use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
 use clap::Parser;
+use fs_err as fs;
+use fs_err::File;
 use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::compression_level::CompressionLevel;
 use rattler_conda_types::package::{IndexJson, PackageFile, PathType, PathsEntry, PathsJson};
@@ -530,10 +532,10 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 
     let build_prefix = work_dir.path().join("build_prefix");
     let install_prefix = work_dir.path().join("install_prefix");
-    std::fs::create_dir_all(&build_prefix)
+    fs::create_dir_all(&build_prefix)
         .into_diagnostic()
         .context("creating build_prefix")?;
-    std::fs::create_dir_all(&install_prefix)
+    fs::create_dir_all(&install_prefix)
         .into_diagnostic()
         .context("creating install_prefix")?;
 
@@ -579,7 +581,7 @@ channel so other tools can use it.
         .context("resolving output directory")?;
 
     let subdir_dir = output_dir.join(manifest.subdir());
-    std::fs::create_dir_all(&subdir_dir)
+    fs::create_dir_all(&subdir_dir)
         .into_diagnostic()
         .context("creating output subdir")?;
 
@@ -886,7 +888,7 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
 
 ``` {.rust #create-index-json}
     let info_dir = install_prefix.join("info");
-    std::fs::create_dir_all(&info_dir)
+    fs::create_dir_all(&info_dir)
         .into_diagnostic()
         .context("creating info/ directory")?;
 
@@ -942,7 +944,7 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
     let index_json = serde_json::to_string_pretty(&index)
         .into_diagnostic()
         .context("serializing index.json")?;
-    std::fs::write(&index_path, index_json)
+    fs::write(&index_path, index_json)
         .into_diagnostic()
         .context("writing info/index.json")?;
 
@@ -952,7 +954,7 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
     let paths_json = serde_json::to_string_pretty(&paths)
         .into_diagnostic()
         .context("serializing paths.json")?;
-    std::fs::write(&paths_path, paths_json)
+    fs::write(&paths_path, paths_json)
         .into_diagnostic()
         .context("writing info/paths.json")?;
 

@@ -81,6 +81,9 @@ clap = { version = "4", features = ["derive", "color", "suggestions"] }
 miette = { version = "7", features = ["fancy"] }
 thiserror = "2"
 
+# fs-err wraps std::fs, adding the file path to every error message
+fs-err = "3"
+
 # Serialization: manifest I/O
 serde = { version = "1", features = ["derive"] }
 serde_with = { version = "3", default-features = false, features = ["macros"] }

@@ -732,6 +732,7 @@ and the freshness check work correctly.
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fs_err as fs;
     use rattler_conda_types::{
         package::CondaArchiveIdentifier, Channel, ChannelConfig, PackageName, PackageRecord,
         Platform, RepoDataRecord,
@@ -796,17 +797,17 @@ mod tests {
         assert!(!is_lock_fresh(&lock_path, &manifest_path));
 
         // Only manifest exists → stale.
-        std::fs::write(&manifest_path, "").unwrap();
+        fs::write(&manifest_path, "").unwrap();
         assert!(!is_lock_fresh(&lock_path, &manifest_path));
 
         // Lock written after manifest → fresh.
         std::thread::sleep(std::time::Duration::from_millis(50));
-        std::fs::write(&lock_path, "").unwrap();
+        fs::write(&lock_path, "").unwrap();
         assert!(is_lock_fresh(&lock_path, &manifest_path));
 
         // Manifest touched after lock → stale.
         std::thread::sleep(std::time::Duration::from_millis(50));
-        std::fs::write(&manifest_path, "changed").unwrap();
+        fs::write(&manifest_path, "changed").unwrap();
         assert!(!is_lock_fresh(&lock_path, &manifest_path));
     }
 }

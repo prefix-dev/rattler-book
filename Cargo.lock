@@ -2225,6 +2225,7 @@ dependencies = [
  "chrono",
  "clap",
  "console",
+ "fs-err",
  "indicatif",
  "miette",
  "rattler",

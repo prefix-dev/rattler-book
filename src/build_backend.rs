@@ -2,6 +2,7 @@
 // ~/~ begin <<book/src/ch10-build.md#build-backend-imports>>[init]
 use std::path::{Path, PathBuf};
 
+use fs_err as fs;
 use miette::{Context, IntoDiagnostic};
 
 use crate::manifest::Manifest;
@@ -128,7 +129,7 @@ async fn run_build_script(
         .context("creating wrapper temp dir")?;
 
     let prelude_path = wrapper_dir.path().join("prelude.lua");
-    std::fs::write(&prelude_path, BUILD_PRELUDE)
+    fs::write(&prelude_path, BUILD_PRELUDE)
         .into_diagnostic()
         .context("writing build prelude")?;
 
@@ -138,7 +139,7 @@ async fn run_build_script(
         script = script.to_string_lossy(),
     );
     let wrapper_path = wrapper_dir.path().join("wrapper.lua");
-    std::fs::write(&wrapper_path, &wrapper_src)
+    fs::write(&wrapper_path, &wrapper_src)
         .into_diagnostic()
         .context("writing build wrapper")?;
 

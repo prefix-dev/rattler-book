@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
+use fs_err as fs;
 use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::{MatchSpec, NamelessMatchSpec, PackageName};
 use serde::{Deserialize, Serialize};
@@ -91,9 +92,9 @@ impl Default for BuildConfig {
 impl Manifest {
 // ~/~ begin <<book/src/ch03-init.md#manifest-from-path>>[init]
     pub fn from_path(path: &Path) -> miette::Result<Self> {
-        let content = std::fs::read_to_string(path)
+        let content = fs::read_to_string(path)
             .into_diagnostic()
-            .with_context(|| format!("reading manifest at `{}`", path.display()))?;
+            .context("reading manifest")?;
 
         // `DisplayFromStr` validates every dependency spec during
         // deserialization, so a typo like `">==5.4"` fails here.
@@ -110,9 +111,9 @@ impl Manifest {
             .into_diagnostic()
             .context("serializing manifest")?;
 
-        std::fs::write(path, content)
+        fs::write(path, content)
             .into_diagnostic()
-            .with_context(|| format!("writing manifest to `{}`", path.display()))
+            .context("writing manifest")
     }
 // ~/~ end
 // ~/~ begin <<book/src/ch03-init.md#manifest-find-in-dir>>[init]

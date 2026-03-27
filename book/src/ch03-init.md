@@ -85,6 +85,7 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
+use fs_err as fs;
 use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::{MatchSpec, NamelessMatchSpec, PackageName};
 use serde::{Deserialize, Serialize};
@@ -212,9 +213,9 @@ Reading TOML:
 
 ``` {.rust #manifest-from-path}
     pub fn from_path(path: &Path) -> miette::Result<Self> {
-        let content = std::fs::read_to_string(path)
+        let content = fs::read_to_string(path)
             .into_diagnostic()
-            .with_context(|| format!("reading manifest at `{}`", path.display()))?;
+            .context("reading manifest")?;
 
         // `DisplayFromStr` validates every dependency spec during
         // deserialization, so a typo like `">==5.4"` fails here.
@@ -225,12 +226,26 @@ Reading TOML:
         Ok(manifest)
     }
 ```
-### Miette for error handling
+### `fs_err` and Miette for error handling
 
-`std::fs::read_to_string` returns `Result<String, std::io::Error>`.  We convert
-that to `miette::Result` with `into_diagnostic()`, then attach a context message
-with `with_context`. [Miette] renders these as user-friendly error messages with
-source context.
+We use [`fs_err`][fs_err] instead of `std::fs` throughout this project, aliased
+as `fs` with `use fs_err as fs;`. It is a drop-in replacement that wraps every
+error with the file path that caused it, so you never see a bare "No such file
+or directory" without knowing *which* file. We found this very useful, while working
+on pixi so that the unknown directory or file at least surfaces.
+
+`fs::read_to_string` returns `Result<String, fs_err::Error>`, which implements
+`std::error::Error`.  We convert that to `miette::Result` with
+`into_diagnostic()`, then optionally attach extra context with `.context()`.
+[Miette] renders these as user-friendly error messages in the terminal.
+
+<details class="margin-note" markdown>
+<summary>Miette Conversion</summary>
+`.into_diagnostic()` confused me at first, but because the `miette::Result` differs from the 
+regular `Results` this is a way to convert between the two.
+</details>
+
+[fs_err]: https://docs.rs/fs-err
 
 ### Writing
 
@@ -242,9 +257,9 @@ Writing TOML:
             .into_diagnostic()
             .context("serializing manifest")?;
 
-        std::fs::write(path, content)
+        fs::write(path, content)
             .into_diagnostic()
-            .with_context(|| format!("writing manifest to `{}`", path.display()))
+            .context("writing manifest")
     }
 ```
 
@@ -275,7 +290,8 @@ installing).
 `find_in_dir` only looks in the directory you pass it. An alternative
 design, used by Cargo and npm, walks up the directory tree until it finds a
 manifest. Walk-up is convenient when you run commands from a subdirectory,
-but it introduces ambiguity: which manifest did the tool find? </details>
+but it introduces ambiguity: which manifest did the tool find? 
+</details>
 
 ### Parsing dependencies as match specs
 
@@ -411,9 +427,9 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 }
 ```
 
-**`console::style("✔").green()`** uses the [console] crate to color terminal
+We use the [console] crate to color terminal
 output.  It degrades gracefully when stdout isn't a terminal (redirected to a
-file, CI, etc.).
+file, CI, etc.), again another useful rust library.
 
 ## Running `shot init`
 
