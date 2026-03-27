@@ -1,0 +1,42 @@
+version: 6
+environments:
+  default:
+    channels:
+    - url: https://conda.anaconda.org/conda-forge/
+    packages:
+      osx-arm64:
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/lua-5.4.8-h15fa0ee_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ncurses-6.5-h5e97a16_3.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.3-h46df422_0.conda
+packages:
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/lua-5.4.8-h15fa0ee_1.conda
+  sha256: e4b10ca29526871fa205faec5d224c10958a0badb315ec9aa1d8258039d32733
+  md5: 6cffe1bc4a22cf4f6947d97628513244
+  depends:
+  - readline
+  - ncurses
+  - __osx >=11.0
+  - ncurses >=6.5,<7.0a0
+  - readline >=8.2,<9.0a0
+  license: MIT
+  license_family: MIT
+  size: 182302
+  timestamp: 1750173800483
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/ncurses-6.5-h5e97a16_3.conda
+  sha256: 2827ada40e8d9ca69a153a45f7fd14f32b2ead7045d3bbb5d10964898fe65733
+  md5: 068d497125e4bf8a66bf707254fff5ae
+  depends:
+  - __osx >=11.0
+  license: X11 AND BSD-3-Clause
+  size: 797030
+  timestamp: 1738196177597
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/readline-8.3-h46df422_0.conda
+  sha256: a77010528efb4b548ac2a4484eaf7e1c3907f2aec86123ed9c5212ae44502477
+  md5: f8381319127120ce51e081dce4865cf4
+  depends:
+  - __osx >=11.0
+  - ncurses >=6.5,<7.0a0
+  license: GPL-3.0-only
+  license_family: GPL
+  size: 313930
+  timestamp: 1765813902568

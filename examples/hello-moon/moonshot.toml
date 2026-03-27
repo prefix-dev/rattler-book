@@ -21,7 +21,7 @@ description = "Demo app: searches a package DB using moonjson, mooncolor, moonte
 channels    = ["conda-forge", "../channel"]   # ../channel = locally built packages
 
 [dependencies]
-lua          = ">=5.4"
+lua          = ">=5.4,<5.5"
 moonjson     = "*"
 mooncolor    = "*"
 moontemplate = "*"

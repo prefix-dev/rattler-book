@@ -867,12 +867,9 @@ moonshine = ">=0.3"
 ```
 
 /// margin-note
-For a fully-featured package manager, local indexing is only the first step.
-You would also need a way to push packages to a remote server, sign them so
-consumers can verify authenticity, and define a trust model (who is allowed
-to publish, and how do you revoke a compromised key). These are substantial
-features that we skip in moonshot, but they are the difference between a local
-build tool and a real distribution system.
+For a fully-featured package manager, local indexing is not really the way to go.
+Rather you would need a way to push packages to a remote server in some form. 
+Luckily if you build on top of conda there are existing hosting options.
 ///
 
 ## Try it

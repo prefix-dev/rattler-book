@@ -68,8 +68,8 @@ jobs:
       - name: Clippy (strict)
         run: pixi run lint
 
-  smoke-test:
-    name: Smoke test (${{ matrix.os }})
+  test:
+    name: Test (${{ matrix.os }})
     needs: lint
     runs-on: ${{ matrix.os }}
     strategy:
@@ -88,5 +88,5 @@ jobs:
         with:
           cache-on-failure: true
 
-      - name: Smoke tests
-        run: pixi run smoke-test
+      - name: Tests
+        run: pixi run test

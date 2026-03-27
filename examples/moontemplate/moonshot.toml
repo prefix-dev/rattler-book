@@ -6,7 +6,7 @@ description = "Mustache-style template engine with sections, partials, escaping"
 channels    = ["conda-forge"]
 
 [dependencies]
-lua = ">=5.4"
+lua = ">=5.4,<5.5"
 
 [build]
 script = "build.lua"

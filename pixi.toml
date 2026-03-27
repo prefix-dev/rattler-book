@@ -68,25 +68,43 @@ fmt-check = "cargo fmt --check"
 # CI
 lint = { cmd = "cargo clippy -- -D warnings", description = "Strict clippy lint (CI)" }
 
-# Smoke tests
-smoke-test-help = { cmd = "cargo run -- --help", depends-on = ["build"], description = "Smoke test: --help" }
-smoke-test-init = { cmd = "rm -rf .tmp-smoke-test && mkdir .tmp-smoke-test && cd .tmp-smoke-test && cargo run -- init ci-test && cat moonshot.toml && cd .. && rm -rf .tmp-smoke-test", depends-on = [
+# Smoke test (does the binary start?)
+smoke-test = { cmd = "cargo run -- --help", depends-on = ["build"], description = "Smoke test: --help" }
+
+# Unit tests
+unit-test-lock = { cmd = "cargo test lock", depends-on = ["build"], description = "Unit test: lock roundtrip" }
+
+# Integration tests
+integration-test-init = { cmd = "rm -rf .tmp-smoke-test && mkdir .tmp-smoke-test && cd .tmp-smoke-test && cargo run -- init ci-test && cat moonshot.toml && cd .. && rm -rf .tmp-smoke-test", depends-on = [
   "build"
-], description = "Smoke test: init" }
-smoke-test-build-moonjson = { cmd = "cargo run -- build", cwd = "examples/moonjson", depends-on = [
+], description = "Integration test: init" }
+integration-test-init-library = { cmd = "rm -rf .tmp-smoke-lib && mkdir .tmp-smoke-lib && cd .tmp-smoke-lib && cargo run -- init my-lib --library && cat moonshot.toml && cd .. && rm -rf .tmp-smoke-lib", depends-on = [
   "build"
-], description = "Smoke test: moonjson build" }
-smoke-test-init-library = { cmd = "rm -rf .tmp-smoke-lib && mkdir .tmp-smoke-lib && cd .tmp-smoke-lib && cargo run -- init my-lib --library && cat moonshot.toml && cd .. && rm -rf .tmp-smoke-lib", depends-on = [
+], description = "Integration test: init --library" }
+integration-test-add = { cmd = "rm -rf .tmp-smoke-add && mkdir .tmp-smoke-add && cd .tmp-smoke-add && cargo run -- init add-test && cargo run -- add luarocks \"lua >=5.4\" && grep luarocks moonshot.toml && grep lua moonshot.toml && cd .. && rm -rf .tmp-smoke-add", depends-on = [
   "build"
-], description = "Smoke test: init --library" }
-smoke-test-lock = { cmd = "cargo test lock", depends-on = ["build"], description = "Smoke test: lock roundtrip" }
-smoke-test = { depends-on = [
-  "smoke-test-help",
-  "smoke-test-init",
-  "smoke-test-init-library",
-  "smoke-test-build-moonjson",
-  "smoke-test-lock"
-], description = "Run all smoke tests" }
+], description = "Integration test: add" }
+integration-test-search = { cmd = "cargo run -- search lua", depends-on = ["build"], description = "Integration test: search" }
+integration-test-lock = { cmd = "cargo run -- lock", cwd = "examples/moonjson", depends-on = ["build"], description = "Integration test: lock CLI" }
+integration-test-build = { cmd = "cargo run -- build", cwd = "examples/moonjson", depends-on = [
+  "build"
+], description = "Integration test: moonjson build" }
+integration-test-install-and-run = { cmd = "rm -rf .tmp-smoke-run && mkdir .tmp-smoke-run && cd .tmp-smoke-run && cargo run -- init run-test && cargo run -- add lua && cargo run -- install && cargo run -- run lua -e \"print('ok')\" && cd .. && rm -rf .tmp-smoke-run", depends-on = [
+  "build"
+], description = "Integration test: install + run lifecycle" }
+
+# Aggregate: run everything
+test = { depends-on = [
+  "smoke-test",
+  "unit-test-lock",
+  "integration-test-init",
+  "integration-test-init-library",
+  "integration-test-add",
+  "integration-test-search",
+  "integration-test-lock",
+  "integration-test-build",
+  "integration-test-install-and-run"
+], description = "Run all tests" }
 
 # Release
 bump = { cmd = "python scripts/set_version.py", description = "Bump version in pixi.toml and Cargo.toml (e.g. pixi run bump 0.2.0)" }
