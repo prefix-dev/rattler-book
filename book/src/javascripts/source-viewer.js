@@ -173,8 +173,11 @@ function ensureDrawer() {
 // ---------------------------------------------------------------------------
 // Manifest loading
 // ---------------------------------------------------------------------------
+var _manifestPromise = null;
+
 function loadManifestIfNeeded() {
-  if (manifest) return;
+  if (manifest) return Promise.resolve();
+  if (_manifestPromise) return _manifestPromise;
 
   // Derive manifest URL from this script's own src (works on any host/path)
   var manifestUrl = "./source-manifest.json";
@@ -183,7 +186,7 @@ function loadManifestIfNeeded() {
     manifestUrl = scripts[0].src.replace(/javascripts\/source-viewer\.js.*/, "source-manifest.json");
   }
 
-  fetch(manifestUrl)
+  _manifestPromise = fetch(manifestUrl)
     .then(function (r) {
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
@@ -195,9 +198,12 @@ function loadManifestIfNeeded() {
     })
     .catch(function (err) {
       console.error("Failed to load source manifest:", err);
+      _manifestPromise = null; // allow retry
       var tree = document.querySelector(".source-drawer__tree");
       if (tree) tree.innerHTML = '<div class="source-drawer__spinner">Failed to load files</div>';
     });
+
+  return _manifestPromise;
 }
 
 // ---------------------------------------------------------------------------
@@ -538,16 +544,81 @@ function createFallbackView(container, content) {
 }
 
 // ---------------------------------------------------------------------------
+// File link buttons on entangled code blocks
+// ---------------------------------------------------------------------------
+function injectFileLinks() {
+  var spans = document.querySelectorAll("span.filename");
+  for (var i = 0; i < spans.length; i++) {
+    var span = spans[i];
+    if (span.querySelector(".source-link-btn")) continue;
+    var text = span.textContent;
+    if (!text.startsWith("file: ")) continue;
+    var path = text.replace("file: ", "").trim();
+
+    var btn = document.createElement("button");
+    btn.className = "source-link-btn";
+    btn.dataset.path = path;
+    btn.title = "View full file";
+    btn.setAttribute("aria-label", "View " + path + " in source viewer");
+    btn.textContent = "</>";
+    span.appendChild(btn);
+  }
+}
+
+// Event delegation for file link buttons (registered once)
+var _fileLinkDelegateRegistered = false;
+function registerFileLinkDelegate() {
+  if (_fileLinkDelegateRegistered) return;
+  _fileLinkDelegateRegistered = true;
+
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(".source-link-btn");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    var path = btn.dataset.path;
+    if (!path) return;
+
+    // Open drawer
+    document.body.classList.add("source-drawer-open");
+    var toggleBtn = document.querySelector(".source-viewer-toggle");
+    if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "true");
+    ensureDrawer();
+
+    // Show loading state with filename
+    var body = document.querySelector(".source-drawer__code-body");
+    if (body && !manifest) {
+      body.innerHTML = '<div class="source-drawer__spinner" role="status">Loading ' + btn.dataset.path + '...</div>';
+    }
+
+    // Wait for manifest, then open file
+    loadManifestIfNeeded().then(function () {
+      if (!document.body.classList.contains("source-drawer-open")) return;
+      openFile(path);
+    });
+  });
+}
+
+// ---------------------------------------------------------------------------
 // Init + SPA support
 // ---------------------------------------------------------------------------
 initSourceViewer();
+injectFileLinks();
+registerFileLinkDelegate();
 
 if (typeof document$ !== "undefined") {
   document$.subscribe(function () {
+    // Auto-close drawer on SPA navigation to prevent context loss
+    if (document.body.classList.contains("source-drawer-open")) {
+      closeDrawer();
+    }
     initSourceViewer();
+    injectFileLinks();
   });
 }
 
 document.addEventListener("DOMContentLoaded", function () {
   initSourceViewer();
+  injectFileLinks();
 });
