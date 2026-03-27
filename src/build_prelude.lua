@@ -1,10 +1,10 @@
--- ~/~ begin <<book/src/ch10-build.md#src/build_prelude.lua>>[init]
--- ~/~ begin <<book/src/ch10-build.md#prelude-header>>[init]
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#src/build_prelude.lua>>[init]
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-header>>[init]
 -- moonshot build prelude
 -- Automatically sourced before every build.lua by `shot build`.
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch10-build.md#prelude-globals>>[init]
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-globals>>[init]
 -- ── Globals ───────────────────────────────────────────────────────────────────
 
 PREFIX        = os.getenv("PREFIX")        or error("PREFIX not set")
@@ -15,20 +15,22 @@ PKG_VERSION   = os.getenv("PKG_VERSION")   or error("PKG_VERSION not set")
 PKG_BUILD_NUM = tonumber(os.getenv("PKG_BUILD_NUM") or "0")
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch10-build.md#prelude-internal-helpers>>[init]
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-internal-helpers>>[init]
 -- ── Internal helpers ──────────────────────────────────────────────────────────
 
 --- Detect the operating system once.  `package.config` always starts with the
 --- directory separator (`\` on Windows, `/` everywhere else).
 local IS_WINDOWS = package.config:sub(1, 1) == "\\"
-
+-- ~/~ end
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-internal-helpers>>[1]
 local function shell(cmd)
     local ok, kind, code = os.execute(cmd)
     if not ok then
         error(string.format("Command failed (exit %d):\n  %s", code or -1, cmd), 2)
     end
 end
-
+-- ~/~ end
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-internal-helpers>>[2]
 -- Quote a path for use in a shell command.
 local function q(path)
     if IS_WINDOWS then
@@ -41,7 +43,7 @@ local function q(path)
 end
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch10-build.md#prelude-public-api>>[init]
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-public-api>>[init]
 -- ── Public API ────────────────────────────────────────────────────────────────
 
 --- Join path segments with "/", collapsing duplicate slashes.
@@ -52,7 +54,8 @@ function path_join(...)
     result = result:gsub("([^:])//+", "%1/")
     return result
 end
-
+-- ~/~ end
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-public-api>>[1]
 --- Create `path` and all parent directories (like `mkdir -p`).
 function mkdir(path)
     if IS_WINDOWS then
@@ -63,7 +66,8 @@ function mkdir(path)
         shell("mkdir -p " .. q(path))
     end
 end
-
+-- ~/~ end
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-public-api>>[2]
 --- Copy `src` to `dst`.  `src` may contain shell globs.
 function cp(src, dst)
     mkdir(dst)
@@ -73,14 +77,15 @@ function cp(src, dst)
         shell("cp -r " .. src .. " " .. q(dst))
     end
 end
-
+-- ~/~ end
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-public-api>>[3]
 --- Print an informational message to stderr, prefixed with "[moonshot]".
 function log(msg)
     io.stderr:write("[moonshot] " .. tostring(msg) .. "\n")
 end
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch10-build.md#prelude-install-helpers>>[init]
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-install-helpers>>[init]
 -- ── Install helpers ───────────────────────────────────────────────────────────
 
 --- Return true when `src` is an absolute path on the current platform.
@@ -90,7 +95,8 @@ local function is_absolute(src)
     if IS_WINDOWS and src:match("^%a:[/\\]") then return true end
     return false
 end
-
+-- ~/~ end
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-install-helpers>>[1]
 --- Install files matching `src` (a path or shell glob) into `PREFIX/subdir/`.
 ---
 --- Example:
@@ -107,7 +113,8 @@ function install(src, subdir)
         shell("cp -r " .. expanded .. " " .. q(dst) .. "/")
     end
 end
-
+-- ~/~ end
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-install-helpers>>[2]
 --- Install an executable into `PREFIX/bin/`.
 ---
 --- Example:
@@ -125,7 +132,8 @@ function install_bin(src)
         shell("chmod +x " .. q(path_join(dst, base)))
     end
 end
-
+-- ~/~ end
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-install-helpers>>[3]
 --- Install Lua source files into the standard Lua package path.
 ---
 --- `ver` defaults to "5.4".
@@ -143,7 +151,7 @@ end
 
 -- ~/~ end
 
--- ~/~ begin <<book/src/ch10-build.md#prelude-done>>[init]
+-- ~/~ begin <<book/src/deep-dive-build-script-api.md#prelude-done>>[init]
 -- ── Done ──────────────────────────────────────────────────────────────────────
 
 log(string.format("Building %s %s (build %d)", PKG_NAME, PKG_VERSION, PKG_BUILD_NUM))

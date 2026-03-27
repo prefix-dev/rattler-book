@@ -37,7 +37,7 @@ pub trait BuildBackend {
 const BUILD_PRELUDE: &str = include_str!("build_prelude.lua");
 // ~/~ end
 // ~/~ begin <<book/src/ch10-build.md#lua-backend-struct>>[init]
-/// The default build backend — runs a Lua build script.
+/// The default build backend: runs a Lua build script.
 pub struct LuaBuildBackend;
 // ~/~ end
 // ~/~ begin <<book/src/ch10-build.md#lua-backend-impl>>[init]
