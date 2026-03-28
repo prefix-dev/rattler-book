@@ -71,16 +71,13 @@ command from start to finish. Mostly following the following order: first the de
 then concepts, then implementation.
 
 **Part II** allows you to dive deeper into the rattler library itself: the package
-format, the SAT solver, the networking stack. These chapters stand alone; you
+format, the SAT solver, the networking stack. These chapters stand alone, you
 can read them in any order.
 
 ## Note on Generative AI usage
-Generative AI, namely: Claude Opus, was extensively used during the production of this book for, and was also used to verify that 
-the excercies where doable, by using agent teams. Claude has also been used for writing both code and prose. I did try to set my own rules for the use of
-it and I have done, many, many iterations. I have also heavily edited, appended and changed prose. I have tried really hard, to edit it in such a way so that we get to the point and do not waste your time as a reader.
+Generative AI, specifically: Claude Opus, was extensively used in the production of this book and to verify that the exercises can be completed. Claude has also been used for writing initial drafts of both code and prose. I did try to set my own rules for Claude to follow and I have done, many, many iterations on the generated text alone and with Claude. All text was heavily edited, appended, and changed by myself to make it as concise as possible.
 
-I want to be honest w.r.t to this fact so that you as a reader can decide yourself how you would like to proceed here.
-This section has been written by hand, any other way would feel disingenuous to me.
+I want to be honest w.r.t to this fact so that you as a reader can decide for yourself how to proceed. This section has been written entirely by hand. Any other way would feel disingenuous to me.
 
 ## What we will build
 
