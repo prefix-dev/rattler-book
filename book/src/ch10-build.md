@@ -5,11 +5,11 @@ loop: building a new package from source and publishing it so others can install
 it.
 
 Up to now, lumen-app has only consumed packages that someone else built.
-By adding a build command, we can write our own library (`lumen`, a smalll Lua library
+By adding a build command, we can write our own library (`lumen`, a small Lua library
 that wraps ImageMagick), package it, host it on a local channel, and
 install it into lumen-app with the same tool.
 
-This is also how pyproject.toml: the
+This is similar to how pyproject.toml works: the
 build configuration lives alongside the project manifest. For
 moonshot, a single `moonshot.toml` handles both.
 
@@ -19,10 +19,10 @@ moonshot, a single `moonshot.toml` handles both.
 dependencies into a temporary prefix, runs a Lua build script, packs the result
 into a `.conda` archive, and indexes the output directory as a local channel.
 
-We've also designed [ratter-build] for more general purpose package building, its both
+We've also designed [rattler-build] for more general purpose package building, it's both
 a cli and a library, but I figured that using lua to build is more fun in this case.
 
-[ratler-build]: https://rattler-build.prefix.dev/latest/
+[rattler-build]: https://rattler-build.prefix.dev/latest/
 
 ```console
 $ shot build

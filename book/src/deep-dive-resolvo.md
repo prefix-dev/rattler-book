@@ -77,7 +77,7 @@ search.  This can prune large sections of the search space.
 dependency solving.  It was developed by the prefix.dev team for use in conda-style
 dependency resolution.
 
-[resolvo]: https://github.com/mamba-org/resolvo
+[resolvo]: https://github.com/prefix-dev/resolvo
 
 Key design decisions:
 

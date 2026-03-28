@@ -151,6 +151,7 @@ Here is how the project is structured:
         <ul>
           <li class="file"><span class="name">mod.rs</span> <span class="comment">module declarations</span></li>
           <li class="file"><span class="name">init.rs</span></li>
+          <li class="file"><span class="name">search.rs</span></li>
           <li class="file"><span class="name">add.rs</span></li>
           <li class="file"><span class="name">install.rs</span></li>
           <li class="file"><span class="name">lock.rs</span></li>

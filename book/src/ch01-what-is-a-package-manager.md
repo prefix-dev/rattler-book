@@ -112,7 +112,7 @@ heuristics solve them quickly, in most cases.  We'll use [rattler]'s solver impl
 
 [vsat]: https://research.swtch.com/version-sat
 [3-SAT]: https://en.wikipedia.org/wiki/Boolean_satisfiability_problem#3-satisfiability
-[resolvo]: https://github.com/mamba-org/resolvo
+[resolvo]: https://github.com/prefix-dev/resolvo
 [npm]: https://www.npmjs.com
 [pip]: https://pip.pypa.io
 [cargo-book]: https://doc.rust-lang.org/cargo/
@@ -136,7 +136,7 @@ These are some of the things we thought about when making [rattler]:
 - **Transactive installation**: if the install fails halfway through, don't leave the environment
   in a broken half-installed state. Rattler has structs to handle this.
 - **Linking**: Ref-linking is the most efficient but not always available.
-- **Windows vs Unix**: Windows often-times needs different handling of things. For example opening/closing files is much slower. We wanted really good Windows support for rattler, and I think we have it.
+- **Windows vs Unix**: Windows oftentimes needs different handling of things. For example opening/closing files is much slower. We wanted really good Windows support for rattler, and I think we have it.
 
 ## What we will build
 
@@ -213,8 +213,8 @@ for the complete picture.
 - Every package manager shares four concepts: versions, requirements, artifacts,
   and an index.
 - Installing packages is usually some form of the pipeline: discovery, solving, installation.
-- [conda] is a platform-first, hermetic environment system with support for multipe programming languages.
-- [rattler] implements the neccesities to work with the [conda] ecosystem in pure Rust, providing library
+- [conda] is a platform-first, hermetic environment system with support for multiple programming languages.
+- [rattler] implements the necessities to work with the [conda] ecosystem in pure Rust, providing library
   crates for each subsystem.
 - We'll use these crates to build `moonshot`.
 

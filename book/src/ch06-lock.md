@@ -70,9 +70,18 @@ Now `web-server 2.0` is incompatible with `legacy-plugin`.  The solver has to
 backtrack and try `web-server 1.0` + `json-lib 1.9` + `legacy-plugin`.
 
 In the general case, dependency solving is equivalent to
-[SAT] (Boolean satisfiability), which is NP-hard. SAT is actually the "OG" NP problem via the [Cook-Levin theorem](https://en.wikipedia.org/wiki/Cook%E2%80%93Levin_theorem). In practice, real package
+[SAT] (Boolean satisfiability), which is NP-hard. SAT is the first problem proven NP-complete, via the [Cook-Levin theorem](https://en.wikipedia.org/wiki/Cook%E2%80%93Levin_theorem). In practice, real package
 ecosystems have structure that makes good heuristics very effective.
 
+/// margin-note
+For a survey of how different package managers handle solving in practice,
+see [Abate et al., "Dependency Solving Is Still Hard, but We Are Getting
+Better at It" (2020)][abate2020]. The authors, who originally proved the
+NP-completeness result, found that SAT-based solvers handle real-world
+instances in milliseconds to seconds.
+///
+
+[abate2020]: https://arxiv.org/abs/2011.07851
 [SAT]: https://en.wikipedia.org/wiki/Boolean_satisfiability_problem
 
 /// margin-note
@@ -141,7 +150,7 @@ through a scoring system, not a separate post-processing step. Without the "pref
 Without a lock file, the solver picks the best solution *at the time you run
 it*. A lock file records the *exact* solution: every package name, version,
 build string, and download URL. Replaying the lock gives you the same
-environment every time. We are pretty bullish on locking and it was something we spent a lot of time on with pixi to get right; we are already at the 7th version of our lock file format.
+environment every time. We are pretty bullish on locking and it was something we spent a lot of time on with pixi to get right; we are already at the 6th version of our lock file format.
 
 Every serious package manager converges on this pattern:
 
@@ -964,7 +973,7 @@ satisfied together.
 In the next chapter we implement `shot install`, which uses the lock file
 as its source of truth for installation.
 
-[resolvo]: https://github.com/mamba-org/resolvo
+[resolvo]: https://github.com/prefix-dev/resolvo
 [rattler_lock]: https://crates.io/crates/rattler_lock
 [pixi]: https://pixi.sh
 [rattler_virtual_packages]: https://crates.io/crates/rattler_virtual_packages

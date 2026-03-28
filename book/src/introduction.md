@@ -106,12 +106,12 @@ pixi install
 pixi run build
 ```
 
-I know it can be a hassle to install a new tool, I really do! But using pixi can famliarize you with what rattler can empower to build.
-Additionally, it will hopefully convince you that its a very useful tool as well.
+I know it can be a hassle to install a new tool, I really do! But using pixi can familiarize you with what rattler can empower to build.
+Additionally, it will hopefully convince you that it's a very useful tool as well.
 
 The `run` command utilizes pixi's tasks system to run tasks. In a way the task system is similar to [mise](https://mise.jdx.dev/tasks/) or [just](https://github.com/casey/just). 
 
-In out project we use a [`[dev]`](https://pixi.prefix.dev/latest/build/dev/) table in `pixi.toml` to pull in the Rust compiler and
+In our project we use a [`[dev]`](https://pixi.prefix.dev/latest/build/dev/) table in `pixi.toml` to pull in the Rust compiler and
 all build dependencies automatically via the `pixi-build-rust` backend.
 These can then be used in conjunction with `run`.
 No manual Rust installation required.

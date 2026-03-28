@@ -70,7 +70,7 @@ pub struct Project {
 }
 ```
 
-`discover()` walks up from the current directory to find `moonshot.toml`
+`discover()` looks in the current directory for `moonshot.toml`
 (using `Manifest::find_in_dir` from [Chapter 3](ch03-init.md)).
 `default_prefix()` returns the `.env/` directory relative to the project root,
 and `save()` writes the manifest back after modifications like `shot add`:
