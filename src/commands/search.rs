@@ -97,7 +97,16 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 // ~/~ begin <<book/src/ch04-search.md#search-results>>[1]
     // Sort by name, then by version descending.
     let mut results: Vec<(String, String)> = seen.into_keys().collect();
-    results.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
+    results.sort_by(|a, b| {
+        a.0.cmp(&b.0).then_with(|| {
+            let va = a.1.parse::<rattler_conda_types::Version>();
+            let vb = b.1.parse::<rattler_conda_types::Version>();
+            match (va, vb) {
+                (Ok(va), Ok(vb)) => vb.cmp(&va),
+                _ => b.1.cmp(&a.1),
+            }
+        })
+    });
 
     // Deduplicate by name (show only latest version per package).
     let mut last_name = String::new();

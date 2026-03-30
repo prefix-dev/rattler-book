@@ -47,7 +47,7 @@ rustls-tls = [
 ]
 ```
 
-The dependencies start with the core [rattler] crates.
+Cargo features are compile-time flags that enable optional functionality in a crate. Setting `default-features = false` turns off a crate's defaults so we can pick only what we need. The dependencies start with the core [rattler] crates.
 
 ``` {.toml #cargo-deps}
 [dependencies]
@@ -195,7 +195,7 @@ Let's take it section by section.
 
 The imports pull in Clap for argument parsing, miette for error reporting, and
 the [tracing] filter types for log-level control. The `mod` declarations make the
-rest of our crate visible — including the new `project`, `session`,
+rest of our crate visible, including the new `project`, `session`,
 `environment`, and `build_backend` modules we will fill in over the coming
 chapters.
 
@@ -270,10 +270,14 @@ enum Command {
 
 ### The synchronous entry point
 
+Rust's `async`/`await` lets functions pause while waiting on slow operations like network requests. These async functions need a *runtime* to schedule and execute them. Tokio is the most widely used async runtime for Rust.
+
 `fn main` builds a [Tokio] runtime and blocks on `async_main`. We configure two
 thread pools: `worker_threads` for async work (HTTP requests, futures polling)
 and `max_blocking_threads` for synchronous operations that would stall the async
 scheduler (file I/O, archive extraction, solver runs).
+
+Here `miette::Result` is a type alias for `Result<T, miette::Report>`. It works like the standard `Result` but carries structured error context (source locations, help text).
 
 ``` {.rust #main-fn}
 fn main() -> miette::Result<()> {

@@ -1,6 +1,6 @@
 // ~/~ begin <<book/src/ch03-init.md#src/commands/init.rs>>[init]
 // ~/~ begin <<book/src/ch03-init.md#init-imports>>[init]
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use clap::Parser;
 use miette::IntoDiagnostic;
@@ -59,7 +59,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             license: None,
             description: None,
         },
-        dependencies: HashMap::from([(
+        dependencies: BTreeMap::from([(
             "lua".to_string(),
             ">=5.4".parse::<NamelessMatchSpec>().unwrap(),
         )]),

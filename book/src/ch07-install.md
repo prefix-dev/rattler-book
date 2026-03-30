@@ -1,5 +1,9 @@
 # Chapter 7: The `install` Command
 
+/// margin-note
+In conda, a *prefix* is the directory where packages are installed, like a self-contained filesystem root for your project. Think of it as the equivalent of Python's `.venv` directory.
+///
+
 <span class="newthought">Okay now let's get to the meat of it:</span> the install command. It reads the manifest,
 checks the lock file, resolves if needed, and installs packages into a local
 prefix. The lock file (produced by [Chapter 6](ch06-lock.md)'s `shot lock`) is
@@ -63,7 +67,7 @@ graph TD
 ### The package cache
 
 Every package is first extracted into a *central cache* shared across all
-environments on your machine (at `~/.rattler/pkgs/`).  The cache key is the
+environments on your machine.  The exact cache location is platform-dependent: `~/.cache/rattler/cache` on Linux, `~/Library/Caches/rattler/cache` on macOS, and `%LOCALAPPDATA%\rattler\cache` on Windows (as returned by `rattler::default_cache_dir()`). The cache key is the
 package's content hash, so `lua-5.4.7` is stored exactly once regardless of how
 many environments use it. Content-addressed keys (rather than name-plus-version) prevent collisions when the same version is rebuilt with a different build string. Two builds of `lua-5.4.7` with different compiler flags get different hashes and coexist safely in the cache.
 
@@ -123,6 +127,15 @@ resolve logic:
 The `install_packages` method takes a solved set of packages and links them into a prefix.
 It scans the prefix for already-installed packages (to compute a minimal
 transaction) and runs the `Installer` with progress bars.
+
+The `Installer` is configured with a builder chain. Each method sets one aspect of the install:
+
+- `.with_download_client` sets the HTTP client for fetching packages.
+- `.with_target_platform` selects which platform we are installing for.
+- `.with_installed_packages` tells the installer what is already in the prefix (so it can skip re-installing).
+- `.with_execute_link_scripts` controls whether to run post-link scripts after installation.
+- `.with_requested_specs` records which packages the user directly asked for (vs. transitive dependencies).
+- `.with_reporter` attaches a progress reporting callback.
 
 ``` {.rust #session-install-packages}
 impl Session {

@@ -225,7 +225,7 @@ For comparison:
 
 The practical effect: a modern `.conda` package installs roughly 2-3x faster
 than a `.tar.bz2` of equivalent content, because zstd decompression is
-significantly faster and can leverage multiple cores.
+significantly faster and can use multiple cores.
 
 ## Streaming readers and writers
 

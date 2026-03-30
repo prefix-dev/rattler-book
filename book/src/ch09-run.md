@@ -74,7 +74,7 @@ process internally. The [tokio] runtime manages the blocking thread pool.
 
 ### The run command
 
-With `Environment` handling activation, the run command becomes straightforward:
+With `Environment` handling activation, the run command is short:
 
 ``` {.rust file=src/commands/run.rs}
 <<run-imports>>

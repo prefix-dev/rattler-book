@@ -11,8 +11,7 @@ eval $(shot shell-hook)         # bash / zsh
 shot shell-hook | source        # fish
 ```
 
-The `eval` trick runs the output of `shot shell-hook` as shell code in the current
-process, which *can* modify `PATH`.
+`$()` runs `shot shell-hook` and captures its text output. `eval` then executes that text as shell commands in the current session. This is how shell-hook can modify your current shell's PATH and other variables.
 
 You can pass an optional `--shell` flag to override the detected shell
 dialect and `--prefix` to override the environment location.
@@ -38,8 +37,8 @@ Different package managers handle this in different ways, some examples are:
 3. **uv**: `uv tool install` symlinks executables into `~/.local/bin`. Virtual environment activation sets PATH and `VIRTUAL_ENV`. `uv run` sets env vars on the subprocess directly without sourcing activate scripts.
 4. **Nix**: `nix develop` starts a new shell with PATH rebuilt entirely from `/nix/store` paths, sets build variables like `NIX_CFLAGS_COMPILE` and `PKG_CONFIG_PATH`, and runs the derivation's `shellHook`.
 
-A child process cannot modify the environment of its parent. So when you run `shot shell-hook`, it can't just set
-`PATH` for you, it has to print a script that you evaluate in your shell. 
+A child process cannot modify the environment of its parent. This is a basic rule of Unix and Windows process isolation: when a program exits, any environment variable changes it made die with it. So when you run `shot shell-hook`, it can't just set
+`PATH` for you, it has to print a script that you evaluate in your shell.
 
 ### Shell dialects and nesting
 

@@ -1,6 +1,6 @@
 # Chapter 5: The `add` Command
 
-We want the `add` command for moonshot to be a convenient way to add packages using the command line. In pixi, we coupled this with an automatic install; package managers like npm or pnpm don't do this. We'll also not do so here because it is a bit more complicated and I tried to keep the code shorter.
+The `add` command updates the manifest with new dependencies from the command line. In pixi, we coupled this with an automatic install; package managers like npm or pnpm don't do this. We'll also skip that here to keep the code shorter.
 
 ## Design
 
@@ -31,7 +31,7 @@ duplicate entry or change the existing version constraint.
 
 ## Implementation
 
-The `add` command is where we first use the `Project` struct — a small
+The `add` command is where we first use the `Project` struct, a small
 abstraction that finds the manifest from the current directory and provides
 helpers for saving changes back to disk. We introduce `Project` in its own
 file.
@@ -160,12 +160,15 @@ and save:
 ``` {.rust #add-execute}
     let mut added = 0usize;
     for (name, spec) in parsed {
+        let len_before = project.manifest.dependencies.len();
         project
             .manifest
             .dependencies
             .entry(name.to_string())
             .or_insert(spec);
-        added += 1;
+        if project.manifest.dependencies.len() > len_before {
+            added += 1;
+        }
     }
 
     project.save()?;
@@ -182,10 +185,10 @@ and save:
 
 ``` {.rust #split-spec}
 fn split_spec(spec: &str) -> (&str, &str) {
-    // Respect quoted strings and handle the common "name version" pattern.
-    if let Some(pos) = spec.find(|c: char| c.is_whitespace() || c == '=') {
+    // Split on first whitespace only; operator-prefixed versions require a space.
+    if let Some(pos) = spec.find(char::is_whitespace) {
         let name = spec[..pos].trim();
-        let version = spec[pos..].trim().trim_start_matches('=').trim();
+        let version = spec[pos..].trim();
         (name, if version.is_empty() { "*" } else { version })
     } else {
         (spec.trim(), "*")
@@ -193,11 +196,9 @@ fn split_spec(spec: &str) -> (&str, &str) {
 }
 ```
 
-This splits `"lua >=5.4"` into `("lua", ">=5.4")` or `"luarocks"` into
-`("luarocks", "*")`.
+We split on whitespace only. Users write `shot add lua ">=5.4"` with a space between the name and the constraint. This avoids ambiguity with operator characters like `>=` and `==`.
 
-We split on the first whitespace or `=` character to separate the package name
-from the version constraint.
+For example, given input `"lua >=5.4"`, `find` locates the space at position 3. The name becomes `"lua"` and the version constraint becomes `">=5.4"`.
 
 ## Running `shot add`
 

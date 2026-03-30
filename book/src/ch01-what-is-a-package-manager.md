@@ -10,7 +10,7 @@ handful of ideas. This was never clear to me when starting to work on packaging,
 
 **Versions.** Every package has a version. [Semantic versioning][semver] (major.minor.patch)
 is commonly used but not universal. [conda] uses its own version ordering that is
-compatible with semver but also handles more, like pre-release suffixes
+compatible with semver (so versions like 1.2.3 work as expected) but also handles more, like pre-release suffixes
 and post-release tags. See [cep-33] for more information.
 
 **Requirements.** A requirement (also called a constraint, dependency, or spec)
@@ -73,7 +73,7 @@ available packages.  The catalog, again in conda, is called the **repodata**.
 </ul>
 </div>
 
-`repodata.json` is a *really* large JSON file (which can exceed 350 MB for large channels like conda-forge) that lists
+`repodata.json` is a *really* large JSON file (which can exceed 350 MB uncompressed for large channels like conda-forge; the compressed .json.zst transfer is around 30-40 MB) that lists
 every package, every version of every package, and the dependencies of each
 version. Later on you'll see that conda eventually outgrew this format and switched to a format that does not need
 to be downloaded all at once. Other ecosystems also had a transition like this at some point.
@@ -88,7 +88,9 @@ You request:
 
 Which exact versions should be installed?
 
-This is a **dependency solving** problem.  When a package manager enforces
+This is a **dependency solving** problem.  You do not need to understand complexity theory to use the solver or follow this book. The next few paragraphs explain *why* solving is hard; feel free to skip ahead if the theory is not your thing.
+
+When a package manager enforces
 that only one version of each package can be installed at a time, the problem is
 NP-complete.
 
@@ -156,6 +158,10 @@ These are the basic commands we will be creating in moonshot.
 | `build` | Create a new `.conda` package | (package creation) |
 
 We'll implement each of these commands in its own chapter in Part I.
+
+/// margin-note
+**Coming from pip?** Think of a conda channel as similar to PyPI, except packages include native libraries (like libpng or OpenSSL) that pip expects the OS to provide. A conda environment is like a Python venv that also manages C libraries and system dependencies.
+///
 
 ## The conda file format
 

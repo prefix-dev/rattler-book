@@ -1,6 +1,6 @@
 // ~/~ begin <<book/src/ch03-init.md#src/manifest.rs>>[init]
 // ~/~ begin <<book/src/ch03-init.md#manifest-imports>>[init]
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -20,9 +20,9 @@ pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 pub struct Manifest {
     pub project: ProjectMetadata,
 
-    #[serde_as(as = "HashMap<_, DisplayFromStr>")]
+    #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
     #[serde(default)]
-    pub dependencies: HashMap<String, NamelessMatchSpec>,
+    pub dependencies: BTreeMap<String, NamelessMatchSpec>,
 
     /// Present only for library projects.
     #[serde(default, skip_serializing_if = "Option::is_none")]

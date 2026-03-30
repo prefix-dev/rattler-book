@@ -1,6 +1,7 @@
 # Introduction
 
 <span class="newthought">This book</span> teaches you how to build a package manager.
+A package manager automates finding, downloading, and installing software libraries so you don't have to track versions and dependencies by hand.
 
 Here is what using the finished tool will look like:
 
@@ -50,7 +51,7 @@ This book is aimed at programmers who:
   Conda's language-agnostic format makes it a surprisingly good foundation.
 
 You don't need to know anything about conda, packaging, or the Lua programming
-language.  We use [Lua] as the target language because it's small and
+language.  We use [Lua] (a lightweight scripting language commonly embedded in games and applications) as the target language because it's small and
 self-contained, but the techniques generalize to any ecosystem.
 
 ## Who am I?
@@ -96,6 +97,15 @@ The full source code lives in the `src/` directory alongside this book in the
 [rattler-book repository][repo].
 
 
+## Getting the source
+
+Clone the repository:
+
+```bash
+git clone https://github.com/prefix-dev/rattler-book
+cd rattler-book
+```
+
 ## Running the examples
 
 The easiest way to get started is with [pixi](https://pixi.prefix.dev/latest/installation/), which manages the Rust toolchain
@@ -106,10 +116,10 @@ pixi install
 pixi run build
 ```
 
-I know it can be a hassle to install a new tool, I really do! But using pixi can familiarize you with what rattler can empower to build.
+I know it can be a hassle to install a new tool. I really do! But using pixi can familiarize you with what rattler can empower to build.
 Additionally, it will hopefully convince you that it's a very useful tool as well.
 
-The `run` command utilizes pixi's tasks system to run tasks. In a way the task system is similar to [mise](https://mise.jdx.dev/tasks/) or [just](https://github.com/casey/just). 
+The `run` command uses pixi's tasks system to run tasks. In a way the task system is similar to [mise](https://mise.jdx.dev/tasks/) or [just](https://github.com/casey/just). 
 
 In our project we use a [`[dev]`](https://pixi.prefix.dev/latest/build/dev/) table in `pixi.toml` to pull in the Rust compiler and
 all build dependencies automatically via the `pixi-build-rust` backend.
@@ -142,17 +152,10 @@ pixi r shot init
 ### Without pixi
 
 If you prefer to manage Rust yourself, you need Rust 1.82 or later.  Install it
-with [rustup]:
+with [rustup] and build with cargo:
 
 ```bash
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-
-Then clone the repository and build:
-
-```bash
-git clone https://github.com/prefix-dev/rattler-book
-cd rattler-book
 cargo build
 ```
 

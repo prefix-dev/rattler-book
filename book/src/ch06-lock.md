@@ -42,6 +42,8 @@ As discussed in [Chapter 1](ch01-what-is-a-package-manager.md), conda enforces t
 
 ### Why solving is hard
 
+You do not need to understand the theory to follow the rest of this chapter. The next few paragraphs explain *why* solving is hard; skip ahead to the implementation if the theory is not your focus.
+
 Dependency solving is one of those problems that seems trivial until you hit a real conflict. We previously worked on [rip](https://github.com/prefix-dev/rip), a project that would solve PyPI dependencies directly, and we found weird backtracking behaviors and certain combinations of decisions made by library authors that cause really long solve times. The combination of `boto3` and `urllib3` being a [notorious one](https://github.com/prefix-dev/rip/issues/191) in the Python world.
 
 Imagine you ask for two packages:
@@ -150,7 +152,7 @@ through a scoring system, not a separate post-processing step. Without the "pref
 Without a lock file, the solver picks the best solution *at the time you run
 it*. A lock file records the *exact* solution: every package name, version,
 build string, and download URL. Replaying the lock gives you the same
-environment every time. We are pretty bullish on locking and it was something we spent a lot of time on with pixi to get right; we are already at the 6th version of our lock file format.
+environment every time. Lock files are central to reproducibility, and getting the format right took significant effort in pixi. We are already at the 6th version of our lock file format.
 
 Every serious package manager converges on this pattern:
 
@@ -184,7 +186,8 @@ How do we know when to re-solve? We compare file modification times:
 ### The `rattler_lock` format
 
 `moonshot.lock` is a YAML file following the [rattler_lock] crate's format (the
-same format [pixi] uses for `pixi.lock`). A simplified example:
+same format [pixi] uses for `pixi.lock`). Specifically, this is the pixi.lock v6
+format from prefix.dev, distinct from the [conda-lock](https://github.com/conda/conda-lock) project's format. A simplified example:
 
 ```yaml
 version: 6
@@ -203,6 +206,8 @@ environments:
 
 Each entry records the exact URL, SHA-256 hash, and full dependency metadata.
 The [rattler_lock] crate handles serialization and deserialization.
+
+Moonshot solves only for the current platform. Tools like pixi solve for multiple platforms in a single lock file, which matters for cross-platform reproducibility in CI.
 
 ## Implementation
 
@@ -635,7 +640,7 @@ exclude packages that need features the host doesn't have.
 
 Now we assemble a `SolverTask` and hand it to resolvo. The `locked_packages`
 field seeds the solver with previous solutions as preferences, which makes
-re-solves faster and more stable.
+re-solves faster and more stable. The `..` syntax fills in all remaining fields from the value on the right. Here it builds a default `SolverTask` from the repodata, then we override `locked_packages`, `virtual_packages`, and `specs` with our own values.
 
 ``` {.rust #session-resolve}
         let solver_task = SolverTask {

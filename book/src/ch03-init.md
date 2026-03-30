@@ -43,7 +43,7 @@ luarocks = "*"
 ```
 
 The `[project]` section will contain the metadata: `[dependencies]` maps package names
-to version constraints.  Version Requirements follow the conda MatchSpec mini-language, which evolved in conjunction with Python's Version and Requirements syntax. It does offers a couple of crazy features like matching on regexes, md5 hashes (with a regex even, never seen that being used!), and globs:
+to version constraints.  Version Requirements follow the conda MatchSpec mini-language, which evolved in conjunction with Python's Version and Requirements syntax. It does offer a couple of crazy features like matching on regexes, md5 hashes (with a regex even, never seen that being used!), and globs:
 
 Some simple most-commonly used cases:
 
@@ -83,7 +83,7 @@ Here is the full `src/manifest.rs` assembled from the pieces we'll walk through:
 We begin with the standard imports for file handling, serialization, and conda types:
 
 ``` {.rust #manifest-imports}
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -101,7 +101,9 @@ A single constant keeps the filename consistent across all commands:
 pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 ```
 
-The core data structures map directly to the TOML layout:
+The core data structures map directly to the TOML layout. The struct below uses `serde_with`, a companion crate to serde. The `#[serde_as]` attribute on the struct and `#[serde_as(as = "DisplayFromStr")]` on the `dependencies` field tell serde to deserialize a TOML string by calling `FromStr::from_str()` on the target type, and serialize it back via `Display`. This means version strings like `">=5.4"` in the TOML are automatically parsed into typed `NamelessMatchSpec` values at load time.
+
+We use `BTreeMap` instead of `HashMap` so that dependencies serialize in alphabetical order, producing stable diffs when the manifest changes.
 
 ``` {.rust #manifest-structs}
 #[serde_as]
@@ -109,9 +111,9 @@ The core data structures map directly to the TOML layout:
 pub struct Manifest {
     pub project: ProjectMetadata,
 
-    #[serde_as(as = "HashMap<_, DisplayFromStr>")]
+    #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
     #[serde(default)]
-    pub dependencies: HashMap<String, NamelessMatchSpec>,
+    pub dependencies: BTreeMap<String, NamelessMatchSpec>,
 
     /// Present only for library projects.
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -177,11 +179,11 @@ gap with `DisplayFromStr`: it deserializes any type that implements `FromStr`
 from a string, and serializes it back via `Display`.
 
 The `#[serde_as]` attribute replaces serde's default (de)serialization for
-annotated fields. Here `HashMap<_, DisplayFromStr>` tells serde_with to leave
+annotated fields. Here `BTreeMap<_, DisplayFromStr>` tells serde_with to leave
 the keys alone (they're already `String`s) but run each value through
 `NamelessMatchSpec::from_str` on read, and `Display::fmt` on write.
 
-This follows the "parse, don't validate" principle: a typo like
+This follows the "parse, don't validate" principle (*parse, don't validate* is a design principle: convert raw data into typed values at the boundary, so the rest of your code can assume validity without re-checking). A typo like
 `lua = ">==5.4"` is now caught during TOML deserialization itself, not in a
 separate validation step afterward. If the spec string is malformed,
 `toml::from_str` returns an error before `Manifest` is ever constructed.
@@ -351,7 +353,7 @@ The imports pull in clap for argument parsing and the manifest types we just
 defined:
 
 ``` {.rust #init-imports}
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 
 use clap::Parser;
 use miette::IntoDiagnostic;
@@ -423,7 +425,7 @@ also add a version and a default `BuildConfig`:
             license: None,
             description: None,
         },
-        dependencies: HashMap::from([(
+        dependencies: BTreeMap::from([(
             "lua".to_string(),
             ">=5.4".parse::<NamelessMatchSpec>().unwrap(),
         )]),

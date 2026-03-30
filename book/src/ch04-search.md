@@ -98,6 +98,10 @@ by splitting repodata into per-package shards so the client never
 downloads data it will never read.
 ///
 
+/// margin-note
+Think of sharded repodata like a phone book index. Instead of downloading the entire book, you request just the page for the letter you need.
+///
+
 [CEP-16][cep-16] (sharded repodata) replaces the monolithic file with a
 **content-addressed, per-package** scheme:
 
@@ -199,7 +203,7 @@ pub fn build_authenticated_client() -> miette::Result<reqwest_middleware::Client
 }
 ```
 
-The `.no_gzip()` call disables reqwest's automatic gzip decompression. Repodata is already served compressed by the channel and rattler handles that decompression itself. Letting reqwest also decompress would interfere.
+The `.no_gzip()` call disables reqwest's automatic gzip decompression. Rattler downloads `.json.zst` (zstd-compressed) files and handles decompression itself. Disabling reqwest's automatic gzip prevents double-decompression, where reqwest would try to gunzip a response that rattler then also tries to decompress.
 
 `reqwest_middleware` wraps `reqwest::Client` to allow pluggable middleware.
 Each middleware intercepts every request and response:
@@ -316,9 +320,7 @@ sharded format when a channel supports it.
         .finish();
 ```
 
-`gateway.query(...)` fetches repodata for the requested packages. We set
-`.recursive(false)` because we only need direct matches, not transitive
-dependencies. We query both the current platform and `NoArch` to cover pure-Lua packages.
+`gateway.query(...)` fetches repodata for the requested packages. When `recursive` is `true`, the gateway also fetches repodata for transitive dependencies. For search we only need direct matches, so we set it to `false`. We query both the current platform and `NoArch` to cover pure-Lua packages.
 
 ``` {.rust #search-query}
     let repo_data: Vec<RepoData> = with_spinner(
@@ -358,10 +360,21 @@ With duplicates collapsed, we sort the results alphabetically and print one
 line per package, showing only the latest version. This mimics how tools like
 `apt search` or `cargo search` present results.
 
+We parse the version strings into `Version` values for correct ordering. Plain string comparison would sort `5.9.0` after `5.10.0`.
+
 ``` {.rust #search-results}
     // Sort by name, then by version descending.
     let mut results: Vec<(String, String)> = seen.into_keys().collect();
-    results.sort_by(|a, b| a.0.cmp(&b.0).then(b.1.cmp(&a.1)));
+    results.sort_by(|a, b| {
+        a.0.cmp(&b.0).then_with(|| {
+            let va = a.1.parse::<rattler_conda_types::Version>();
+            let vb = b.1.parse::<rattler_conda_types::Version>();
+            match (va, vb) {
+                (Ok(va), Ok(vb)) => vb.cmp(&va),
+                _ => b.1.cmp(&a.1),
+            }
+        })
+    });
 
     // Deduplicate by name (show only latest version per package).
     let mut last_name = String::new();

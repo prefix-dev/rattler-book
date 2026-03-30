@@ -13,6 +13,8 @@ This is similar to how pyproject.toml works: the
 build configuration lives alongside the project manifest. For
 moonshot, a single `moonshot.toml` handles both.
 
+Building a package has five stages: discover what to build (read the manifest), set up isolated directories (build prefix and install prefix), install build dependencies, run the build script, and pack the result into a `.conda` archive. We will implement each stage in order.
+
 ## Design
 
 `shot build` reads the `[build]` section from `moonshot.toml`, installs
@@ -74,6 +76,10 @@ projects but `version` is required when `[build]` is present.
 In our simple package manager `[dependencies]` serve a double duty: `shot install` installs them into your
 environment, and `shot build` puts them into the package as runtime
 requirements. In pixi for example we've actually split these dependency types.
+
+/// margin-note
+Real conda build systems like rattler-build separate dependencies into `host` (needed during compilation), `build` (build tools), and `run` (needed at runtime). Moonshot's single `[dependencies]` section is a simplification that works because Lua packages have no compilation step.
+///
 
 /// margin-note
 In a real-world tool you might want a `[dev-dependencies]` section for packages
@@ -138,6 +144,8 @@ dependencies, making the package larger and less portable. It's the same
 principle behind Debian's Build-Depends vs Depends, and it's a requirement for
 reproducible builds.
 
+Build dependencies are like scaffolding for a building. You need scaffolding during construction, but you do not ship it to the tenants. The build prefix holds these temporary tools; the install prefix holds the finished package.
+
 ### The `.conda` format
 
 The `.conda` format (version 2) is an uncompressed ZIP containing two inner
@@ -153,10 +161,14 @@ For a detailed reference on what's inside a `.conda` archive, including
 
 ### `noarch` packages
 
-When `noarch` is true (as it is for pure-Lua packages or pure Python ones for that matter), 
+When `noarch` is true (as it is for pure-Lua packages or pure Python ones for that matter),
 the package is built once and works on all platforms, stored under the `noarch/` subdirectory. When
 false, the package is platform-specific and must be built separately for each
 target.
+
+/// margin-note
+Moonshot uses `noarch: generic` since Lua packages are platform-independent. In conda-forge, `noarch: python` is far more common; it signals that the installer should generate entry points and place files in the correct `site-packages` path.
+///
 
 ## Implementation
 
@@ -263,10 +275,14 @@ pub trait BuildBackend {
 }
 ```
 
+/// margin-note
+**Coming from Python?** This is similar to how `pyproject.toml`'s `[build-system].build-backend` lets you swap between setuptools, flit, and hatch. Here we define the interface so someone could add a Python or shell build backend later.
+///
+
 The trait is generic over the build-script language. Today we only have Lua,
 but the design allows adding Python, shell, or other backends later.
 
-Today we only have one backend -- Lua. It loads a prelude script before running the user's build script:
+Today we only have one backend, Lua. It loads a prelude script before running the user's build script:
 
 ``` {.rust #lua-backend-const}
 const BUILD_PRELUDE: &str = include_str!("build_prelude.lua");
@@ -319,6 +335,8 @@ impl BuildBackend for LuaBuildBackend {
     }
 }
 ```
+
+We use `.expect()` here because `execute()` already verified the `[build]` section exists. In a larger codebase you would pass `&BuildConfig` directly to make the requirement visible in the type signature. The same pattern appears in `run_build_script` and `write_package_metadata` below.
 
 Finding the Lua interpreter requires checking several possible binary names and locations:
 
@@ -726,6 +744,10 @@ runtime dependencies; and `noarch`/`subdir` control platform targeting.
         ),
     };
 ```
+
+/// margin-note
+Moonshot copies `[dependencies]` directly into the package's runtime requirements. Real conda build systems also handle `run_exports`, where a build dependency (like `libpng`) automatically adds a version-constrained runtime dependency on itself. We skip this for simplicity.
+///
 
 ``` {.rust #write-meta-files}
     let index_path = install_prefix.join(IndexJson::package_path());

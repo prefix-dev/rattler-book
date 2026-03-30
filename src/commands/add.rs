@@ -36,12 +36,15 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 // ~/~ begin <<book/src/ch05-add.md#add-execute>>[1]
     let mut added = 0usize;
     for (name, spec) in parsed {
+        let len_before = project.manifest.dependencies.len();
         project
             .manifest
             .dependencies
             .entry(name.to_string())
             .or_insert(spec);
-        added += 1;
+        if project.manifest.dependencies.len() > len_before {
+            added += 1;
+        }
     }
 
     project.save()?;
@@ -55,10 +58,10 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 // ~/~ end
 // ~/~ begin <<book/src/ch05-add.md#split-spec>>[init]
 fn split_spec(spec: &str) -> (&str, &str) {
-    // Respect quoted strings and handle the common "name version" pattern.
-    if let Some(pos) = spec.find(|c: char| c.is_whitespace() || c == '=') {
+    // Split on first whitespace only; operator-prefixed versions require a space.
+    if let Some(pos) = spec.find(char::is_whitespace) {
         let name = spec[..pos].trim();
-        let version = spec[pos..].trim().trim_start_matches('=').trim();
+        let version = spec[pos..].trim();
         (name, if version.is_empty() { "*" } else { version })
     } else {
         (spec.trim(), "*")
