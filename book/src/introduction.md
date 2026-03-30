@@ -183,9 +183,6 @@ name appears on multiple code blocks, Entangled appends them in order. This
 lets us explain each piece separately while they end up as one continuous block
 in the tangled output.
 
-Do you also see the small <button class="source-link-btn" data-path="examples/intro/hello.rs" title="View full file" aria-label="View examples/intro/hello.rs in source viewer">&lt;/&gt;</button>
-in the heading? Click that to go the file directly, using a built-in file browser.
-
 The imports bring in `std::io` for reading from stdin:
 
 ``` {.rust #intro-imports}
@@ -211,6 +208,19 @@ Entangled stitches these together: every `<<intro-imports>>` reference is
 replaced by the contents of the `#intro-imports` block. This lets the book
 introduce code in the order that makes sense for reading, while the tangled
 output follows the order the compiler expects.
+
+Every code block that carries a `file=` or `#name` attribute has a small
+<button class="source-link-btn" style="pointer-events:none">&lt;/&gt;</button>
+button in its title bar. Clicking it opens the **source viewer**, a slide-up
+panel where you can browse the full tangled files. The viewer scrolls directly
+to the corresponding section and highlights it briefly. You can also open the
+source viewer any time with the
+<code>&lt;/&gt;</code> icon in the header bar.
+
+Inside the tangled files you will see marker comments like
+`// ~/~ begin <<intro-imports>>[init]` that record where each block came from.
+They act as section separators; click the fold arrow in the gutter to collapse
+any section you are not interested in.
 
 You can tangle all files with:
 

@@ -1233,3 +1233,70 @@ body.focus-mode .md-sidebar--primary {
     color: #fb4934;
     background: #3c1f1e;
 }
+
+/* ---------------------------------------------------------------------------
+   Entangled noweb references — Gruvbox palette overrides
+   --------------------------------------------------------------------------- */
+
+/* Light: Gruvbox aqua for references, matching the book's accent tone */
+.noweb-ref {
+    color: #427b58;
+    font-style: italic;
+    text-decoration: none;
+    letter-spacing: -0.01em;
+}
+
+.noweb-ref:hover {
+    color: #076678;
+    text-decoration: underline;
+    filter: none;
+}
+
+.noweb-index a {
+    color: #427b58;
+}
+
+.noweb-index a:hover {
+    color: #076678;
+}
+
+.used-by {
+    color: #928374;
+}
+
+.used-by a {
+    color: #427b58;
+}
+
+.used-by a:hover {
+    color: #076678;
+}
+
+/* Dark: Gruvbox aqua (bright) */
+[data-md-color-scheme="slate"] .noweb-ref {
+    color: #8ec07c;
+}
+
+[data-md-color-scheme="slate"] .noweb-ref:hover {
+    color: #83a598;
+}
+
+[data-md-color-scheme="slate"] .noweb-index a {
+    color: #8ec07c;
+}
+
+[data-md-color-scheme="slate"] .noweb-index a:hover {
+    color: #83a598;
+}
+
+[data-md-color-scheme="slate"] .used-by {
+    color: #a89984;
+}
+
+[data-md-color-scheme="slate"] .used-by a {
+    color: #8ec07c;
+}
+
+[data-md-color-scheme="slate"] .used-by a:hover {
+    color: #83a598;
+}

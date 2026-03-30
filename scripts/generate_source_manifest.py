@@ -1,7 +1,7 @@
 """Generate a JSON manifest of all tangled source files for the book's source viewer.
 
 Parses markdown chapters to discover file= attributes in entangled code blocks,
-reads the tangled files, strips marker comments, and writes a JSON manifest
+reads the tangled files (preserving entangled markers), and writes a JSON manifest
 to book/src/source-manifest.json.
 
 Usage: python scripts/generate_source_manifest.py
@@ -20,14 +20,6 @@ OUTPUT = BOOK_SRC / "source-manifest.json"
 # Only matches at the start of a line to avoid false positives in prose.
 FILE_ATTR_RE = re.compile(r"^```\s*\{[^}]*file=([^\s}]+)", re.MULTILINE)
 
-# Marker stripping regexes per comment style.
-# Anchored to line start with re.MULTILINE to avoid corrupting mid-line content.
-MARKER_PATTERNS = {
-    ".rs": re.compile(r"^[ ]*// ~/~ [^\n]*\n", re.MULTILINE),
-    ".toml": re.compile(r"^[ ]*# ~/~ [^\n]*\n", re.MULTILINE),
-    ".lua": re.compile(r"^[ ]*-- ~/~ [^\n]*\n", re.MULTILINE),
-}
-
 
 def discover_files():
     """Parse all markdown files to find unique file= paths."""
@@ -39,14 +31,6 @@ def discover_files():
     if not files:
         print("Warning: no file= attributes found in any markdown files")
     return sorted(files)
-
-
-def strip_markers(content, suffix):
-    """Strip entangled marker lines from file content."""
-    pattern = MARKER_PATTERNS.get(suffix)
-    if pattern:
-        return pattern.sub("", content)
-    return content
 
 
 def lang_from_suffix(suffix):
@@ -112,7 +96,6 @@ def main():
         except UnicodeDecodeError:
             print(f"Warning: skipping {rel_path} (not valid UTF-8)")
             continue
-        content = strip_markers(content, abs_path.suffix)
         files[rel_path] = content
 
     if missing:

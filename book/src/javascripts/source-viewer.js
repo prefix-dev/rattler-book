@@ -2,7 +2,7 @@
 // Source Code Drawer: full-screen file browser with CodeMirror 6
 // ---------------------------------------------------------------------------
 
-var ICON_SOURCE = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M14.6 16.6l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4m-5.2 0L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4Z"/></svg>';
+var ICON_SOURCE = '&lt;/&gt;';
 
 // State
 var manifest = null;
@@ -11,6 +11,7 @@ var cmModules = null;
 var activeFilePath = null;
 var _flatFilesCache = null;
 var _triggerBtn = null;
+var _highlightEffect = null;
 
 // Safe localStorage wrapper
 function storageSet(key, value) {
@@ -37,7 +38,7 @@ function initSourceViewer() {
   if (!palette) return;
 
   var btn = document.createElement("button");
-  btn.className = "source-viewer-toggle md-header__button md-icon";
+  btn.className = "source-viewer-toggle md-header__button";
   btn.title = "Browse source code";
   btn.setAttribute("aria-expanded", "false");
   btn.setAttribute("aria-label", "Browse source code");
@@ -98,6 +99,7 @@ function ensureDrawer() {
     '<nav class="source-drawer__tree" aria-label="File tree">' +
       '<div class="source-drawer__spinner" role="status">Loading...</div>' +
     '</nav>' +
+    '<div class="source-drawer__resize-handle" aria-hidden="true"></div>' +
     '<div class="source-drawer__code">' +
       '<div class="source-drawer__code-header">' +
         '<button class="source-drawer__back-btn" aria-label="Back to file tree">&larr; Back</button>' +
@@ -160,6 +162,49 @@ function ensureDrawer() {
   document.addEventListener("touchmove", onDragMove, { passive: false });
   document.addEventListener("touchend", onDragEnd);
 
+  // Resizable tree/code split
+  var resizeHandle = drawer.querySelector(".source-drawer__resize-handle");
+  var resizing = false;
+
+  function onResizeStart(e) {
+    resizing = true;
+    resizeHandle.classList.add("dragging");
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+    if (e.cancelable) e.preventDefault();
+  }
+
+  function onResizeMove(e) {
+    if (!resizing) return;
+    if (e.cancelable) e.preventDefault();
+    var clientX = (e.touches ? e.touches[0] : e).clientX;
+    var drawerRect = drawer.getBoundingClientRect();
+    var newWidth = Math.max(180, Math.min(clientX - drawerRect.left, drawerRect.width * 0.6));
+    drawer.style.setProperty("--source-tree-width", newWidth + "px");
+    storageSet("rb-tree-width", Math.round(newWidth));
+  }
+
+  function onResizeEnd() {
+    if (!resizing) return;
+    resizing = false;
+    resizeHandle.classList.remove("dragging");
+    document.body.style.cursor = "";
+    document.body.style.userSelect = "";
+  }
+
+  resizeHandle.addEventListener("mousedown", onResizeStart);
+  document.addEventListener("mousemove", onResizeMove);
+  document.addEventListener("mouseup", onResizeEnd);
+  resizeHandle.addEventListener("touchstart", onResizeStart, { passive: false });
+  document.addEventListener("touchmove", onResizeMove, { passive: false });
+  document.addEventListener("touchend", onResizeEnd);
+
+  // Restore saved tree width
+  try {
+    var savedWidth = localStorage.getItem("rb-tree-width");
+    if (savedWidth) drawer.style.setProperty("--source-tree-width", savedWidth + "px");
+  } catch (e) { /* private mode */ }
+
   // Escape key
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && document.body.classList.contains("source-drawer-open")) {
@@ -218,6 +263,14 @@ function renderTree() {
   ul.setAttribute("role", "tree");
   renderTreeNodes(ul, manifest.tree, 1);
   container.appendChild(ul);
+
+  // Fold legend
+  var legend = document.createElement("div");
+  legend.className = "source-drawer__legend";
+  legend.innerHTML =
+    '<span class="source-drawer__legend-item"><span class="source-drawer__legend-icon legend-entangled">&raquo;</span> literate block</span>' +
+    '<span class="source-drawer__legend-item"><span class="source-drawer__legend-icon legend-code">&#9656;</span> code fold</span>';
+  container.appendChild(legend);
 }
 
 function renderTreeNodes(parentUl, nodes, level) {
@@ -276,7 +329,7 @@ function escapeHtml(str) {
 // ---------------------------------------------------------------------------
 // File opening + CodeMirror
 // ---------------------------------------------------------------------------
-function openFile(path) {
+function openFile(path, blockId, markerSuffix) {
   if (!manifest || !manifest.files[path]) return;
 
   activeFilePath = path;
@@ -305,6 +358,7 @@ function openFile(path) {
       .then(function () {
         if (!document.body.classList.contains("source-drawer-open")) return;
         createEditor(body, content, lang);
+        if (blockId) scrollToBlock(blockId, markerSuffix);
       })
       .catch(function (err) {
         console.warn("CodeMirror unavailable (offline?), using plain text fallback:", err);
@@ -312,6 +366,7 @@ function openFile(path) {
       });
   } else {
     createEditor(body, content, lang);
+    if (blockId) scrollToBlock(blockId, markerSuffix);
   }
 }
 
@@ -330,6 +385,83 @@ function updateActiveFileBtn() {
     btns[i].classList.toggle("active", isActive);
     btns[i].setAttribute("aria-current", isActive ? "true" : "false");
   }
+}
+
+// ---------------------------------------------------------------------------
+// Block navigation helpers
+// ---------------------------------------------------------------------------
+
+// Find which file in the manifest contains a given block ID
+function findFileForBlock(blockId) {
+  if (!manifest || !manifest.files) return null;
+  var needle = "#" + blockId + ">>";
+  var paths = Object.keys(manifest.files);
+  for (var i = 0; i < paths.length; i++) {
+    if (manifest.files[paths[i]].indexOf(needle) !== -1) return paths[i];
+  }
+  return null;
+}
+
+// Find the line range for a block in the current editor
+function findBlockRange(blockId, markerSuffix) {
+  if (!cmView) return null;
+  var doc = cmView.state.doc;
+  var needle = "#" + blockId + ">>[" + (markerSuffix || "init") + "]";
+  var startLine = -1;
+
+  for (var i = 1; i <= doc.lines; i++) {
+    if (doc.line(i).text.indexOf(needle) !== -1) {
+      startLine = i;
+      break;
+    }
+  }
+  if (startLine === -1) return null;
+
+  // Find matching end, respecting nesting
+  var depth = 1;
+  var endLine = startLine;
+  for (var j = startLine + 1; j <= doc.lines; j++) {
+    var text = doc.line(j).text;
+    if (text.indexOf("~/~ begin") !== -1) depth++;
+    else if (text.indexOf("~/~ end") !== -1) {
+      depth--;
+      if (depth === 0) { endLine = j; break; }
+    }
+  }
+  return { start: startLine, end: endLine };
+}
+
+// Scroll to and highlight a block in the current editor
+function scrollToBlock(blockId, markerSuffix) {
+  if (!cmView || !_highlightEffect || !cmModules) return;
+  var range = findBlockRange(blockId, markerSuffix);
+  if (!range) return;
+
+  var doc = cmView.state.doc;
+  var deco = cmModules.blockHighlightDeco;
+  var builder = new cmModules.state.RangeSetBuilder();
+  for (var line = range.start; line <= range.end; line++) {
+    builder.add(doc.line(line).from, doc.line(line).from, deco);
+  }
+
+  cmView.dispatch({
+    effects: [
+      _highlightEffect.of(builder.finish()),
+      cmModules.view.EditorView.scrollIntoView(
+        doc.line(range.start).from,
+        { y: "start", yMargin: 50 }
+      ),
+    ],
+  });
+
+  // Fade out highlight after 3 seconds
+  setTimeout(function () {
+    if (cmView) {
+      cmView.dispatch({
+        effects: _highlightEffect.of(cmModules.view.Decoration.none),
+      });
+    }
+  }, 3000);
 }
 
 function flatFiles(tree) {
@@ -459,6 +591,55 @@ function loadCodeMirror() {
       ]),
     ];
 
+    // Entangled marker line decoration (dimmed)
+    var markerLineDeco = view.Decoration.line({ class: "cm-entangled-marker" });
+    var markerField = state.StateField.define({
+      create: function (editorState) {
+        var builder = new state.RangeSetBuilder();
+        for (var i = 1; i <= editorState.doc.lines; i++) {
+          if (/^\s*(\/\/|#|--)\s*~\/~/.test(editorState.doc.line(i).text)) {
+            builder.add(editorState.doc.line(i).from, editorState.doc.line(i).from, markerLineDeco);
+          }
+        }
+        return builder.finish();
+      },
+      update: function (decos) { return decos; },
+      provide: function (f) { return view.EditorView.decorations.from(f); },
+    });
+
+    // Gutter class for entangled fold markers (distinct icon via CSS)
+    class EntangledFoldMark extends view.GutterMarker {
+      get elementClass() { return "cm-entangled-fold"; }
+    }
+    var entangledFoldMark = new EntangledFoldMark();
+    var entangledGutterField = state.StateField.define({
+      create: function (editorState) {
+        var builder = new state.RangeSetBuilder();
+        for (var i = 1; i <= editorState.doc.lines; i++) {
+          if (/^\s*(\/\/|#|--)\s*~\/~\s*begin/.test(editorState.doc.line(i).text)) {
+            builder.add(editorState.doc.line(i).from, editorState.doc.line(i).from, entangledFoldMark);
+          }
+        }
+        return builder.finish();
+      },
+      update: function (marks) { return marks; },
+      provide: function (f) { return view.gutterLineClass.from(f); },
+    });
+
+    // Block highlight decoration (driven by effect)
+    _highlightEffect = state.StateEffect.define();
+    var blockHighlightDeco = view.Decoration.line({ class: "cm-block-highlight" });
+    var highlightField = state.StateField.define({
+      create: function () { return view.Decoration.none; },
+      update: function (decos, tr) {
+        for (var i = 0; i < tr.effects.length; i++) {
+          if (tr.effects[i].is(_highlightEffect)) return tr.effects[i].value;
+        }
+        return decos;
+      },
+      provide: function (f) { return view.EditorView.decorations.from(f); },
+    });
+
     cmModules = {
       basicSetup: basicSetup,
       langRust: langRust,
@@ -467,6 +648,10 @@ function loadCodeMirror() {
       state: state,
       language: language,
       getHighlightStyle: getHighlightStyle,
+      markerField: markerField,
+      highlightField: highlightField,
+      entangledGutterField: entangledGutterField,
+      blockHighlightDeco: blockHighlightDeco,
     };
   });
 }
@@ -508,6 +693,29 @@ function createEditor(container, content, lang) {
   } else if (lang === "lua" && cmModules.langLua) {
     extensions.push(cmModules.langLua);
   }
+
+  // Entangled marker + block highlight decorations
+  if (cmModules.markerField) extensions.push(cmModules.markerField);
+  if (cmModules.highlightField) extensions.push(cmModules.highlightField);
+  if (cmModules.entangledGutterField) extensions.push(cmModules.entangledGutterField);
+
+  // Fold service: begin/end marker blocks are collapsible via the gutter
+  extensions.push(cmModules.language.foldService.of(function (state, lineStart) {
+    var line = state.doc.lineAt(lineStart);
+    if (line.text.indexOf("~/~ begin") === -1) return null;
+    var depth = 1;
+    for (var i = line.number + 1; i <= state.doc.lines; i++) {
+      var text = state.doc.line(i).text;
+      if (text.indexOf("~/~ begin") !== -1) depth++;
+      else if (text.indexOf("~/~ end") !== -1) {
+        depth--;
+        if (depth === 0) {
+          return { from: line.to, to: state.doc.line(i).to };
+        }
+      }
+    }
+    return null;
+  }));
 
   var state = cmModules.state.EditorState.create({
     doc: content,
@@ -551,15 +759,38 @@ function injectFileLinks() {
   for (var i = 0; i < spans.length; i++) {
     var span = spans[i];
     if (span.querySelector(".source-link-btn")) continue;
-    var text = span.textContent;
-    if (!text.startsWith("file: ")) continue;
-    var path = text.replace("file: ", "").trim();
+    var text = span.textContent.trim();
+
+    var path = null;
+    var blockId = null;
+    var markerSuffix = "init";
+
+    // Extract file path (e.g. "file: src/main.rs")
+    var fileMatch = text.match(/file:\s*(.+?)$/);
+    if (fileMatch) path = fileMatch[1].trim();
+
+    // Extract block ID (e.g. "#main-imports")
+    var idMatch = text.match(/^#([^\s\[]+)/);
+    if (idMatch) blockId = idMatch[1];
+
+    // Extract index for multi-part blocks (e.g. "[1]", "[2]")
+    // The plugin uses 1-based display: [1]=first, [2]=second, ...
+    // Entangled markers use: [init]=first, [1]=second, [2]=third, ...
+    var indexMatch = text.match(/\[(\d+)\]/);
+    if (indexMatch) {
+      var n = parseInt(indexMatch[1]);
+      markerSuffix = n <= 1 ? "init" : String(n - 1);
+    }
+
+    if (!path && !blockId) continue;
 
     var btn = document.createElement("button");
     btn.className = "source-link-btn";
-    btn.dataset.path = path;
-    btn.title = "View full file";
-    btn.setAttribute("aria-label", "View " + path + " in source viewer");
+    if (path) btn.dataset.path = path;
+    if (blockId) btn.dataset.blockId = blockId;
+    btn.dataset.markerSuffix = markerSuffix;
+    btn.title = "View in source";
+    btn.setAttribute("aria-label", "View " + (path || "#" + blockId) + " in source viewer");
     btn.textContent = "</>";
     span.appendChild(btn);
   }
@@ -578,7 +809,9 @@ function registerFileLinkDelegate() {
     e.stopPropagation();
 
     var path = btn.dataset.path;
-    if (!path) return;
+    var blockId = btn.dataset.blockId;
+    var markerSuffix = btn.dataset.markerSuffix || "init";
+    if (!path && !blockId) return;
 
     // Open drawer
     document.body.classList.add("source-drawer-open");
@@ -586,16 +819,22 @@ function registerFileLinkDelegate() {
     if (toggleBtn) toggleBtn.setAttribute("aria-expanded", "true");
     ensureDrawer();
 
-    // Show loading state with filename
+    // Show loading state
     var body = document.querySelector(".source-drawer__code-body");
     if (body && !manifest) {
-      body.innerHTML = '<div class="source-drawer__spinner" role="status">Loading ' + btn.dataset.path + '...</div>';
+      body.innerHTML = '<div class="source-drawer__spinner" role="status">Loading...</div>';
     }
 
     // Wait for manifest, then open file
     loadManifestIfNeeded().then(function () {
       if (!document.body.classList.contains("source-drawer-open")) return;
-      openFile(path);
+      // Resolve path from blockId if not directly available
+      if (!path && blockId) {
+        path = findFileForBlock(blockId);
+      }
+      if (path) {
+        openFile(path, blockId, markerSuffix);
+      }
     });
   });
 }
