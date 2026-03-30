@@ -47,7 +47,11 @@ platform.  It lists every available package with its metadata:
 For a large channel like conda-forge, this file can be *hundreds* of megabytes.
 You really don't want to download all of that for every command.
 
-Think of repodata as a catalog of the packages that exist, which a client can choose from. How this catalog is designed determines download speed, caching, and how much work the client has to do before it can even start solving.
+Think of repodata as a catalog of the packages that exist, which a client can choose from. How this catalog is designed determines:
+
+- **Download speed**: how much data the client must fetch
+- **Caching**: how much can be reused between runs
+- **Startup cost**: how much work the client does before it can even start solving
 
 ### Channels
 

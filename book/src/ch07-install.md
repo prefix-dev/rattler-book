@@ -67,9 +67,18 @@ graph TD
 ### The package cache
 
 Every package is first extracted into a *central cache* shared across all
-environments on your machine.  The exact cache location is platform-dependent: `~/.cache/rattler/cache` on Linux, `~/Library/Caches/rattler/cache` on macOS, and `%LOCALAPPDATA%\rattler\cache` on Windows (as returned by `rattler::default_cache_dir()`). The cache key is the
+environments on your machine. The exact cache location is platform-dependent:
+
+- **Linux**: `~/.cache/rattler/cache`
+- **macOS**: `~/Library/Caches/rattler/cache`
+- **Windows**: `%LOCALAPPDATA%\rattler\cache`
+
+These paths come from `rattler::default_cache_dir()`. The cache key is the
 package's content hash, so `lua-5.4.7` is stored exactly once regardless of how
-many environments use it. Content-addressed keys (rather than name-plus-version) prevent collisions when the same version is rebuilt with a different build string. Two builds of `lua-5.4.7` with different compiler flags get different hashes and coexist safely in the cache.
+many environments use it. Content-addressed keys (rather than name-plus-version)
+prevent collisions when the same version is rebuilt with a different build
+string. Two builds of `lua-5.4.7` with different compiler flags get different
+hashes and coexist safely in the cache.
 
 ### Hard links and reflinks
 

@@ -109,17 +109,24 @@ cd rattler-book
 ## Running the examples
 
 The easiest way to get started is with [pixi](https://pixi.prefix.dev/latest/installation/), which manages the Rust toolchain
-and all dependencies for you:
-
-```bash
-pixi install
-pixi run build
-```
-
-I know it can be a hassle to install a new tool. I really do! But using pixi can familiarize you with what rattler can empower to build.
+and all dependencies for you.  I know it can be a hassle to install a new tool. I really do! But using pixi can familiarize you with what rattler can empower to build.
 Additionally, it will hopefully convince you that it's a very useful tool as well.
 
+To test things its easy to run:
+```bash
+pixi r shot <cmd>
+# e.g
+pixi r shot init
+```
+
 The `run` command uses pixi's tasks system to run tasks. In a way the task system is similar to [mise](https://mise.jdx.dev/tasks/) or [just](https://github.com/casey/just). 
+
+To just build without running:
+
+```bash
+# Installs and runs t
+pixi run build
+```
 
 In our project we use a [`[dev]`](https://pixi.prefix.dev/latest/build/dev/) table in `pixi.toml` to pull in the Rust compiler and
 all build dependencies automatically via the `pixi-build-rust` backend.
@@ -132,20 +139,15 @@ You can also build a distributable conda package:
 pixi build
 ```
 
-You can also install `moonshot` globally
+You can also install `moonshot` globally:
 
 ```bash
 pixi global install --path .
+# it will be available as:
+shot init
 ```
 
 Again, pixi automatically figures out what to install and how to build it.
-
-To test things its easy to run:
-```bash
-pixi r shot <cmd>
-# e.g
-pixi r shot init
-```
 
 [pixi]: https://pixi.sh
 
@@ -178,10 +180,14 @@ fn main() {
 }
 ```
 
+/// margin-note
+In literate programming the `<<code>>` were popularized by the [noweb](https://www.cs.tufts.edu/~nr/noweb/) tool.
+///
 The `<<intro-prompt-greet>>` placeholder refers to a named block. When the same
 name appears on multiple code blocks, Entangled appends them in order. This
 lets us explain each piece separately while they end up as one continuous block
 in the tangled output.
+
 
 The imports bring in `std::io` for reading from stdin:
 
@@ -257,12 +263,15 @@ That said, conda isn't always the right choice:
   requires a SAT solver.  If your ecosystem can tolerate duplicate versions (like
   Go or Nix), you avoid that complexity.
 
+I think that if your language depends on c compilation in any ways, like bindings or extensions
+then the case that use the conda ecosystem becomes very compelling.
+
 [rattler]: https://github.com/conda/rattler
 [repo]: https://github.com/prefix-dev/rattler-book
 [Lua]: https://www.lua.org
 [conda-forge]: https://conda-forge.org
 
-Continue on to the next chapter to get started. Or read below for more details regarding exercises in the book.
+Continue on to the next chapter to get started. Or if you are up for getting your hands dirty, read below for more details regarding exercises in the book.
 
 ## Exercises
 

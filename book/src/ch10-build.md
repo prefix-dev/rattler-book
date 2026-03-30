@@ -13,7 +13,15 @@ This is similar to how pyproject.toml works: the
 build configuration lives alongside the project manifest. For
 moonshot, a single `moonshot.toml` handles both.
 
-Building a package has five stages: discover what to build (read the manifest), set up isolated directories (build prefix and install prefix), install build dependencies, run the build script, and pack the result into a `.conda` archive. We will implement each stage in order.
+Building a package has five stages:
+
+1. **Discover** what to build (read the manifest)
+2. **Set up** isolated directories (build prefix and install prefix)
+3. **Install** build dependencies
+4. **Run** the build script
+5. **Pack** the result into a `.conda` archive
+
+We will implement each stage in order.
 
 ## Design
 

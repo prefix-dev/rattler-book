@@ -119,7 +119,7 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 ```
 
-The [rattler] crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) interact with the conda ecosystem. The rest of the dependency list is general-purpose infrastructure: `clap` for CLI parsing, `tokio` for async I/O, [reqwest] for HTTP, and so on.
+The [rattler] crates (`rattler`, `rattler_solve`, `rattler_shell`, etc.) interact with the conda ecosystem; the rest is general-purpose infrastructure.
 
 /// margin-note
 [rattler] is split into fine-grained crates so you can depend on only the

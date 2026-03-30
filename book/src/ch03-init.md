@@ -101,9 +101,17 @@ A single constant keeps the filename consistent across all commands:
 pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 ```
 
-The core data structures map directly to the TOML layout. The struct below uses `serde_with`, a companion crate to serde. The `#[serde_as]` attribute on the struct and `#[serde_as(as = "DisplayFromStr")]` on the `dependencies` field tell serde to deserialize a TOML string by calling `FromStr::from_str()` on the target type, and serialize it back via `Display`. This means version strings like `">=5.4"` in the TOML are automatically parsed into typed `NamelessMatchSpec` values at load time.
+The core data structures map directly to the TOML layout. The struct below uses
+[serde_with], a companion crate to serde, for the `dependencies` field:
 
-We use `BTreeMap` instead of `HashMap` so that dependencies serialize in alphabetical order, producing stable diffs when the manifest changes.
+- `#[serde_as]` on the struct enables `serde_with`'s custom (de)serialization.
+- `#[serde_as(as = "DisplayFromStr")]` on a field tells serde to call
+  `FromStr::from_str()` when reading and `Display::fmt` when writing.
+- Version strings like `">=5.4"` in the TOML are automatically parsed into
+  typed `NamelessMatchSpec` values at load time.
+
+We use `BTreeMap` instead of `HashMap` so that dependencies serialize in
+alphabetical order, producing stable diffs when the manifest changes.
 
 ``` {.rust #manifest-structs}
 #[serde_as]
@@ -175,23 +183,26 @@ project can leave all of these out.
 
 The dependency values in TOML are plain strings like `">=5.4"`, but we want them
 as typed `NamelessMatchSpec` values in Rust. The [serde_with] crate bridges this
-gap with `DisplayFromStr`: it deserializes any type that implements `FromStr`
-from a string, and serializes it back via `Display`.
+gap with `DisplayFromStr`:
 
-The `#[serde_as]` attribute replaces serde's default (de)serialization for
-annotated fields. Here `BTreeMap<_, DisplayFromStr>` tells serde_with to leave
-the keys alone (they're already `String`s) but run each value through
-`NamelessMatchSpec::from_str` on read, and `Display::fmt` on write.
+- **On read**: calls `NamelessMatchSpec::from_str` for each value
+- **On write**: calls `Display::fmt` to turn it back into a string
+- **Keys** are left alone (they're already `String`s)
 
-This follows the "parse, don't validate" principle (*parse, don't validate* is a design principle: convert raw data into typed values at the boundary, so the rest of your code can assume validity without re-checking). A typo like
-`lua = ">==5.4"` is now caught during TOML deserialization itself, not in a
-separate validation step afterward. If the spec string is malformed,
+This follows the "parse, don't validate" principle: convert raw data into typed
+values at the boundary, so the rest of your code can assume validity without
+re-checking. The payoff is early error detection: a typo like `lua = ">==5.4"`
+is caught during TOML deserialization itself. If the spec string is malformed,
 `toml::from_str` returns an error before `Manifest` is ever constructed.
 
 `rattler_conda_types` already uses `serde_with` internally, so adding it here
 does not introduce a new transitive dependency.
 
-We list channels in the manifest rather than in a global config file. Historically in conda and pip, a lot of config lives in your global configuration. One of the visions we have with pixi is that global config impedes reproducibility, so we try to cram as much into the manifest as possible. Although with your own package manager you are free to decide of course.
+We list channels in the manifest rather than in a global config file.
+Historically in conda and pip, a lot of config lives in your global
+configuration. One of the visions we have with pixi is that global config
+impedes reproducibility, so we try to put as much into the manifest as
+possible. With your own package manager you are free to decide of course.
 
 
 The methods live in a single `impl` block:

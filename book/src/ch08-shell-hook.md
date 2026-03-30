@@ -32,10 +32,21 @@ A lot of programs read data from environment variables. Beyond just `PATH`, pack
 
 Different package managers handle this in different ways, some examples are:
 
-1. **conda**: a shell function `eval`s generated shell code, prepending `bin/` to PATH, setting `CONDA_PREFIX`/`CONDA_SHLVL`, and sourcing any scripts packages ship in `activate.d/`.
-2. **pixi**: conda-compatible activation. `pixi run` prepends `bin/` to PATH, sets `CONDA_PREFIX` and `PIXI_*` variables, and runs the full activation sequence including `activate.d/` scripts. `pixi shell-hook` prints an eval-able script. `pixi shell` starts an activated shell as a subprocess.
-3. **uv**: `uv tool install` symlinks executables into `~/.local/bin`. Virtual environment activation sets PATH and `VIRTUAL_ENV`. `uv run` sets env vars on the subprocess directly without sourcing activate scripts.
-4. **Nix**: `nix develop` starts a new shell with PATH rebuilt entirely from `/nix/store` paths, sets build variables like `NIX_CFLAGS_COMPILE` and `PKG_CONFIG_PATH`, and runs the derivation's `shellHook`.
+1. **conda**: a shell function `eval`s generated shell code.
+    - Prepends `bin/` to `PATH`
+    - Sets `CONDA_PREFIX` / `CONDA_SHLVL`
+    - Sources any scripts packages ship in `activate.d/`
+2. **pixi**: conda-compatible activation with three entry points.
+    - `pixi run`: prepends `bin/` to `PATH`, sets `CONDA_PREFIX` and `PIXI_*` variables, runs the full activation sequence including `activate.d/` scripts
+    - `pixi shell-hook`: prints an eval-able script
+    - `pixi shell`: starts an activated shell as a subprocess
+3. **uv**: lighter-weight, no activation scripts.
+    - `uv tool install` symlinks executables into `~/.local/bin`
+    - Virtual-environment activation sets `PATH` and `VIRTUAL_ENV`
+    - `uv run` sets env vars on the subprocess directly
+4. **Nix**: `nix develop` starts a new shell with `PATH` rebuilt entirely from `/nix/store` paths.
+    - Sets build variables like `NIX_CFLAGS_COMPILE` and `PKG_CONFIG_PATH`
+    - Runs the derivation's `shellHook`
 
 A child process cannot modify the environment of its parent. This is a basic rule of Unix and Windows process isolation: when a program exits, any environment variable changes it made die with it. So when you run `shot shell-hook`, it can't just set
 `PATH` for you, it has to print a script that you evaluate in your shell.

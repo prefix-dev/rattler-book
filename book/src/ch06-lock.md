@@ -94,7 +94,12 @@ learning, decision heuristics, and the connection to CDCL, see
 
 ### Virtual packages
 
-Virtual packages model the host system as if it were a regular package. Instead of special-casing "requires glibc 2.17" as a platform check, the solver treats `__glibc` as a regular dependency that happens to be provided by the OS. This lets package authors express system requirements using the same constraint syntax they use for library dependencies. The [rattler_virtual_packages] crate detects what the current system provides.
+Virtual packages model the host system as if it were a regular package. Instead
+of special-casing "requires glibc 2.17" as a platform check, the solver treats
+`__glibc` as a regular dependency that happens to be provided by the OS. This
+lets package authors express system requirements using the same constraint syntax
+they use for library dependencies. The [rattler_virtual_packages] crate detects
+what the current system provides.
 
 The system is probed for things like:
 
