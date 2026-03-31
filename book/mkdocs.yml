@@ -60,6 +60,8 @@ nav:
     - "The `resolvo` SAT Solver": deep-dive-resolvo.md
     - The Build Script API: deep-dive-build-script-api.md
     - "Overview of the `rattler` crates": deep-dive-crate-ecosystem.md
+    - Adapting to Your Language: deep-dive-adapting.md
+  - Conclusion: conclusion.md
 
 extra_css:
   - stylesheets/extra.css
