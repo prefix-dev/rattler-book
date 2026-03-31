@@ -1,3 +1,4 @@
+[![Entangled badge](https://img.shields.io/badge/entangled-Use%20the%20source!-%2300aeff)](https://entangled.github.io/)
 <p align="center">
   <img src="book/src/assets/paxton-moon.png" alt="The Rattler Book" width="400" />
 </p>
