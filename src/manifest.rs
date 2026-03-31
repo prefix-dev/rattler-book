@@ -6,7 +6,7 @@ use std::str::FromStr;
 
 use fs_err as fs;
 use miette::{Context, IntoDiagnostic};
-use rattler_conda_types::{MatchSpec, NamelessMatchSpec, PackageName};
+use rattler_conda_types::{MatchSpec, NamelessMatchSpec, PackageName, Platform};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 // ~/~ end
@@ -19,6 +19,9 @@ pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub project: ProjectMetadata,
+
+    #[serde(default = "default_platforms")]
+    pub platforms: Vec<Platform>,
 
     #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
     #[serde(default)]
@@ -52,6 +55,10 @@ pub struct ProjectMetadata {
 
 fn default_channels() -> Vec<String> {
     vec!["conda-forge".to_string()]
+}
+
+pub(crate) fn default_platforms() -> Vec<Platform> {
+    vec![Platform::current()]
 }
 // ~/~ end
 // ~/~ begin <<book/src/ch10-build.md#manifest-structs>>[0]

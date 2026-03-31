@@ -212,7 +212,7 @@ environments:
 Each entry records the exact URL, SHA-256 hash, and full dependency metadata.
 The [rattler_lock] crate handles serialization and deserialization.
 
-Moonshot solves only for the current platform. Tools like pixi solve for multiple platforms in a single lock file, which matters for cross-platform reproducibility in CI.
+Moonshot solves for every platform listed in the manifest's `platforms` field. Like pixi, it writes all solutions into a single lock file, which matters for cross-platform reproducibility in CI.
 
 ## Implementation
 
@@ -354,8 +354,7 @@ Finally, writing the lock file serializes the solved packages to YAML:
 pub fn write_lock_file(
     lock_path: &Path,
     channels: &[Channel],
-    platform: Platform,
-    solution: &[RepoDataRecord],
+    solutions: &[(Platform, Vec<RepoDataRecord>)],
 ) -> miette::Result<()> {
     let lock_channels: Vec<rattler_lock::Channel> = channels
         .iter()
@@ -374,9 +373,11 @@ identical lock files.
     let mut builder = LockFile::builder();
     builder.set_channels("default", lock_channels);
 
-    for record in solution {
-        let conda_pkg: rattler_lock::CondaPackageData = record.clone().into();
-        builder.add_conda_package("default", platform, conda_pkg);
+    for (platform, solution) in solutions {
+        for record in solution {
+            let conda_pkg: rattler_lock::CondaPackageData = record.clone().into();
+            builder.add_conda_package("default", *platform, conda_pkg);
+        }
     }
 
     let lock_file = builder.finish();
@@ -388,6 +389,8 @@ identical lock files.
     Ok(())
 }
 ```
+
+The lock file stores solutions for every platform. Each platform's packages live under their own key in the YAML, so a single `moonshot.lock` covers the entire set of target platforms.
 
 `LockFileBuilder` accumulates packages and channels, deduplicating by content
 hash. `finish()` produces a `LockFile` that `to_path` serializes to YAML.
@@ -600,11 +603,11 @@ write the lock file.
     /// Run the full dependency-resolution pipeline.
     pub async fn resolve(
         &self,
+        platform: Platform,
         locked_packages: Vec<RepoDataRecord>,
     ) -> miette::Result<(Vec<RepoDataRecord>, Vec<Channel>, Platform)> {
         let specs = self.project.manifest.match_specs()?;
         let channels = self.channels()?;
-        let platform = Platform::current();
 
         let repo_data: Vec<RepoData> = with_spinner(
             "Fetching repodata",
@@ -630,6 +633,10 @@ write the lock file.
 Before we can solve, we need to know what the current system provides.
 Virtual packages like `__linux`, `__glibc`, and `__cuda` let the solver
 exclude packages that need features the host doesn't have.
+
+/// margin-note
+We detect virtual packages from the host, which is correct when solving for the current platform. When solving for a different platform, these values may be wrong (e.g., detecting `__osx` while solving for `linux-64`). Pixi handles this with per-platform virtual package defaults. Extending moonshot to do the same is left as an exercise.
+///
 
 ``` {.rust #session-resolve}
         let virtual_packages: Vec<GenericVirtualPackage> =
@@ -675,23 +682,46 @@ re-solves faster and more stable. The `..` syntax fills in all remaining fields 
 environment. It checks freshness, reads any existing lock records as solver
 preferences, resolves if needed, and writes the lock file.
 
+When the manifest lists multiple platforms, `ensure_resolved` solves for each one and writes all solutions into a single lock file. After solving, it returns the current platform's solution for immediate use by the install command.
+
+/// margin-note
+We solve platforms sequentially for simplicity. Since each `resolve` call is async and the gateway caches repodata across queries, you could solve platforms concurrently with `futures::future::join_all` or `tokio::JoinSet` for a speedup proportional to the number of platforms.
+///
+
 ``` {.rust #session-ensure-resolved}
     /// Ensure the lock file is up to date, resolving if necessary.
     pub async fn ensure_resolved(&self, force: bool) -> miette::Result<ResolveStatus> {
         let lock_path = self.project.lock_path();
-        let platform = Platform::current();
 
         if !force && self.project.is_lock_fresh() {
+            let platform = Platform::current();
             let records = read_lock_file(&lock_path, platform)?;
             return Ok(ResolveStatus::AlreadyFresh(records));
         }
 
-        let existing = read_locked_packages(&lock_path, platform);
-        let (solution, channels, platform) = self.resolve(existing).await?;
+        let channels = self.channels()?;
+        let mut all_solutions: Vec<(Platform, Vec<RepoDataRecord>)> = Vec::new();
 
-        write_lock_file(&lock_path, &channels, platform, &solution)?;
+        for &platform in &self.project.manifest.platforms {
+            let existing = read_locked_packages(&lock_path, platform);
+            let (solution, ..) = self.resolve(platform, existing).await?;
+            all_solutions.push((platform, solution));
+        }
 
-        Ok(ResolveStatus::Resolved { solution, platform })
+        write_lock_file(&lock_path, &channels, &all_solutions)?;
+
+        // Return the current platform's solution for immediate use.
+        let current = Platform::current();
+        let solution = all_solutions
+            .into_iter()
+            .find(|(p, _)| *p == current)
+            .map(|(_, s)| s)
+            .unwrap_or_default();
+
+        Ok(ResolveStatus::Resolved {
+            solution,
+            platform: current,
+        })
     }
 }
 ```
@@ -810,8 +840,9 @@ that the name survives the roundtrip:
         let channels = vec![Channel::from_str("conda-forge", &channel_config).unwrap()];
         let platform = Platform::current();
         let solution = vec![dummy_record("lua", "5.4.7")];
+        let solutions = vec![(platform, solution)];
 
-        write_lock_file(&lock_path, &channels, platform, &solution).unwrap();
+        write_lock_file(&lock_path, &channels, &solutions).unwrap();
         assert!(lock_path.exists());
 
         let records = read_lock_file(&lock_path, platform).unwrap();
@@ -969,6 +1000,19 @@ satisfied together.
         - Non-overridden virtual packages (e.g., `__unix`) are preserved from detection
         - Invalid package names (missing `__` prefix) or unparseable versions produce clear errors
         - `shot lock` reads the table and applies overrides before solving
+
+!!! exercise-hard "Per-Platform Virtual Packages"
+
+    Moonshot detects virtual packages from the host, which gives wrong results when solving for a different platform (e.g., detecting `__osx` while solving for `linux-64`). Fix this by providing sensible default virtual packages per platform. For Linux, emit `__linux` and `__glibc >=2.17`; for macOS, emit `__osx >=14.0`; for Windows, emit `__win`. Only call `VirtualPackage::detect()` for `Platform::current()`.
+
+    /// margin-note
+    You can construct `GenericVirtualPackage` values by hand with `PackageName::from_str("__linux")`, `Version::from_str("0")`, and an empty build string. Match on `platform.is_linux()`, `platform.is_osx()`, and `platform.is_windows()` to select the right set. Combine this with the manifest overrides from the previous exercise for full control.
+    ///
+
+    Acceptance criteria
+    :   - `shot lock` on macOS with `platforms = ["linux-64", "osx-arm64"]` succeeds, and the `linux-64` solution includes packages that have a virtual dependency on `__glibc` (e.g., `libgcc` requires `__glibc >=2.17`)
+        - Solving for `osx-arm64` provides `__osx` but not `__glibc`
+        - The current platform still uses detected values (e.g., the actual glibc version from the host)
 
 ## Summary
 

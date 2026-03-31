@@ -229,7 +229,8 @@ build-time dependencies into a temporary prefix.
         &self,
         prefix: std::path::PathBuf,
     ) -> miette::Result<Vec<RepoDataRecord>> {
-        let (solution, _channels, platform) = self.resolve(vec![]).await?;
+        let platform = Platform::current();
+        let (solution, _channels, platform) = self.resolve(platform, vec![]).await?;
         let result = solution.clone();
         self.install_packages(&prefix, solution, platform).await?;
         Ok(result)
@@ -290,6 +291,10 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         .context("creating prefix directory")?;
     let prefix = std::path::absolute(prefix).into_diagnostic()?;
 ```
+
+/// margin-note
+The lock file may contain solutions for multiple platforms. The install command always picks the current platform's packages. This means the same lock file works on Linux, macOS, and Windows, each machine installing only its own packages.
+///
 
 With the prefix ready, we check the lock file and resolve if needed. The
 `ResolveStatus` tells us whether the solver ran so we can print the right

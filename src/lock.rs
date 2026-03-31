@@ -74,8 +74,7 @@ pub fn read_locked_packages(
 pub fn write_lock_file(
     lock_path: &Path,
     channels: &[Channel],
-    platform: Platform,
-    solution: &[RepoDataRecord],
+    solutions: &[(Platform, Vec<RepoDataRecord>)],
 ) -> miette::Result<()> {
     let lock_channels: Vec<rattler_lock::Channel> = channels
         .iter()
@@ -89,9 +88,11 @@ pub fn write_lock_file(
     let mut builder = LockFile::builder();
     builder.set_channels("default", lock_channels);
 
-    for record in solution {
-        let conda_pkg: rattler_lock::CondaPackageData = record.clone().into();
-        builder.add_conda_package("default", platform, conda_pkg);
+    for (platform, solution) in solutions {
+        for record in solution {
+            let conda_pkg: rattler_lock::CondaPackageData = record.clone().into();
+            builder.add_conda_package("default", *platform, conda_pkg);
+        }
     }
 
     let lock_file = builder.finish();
@@ -151,8 +152,9 @@ mod tests {
         let channels = vec![Channel::from_str("conda-forge", &channel_config).unwrap()];
         let platform = Platform::current();
         let solution = vec![dummy_record("lua", "5.4.7")];
+        let solutions = vec![(platform, solution)];
 
-        write_lock_file(&lock_path, &channels, platform, &solution).unwrap();
+        write_lock_file(&lock_path, &channels, &solutions).unwrap();
         assert!(lock_path.exists());
 
         let records = read_lock_file(&lock_path, platform).unwrap();

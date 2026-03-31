@@ -6,7 +6,9 @@ use clap::Parser;
 use miette::IntoDiagnostic;
 use rattler_conda_types::NamelessMatchSpec;
 
-use crate::manifest::{BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME};
+use crate::manifest::{
+    default_platforms, BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME,
+};
 // ~/~ end
 // ~/~ begin <<book/src/ch03-init.md#init-args>>[init]
 #[derive(Debug, Parser)]
@@ -59,6 +61,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             license: None,
             description: None,
         },
+        platforms: default_platforms(),
         dependencies: BTreeMap::from([(
             "lua".to_string(),
             ">=5.4".parse::<NamelessMatchSpec>().unwrap(),

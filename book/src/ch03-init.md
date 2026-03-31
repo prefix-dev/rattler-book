@@ -36,6 +36,7 @@ already exists, it will refuse to overwrite.
 [project]
 name     = "my-lua-app"
 channels = ["conda-forge"]
+platforms = ["linux-64", "osx-arm64"]
 
 [dependencies]
 lua      = ">=5.4"
@@ -89,7 +90,7 @@ use std::str::FromStr;
 
 use fs_err as fs;
 use miette::{Context, IntoDiagnostic};
-use rattler_conda_types::{MatchSpec, NamelessMatchSpec, PackageName};
+use rattler_conda_types::{MatchSpec, NamelessMatchSpec, PackageName, Platform};
 use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DisplayFromStr};
 ```
@@ -113,11 +114,16 @@ The core data structures map directly to the TOML layout. The struct below uses
 We use `BTreeMap` instead of `HashMap` so that dependencies serialize in
 alphabetical order, producing stable diffs when the manifest changes.
 
+The `platforms` field lists which platforms to solve for. By default it includes only the current platform, but you can add others (like `linux-64` or `osx-arm64`) to produce a lock file that works across machines.
+
 ``` {.rust #manifest-structs}
 #[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub project: ProjectMetadata,
+
+    #[serde(default = "default_platforms")]
+    pub platforms: Vec<Platform>,
 
     #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
     #[serde(default)]
@@ -166,6 +172,10 @@ pub struct ProjectMetadata {
 
 fn default_channels() -> Vec<String> {
     vec!["conda-forge".to_string()]
+}
+
+pub(crate) fn default_platforms() -> Vec<Platform> {
+    vec![Platform::current()]
 }
 ```
 
@@ -370,7 +380,9 @@ use clap::Parser;
 use miette::IntoDiagnostic;
 use rattler_conda_types::NamelessMatchSpec;
 
-use crate::manifest::{BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME};
+use crate::manifest::{
+    default_platforms, BuildConfig, Manifest, ProjectMetadata, MANIFEST_FILENAME,
+};
 ```
 
 The `Args` struct uses clap's derive macros. The `--library` flag controls
@@ -436,6 +448,7 @@ also add a version and a default `BuildConfig`:
             license: None,
             description: None,
         },
+        platforms: default_platforms(),
         dependencies: BTreeMap::from([(
             "lua".to_string(),
             ">=5.4".parse::<NamelessMatchSpec>().unwrap(),

@@ -114,11 +114,11 @@ impl Session {
     /// Run the full dependency-resolution pipeline.
     pub async fn resolve(
         &self,
+        platform: Platform,
         locked_packages: Vec<RepoDataRecord>,
     ) -> miette::Result<(Vec<RepoDataRecord>, Vec<Channel>, Platform)> {
         let specs = self.project.manifest.match_specs()?;
         let channels = self.channels()?;
-        let platform = Platform::current();
 
         let repo_data: Vec<RepoData> = with_spinner(
             "Fetching repodata",
@@ -178,19 +178,36 @@ impl Session {
     /// Ensure the lock file is up to date, resolving if necessary.
     pub async fn ensure_resolved(&self, force: bool) -> miette::Result<ResolveStatus> {
         let lock_path = self.project.lock_path();
-        let platform = Platform::current();
 
         if !force && self.project.is_lock_fresh() {
+            let platform = Platform::current();
             let records = read_lock_file(&lock_path, platform)?;
             return Ok(ResolveStatus::AlreadyFresh(records));
         }
 
-        let existing = read_locked_packages(&lock_path, platform);
-        let (solution, channels, platform) = self.resolve(existing).await?;
+        let channels = self.channels()?;
+        let mut all_solutions: Vec<(Platform, Vec<RepoDataRecord>)> = Vec::new();
 
-        write_lock_file(&lock_path, &channels, platform, &solution)?;
+        for &platform in &self.project.manifest.platforms {
+            let existing = read_locked_packages(&lock_path, platform);
+            let (solution, ..) = self.resolve(platform, existing).await?;
+            all_solutions.push((platform, solution));
+        }
 
-        Ok(ResolveStatus::Resolved { solution, platform })
+        write_lock_file(&lock_path, &channels, &all_solutions)?;
+
+        // Return the current platform's solution for immediate use.
+        let current = Platform::current();
+        let solution = all_solutions
+            .into_iter()
+            .find(|(p, _)| *p == current)
+            .map(|(_, s)| s)
+            .unwrap_or_default();
+
+        Ok(ResolveStatus::Resolved {
+            solution,
+            platform: current,
+        })
     }
 }
 // ~/~ end
@@ -247,7 +264,8 @@ impl Session {
         &self,
         prefix: std::path::PathBuf,
     ) -> miette::Result<Vec<RepoDataRecord>> {
-        let (solution, _channels, platform) = self.resolve(vec![]).await?;
+        let platform = Platform::current();
+        let (solution, _channels, platform) = self.resolve(platform, vec![]).await?;
         let result = solution.clone();
         self.install_packages(&prefix, solution, platform).await?;
         Ok(result)
