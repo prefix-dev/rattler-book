@@ -114,18 +114,11 @@ The core data structures map directly to the TOML layout. The struct below uses
 We use `BTreeMap` instead of `HashMap` so that dependencies serialize in
 alphabetical order, producing stable diffs when the manifest changes.
 
-The `platforms` field lists which platforms to solve for. By default it includes
-only the current platform, but you can add others (like `linux-64` or
-`osx-arm64`) to produce a lock file that works across machines.
-
 ``` {.rust #manifest-structs}
 #[serde_as]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub project: ProjectMetadata,
-
-    #[serde(default = "default_platforms")]
-    pub platforms: Vec<Platform>,
 
     #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
     #[serde(default)]
@@ -151,6 +144,10 @@ back to `["conda-forge"]` when omitted.
 it is a good default for getting started.
 ///
 
+The `platforms` field lists which platforms to solve for. By default it includes
+only the current platform, but you can add others (like `linux-64` or
+`osx-arm64`) to produce a lock file that works across machines.
+
 ```{.rust #manifest-structs}
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ProjectMetadata {
@@ -158,6 +155,9 @@ pub struct ProjectMetadata {
 
     #[serde(default = "default_channels")]
     pub channels: Vec<String>,
+
+    #[serde(default = "default_platforms")]
+    pub platforms: Vec<Platform>,
 
     /// Package version (required when [build] is present).
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -442,6 +442,7 @@ also add a version and a default `BuildConfig`:
         project: ProjectMetadata {
             name: name.clone(),
             channels: args.channel,
+            platforms: default_platforms(),
             version: if args.library {
                 Some("0.1.0".to_string())
             } else {
@@ -450,7 +451,6 @@ also add a version and a default `BuildConfig`:
             license: None,
             description: None,
         },
-        platforms: default_platforms(),
         dependencies: BTreeMap::from([(
             "lua".to_string(),
             ">=5.4".parse::<NamelessMatchSpec>().unwrap(),

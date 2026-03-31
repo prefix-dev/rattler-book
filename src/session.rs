@@ -188,7 +188,7 @@ impl Session {
         let channels = self.channels()?;
         let mut all_solutions: Vec<(Platform, Vec<RepoDataRecord>)> = Vec::new();
 
-        for &platform in &self.project.manifest.platforms {
+        for &platform in &self.project.manifest.project.platforms {
             let existing = read_locked_packages(&lock_path, platform);
             let (solution, ..) = self.resolve(platform, existing).await?;
             all_solutions.push((platform, solution));

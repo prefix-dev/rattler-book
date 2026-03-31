@@ -53,6 +53,7 @@ pub async fn execute(args: Args) -> miette::Result<()> {
         project: ProjectMetadata {
             name: name.clone(),
             channels: args.channel,
+            platforms: default_platforms(),
             version: if args.library {
                 Some("0.1.0".to_string())
             } else {
@@ -61,7 +62,6 @@ pub async fn execute(args: Args) -> miette::Result<()> {
             license: None,
             description: None,
         },
-        platforms: default_platforms(),
         dependencies: BTreeMap::from([(
             "lua".to_string(),
             ">=5.4".parse::<NamelessMatchSpec>().unwrap(),

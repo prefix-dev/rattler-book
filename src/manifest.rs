@@ -20,9 +20,6 @@ pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 pub struct Manifest {
     pub project: ProjectMetadata,
 
-    #[serde(default = "default_platforms")]
-    pub platforms: Vec<Platform>,
-
     #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
     #[serde(default)]
     pub dependencies: BTreeMap<String, NamelessMatchSpec>,
@@ -39,6 +36,9 @@ pub struct ProjectMetadata {
 
     #[serde(default = "default_channels")]
     pub channels: Vec<String>,
+
+    #[serde(default = "default_platforms")]
+    pub platforms: Vec<Platform>,
 
     /// Package version (required when [build] is present).
     #[serde(default, skip_serializing_if = "Option::is_none")]

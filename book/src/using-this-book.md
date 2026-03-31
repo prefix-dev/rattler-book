@@ -9,7 +9,7 @@ git clone https://github.com/prefix-dev/rattler-book
 cd rattler-book
 ```
 
-## Running the examples
+## Using the book's source
 
 The easiest way to get started is with [pixi](https://pixi.prefix.dev/latest/installation/), which manages the Rust toolchain
 and all dependencies for you.  I know it can be a hassle to install a new tool. I really do! But using pixi can familiarize you with what rattler can empower to build.
@@ -27,7 +27,7 @@ The `run` command uses pixi's tasks system to run tasks. In a way the task syste
 To just build without running:
 
 ```bash
-# Installs and runs t
+# Installs the pixi env and runs the build
 pixi run build
 ```
 
@@ -38,6 +38,9 @@ No manual Rust installation required.
 
 You can also build a distributable conda package:
 
+/// margin-note
+`pixi run build` runs the build task. While `pixi build` is built-in.
+///
 ```bash
 pixi build
 ```
@@ -46,8 +49,8 @@ You can also install `moonshot` globally:
 
 ```bash
 pixi global install --path .
-# it will be available as:
-shot init
+# it will be available as
+shot <cmd>
 ```
 
 Again, pixi automatically figures out what to install and how to build it.
