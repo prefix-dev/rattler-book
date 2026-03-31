@@ -13,9 +13,6 @@ version = "0.4.*"
 [dev]
 moonshot = { path = "." }
 
-[target.osx.activation.env]
-SDKROOT = "/Library/Developer/CommandLineTools/SDKs/MacOSX15.sdk"
-
 [dependencies]
 
 [feature.book.dependencies]
