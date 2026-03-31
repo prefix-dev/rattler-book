@@ -227,6 +227,39 @@ error messages, and doesn't require a C compiler.
 The two backends share the same `SolverImpl` trait, so switching is a
 one-line change.
 
+### Using resolvo directly
+
+Moonshot uses resolvo through the `rattler_solve` wrapper, which implements
+`DependencyProvider` for conda packages. Resolvo itself is not tied to conda. You
+can solve any dependency problem by implementing that trait yourself.
+
+Implementing this requires two traits: `Interner` (for mapping between names,
+version sets, and internal IDs) and `DependencyProvider` itself. The provider
+has four core methods:
+
+- `get_candidates(name)` -- return the available versions for a package name.
+- `sort_candidates(solver, solvables)` -- order candidates by preference
+  (typically highest version first).
+- `filter_candidates(candidates, version_set, inverse)` -- narrow candidates to
+  those matching (or not matching) a version constraint.
+- `get_dependencies(solvable)` -- return the dependencies of a specific version.
+
+Once you have a provider, solving looks like this:
+
+```rust
+let provider = MyProvider::new(packages);
+let mut solver = Solver::new(provider);
+let reqs = /* build requirements from version sets */;
+let problem = Problem::new().requirements(reqs);
+let solution = solver.solve(problem)?;
+```
+
+Implementing the full trait takes roughly a hundred lines because `Interner`
+requires you to map between string names, version sets, and their internal
+integer IDs. The resolvo repository includes `BundleBoxProvider`, a complete test
+implementation of `DependencyProvider` that uses in-memory package definitions.
+It is the best starting point if you want to build a custom solver backend.
+
 ## Summary
 
 - Dependency solving reduces to SAT.

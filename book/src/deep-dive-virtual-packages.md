@@ -161,6 +161,31 @@ VirtualPackageOverrides {
 `Some(None)` means "override with no package present".  `None` means "use
 auto-detection".
 
+### Custom virtual packages
+
+You are not limited to the five built-in virtual packages. The solver works with
+`GenericVirtualPackage` values, not the typed `VirtualPackage` enum, so you can
+construct your own and append them to the detected list. No changes to rattler's
+source needed.
+
+conda-forge already does this with `__python`. Here is how you would create one:
+
+```rust
+let python_vp = GenericVirtualPackage {
+    name: "__python".parse().unwrap(),
+    version: "3.12".parse().unwrap(),
+    build_string: String::new(),
+};
+virtual_packages.push(python_vp);
+```
+
+The same idea extends to any language runtime or system capability. A Ruby
+package manager could provide `__ruby =3.3`. A Common Lisp package manager could
+provide `__common_lisp =2` (for the ANSI standard version) and let individual
+packages constrain on implementation-specific features if needed. Package authors
+then declare dependencies on these virtual packages with normal constraint syntax
+(`__ruby >=3.2`), and the solver handles them exactly like the built-in ones.
+
 ## Summary
 
 - Virtual packages represent host capabilities that can't be installed.

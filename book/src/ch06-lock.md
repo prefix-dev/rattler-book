@@ -635,7 +635,10 @@ Virtual packages like `__linux`, `__glibc`, and `__cuda` let the solver
 exclude packages that need features the host doesn't have.
 
 /// margin-note
-We detect virtual packages from the host, which is correct when solving for the current platform. When solving for a different platform, these values may be wrong (e.g., detecting `__osx` while solving for `linux-64`). Pixi handles this with per-platform virtual package defaults. Extending moonshot to do the same is left as an exercise.
+We detect virtual packages from the host, which is correct when solving for the
+current platform. For other platforms these values may be wrong (e.g., detecting
+`__osx` while solving for `linux-64`). See the exercise at the end of this
+chapter for a fix.
 ///
 
 ``` {.rust #session-resolve}
@@ -682,10 +685,14 @@ re-solves faster and more stable. The `..` syntax fills in all remaining fields 
 environment. It checks freshness, reads any existing lock records as solver
 preferences, resolves if needed, and writes the lock file.
 
-When the manifest lists multiple platforms, `ensure_resolved` solves for each one and writes all solutions into a single lock file. After solving, it returns the current platform's solution for immediate use by the install command.
+When the manifest lists multiple platforms, `ensure_resolved` solves for each
+one and writes all solutions into a single lock file. It returns the current
+platform's solution for immediate use by the install command.
 
 /// margin-note
-We solve platforms sequentially for simplicity. Since each `resolve` call is async and the gateway caches repodata across queries, you could solve platforms concurrently with `futures::future::join_all` or `tokio::JoinSet` for a speedup proportional to the number of platforms.
+We solve platforms sequentially here. You could solve them concurrently with
+`futures::future::join_all` or `tokio::JoinSet` since the gateway caches
+repodata across queries.
 ///
 
 ``` {.rust #session-ensure-resolved}

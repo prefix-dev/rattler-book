@@ -273,6 +273,23 @@ This reads the prefix and discovers:
 3. **Extra environment variables**: from `<prefix>/conda-meta/state` and
    `<prefix>/etc/conda/env_vars.d/`.
 
+As a concrete example, the `glib` package ships a small activation script that
+looks like this:
+
+```bash
+export GSETTINGS_SCHEMA_DIR_CONDA_BACKUP="${GSETTINGS_SCHEMA_DIR:-}"
+export GSETTINGS_SCHEMA_DIR="$CONDA_PREFIX/share/glib-2.0/schemas"
+```
+
+This script sets `GSETTINGS_SCHEMA_DIR` to point at the prefix's schema
+directory. The first line backs up any existing value so deactivation can
+restore it.
+
+Compiler packages like `clang_osx-arm64` ship much larger activation scripts
+that set `CC`, `CFLAGS`, `LDFLAGS`, `CMAKE_ARGS`, and other build variables.
+Install a compiler into your environment, activate it, and the shell is ready
+to compile.
+
 ## `ActivationVariables`
 
 ```rust

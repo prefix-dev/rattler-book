@@ -114,7 +114,9 @@ The core data structures map directly to the TOML layout. The struct below uses
 We use `BTreeMap` instead of `HashMap` so that dependencies serialize in
 alphabetical order, producing stable diffs when the manifest changes.
 
-The `platforms` field lists which platforms to solve for. By default it includes only the current platform, but you can add others (like `linux-64` or `osx-arm64`) to produce a lock file that works across machines.
+The `platforms` field lists which platforms to solve for. By default it includes
+only the current platform, but you can add others (like `linux-64` or
+`osx-arm64`) to produce a lock file that works across machines.
 
 ``` {.rust #manifest-structs}
 #[serde_as]

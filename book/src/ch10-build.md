@@ -497,7 +497,9 @@ use fs_err as fs;
 use fs_err::File;
 use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::compression_level::CompressionLevel;
-use rattler_conda_types::package::{IndexJson, PackageFile, PathType, PathsEntry, PathsJson};
+use rattler_conda_types::package::{
+    FileMode, IndexJson, PackageFile, PathType, PathsEntry, PathsJson, PrefixPlaceholder,
+};
 use rattler_conda_types::{NoArchType, PackageName, VersionWithSource};
 use rattler_index::{index_fs, IndexFsConfig};
 use rattler_package_streaming::write::write_conda_package;
@@ -806,7 +808,10 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
             relative_path: rel_path,
             no_link: false,
             path_type: PathType::HardLink,
-            prefix_placeholder: None,
+            prefix_placeholder: Some(PrefixPlaceholder {
+                file_mode: FileMode::Text,
+                placeholder: prefix.display().to_string(),
+            }),
             sha256: Some(sha256),
             size_in_bytes: Some(size),
         });
@@ -818,6 +823,31 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
     })
 }
 ```
+
+/// margin-note
+We use `FileMode::Text` because our Lua packages only contain scripts and
+configuration. For compiled binaries or shared libraries, use
+`FileMode::Binary` so the installer applies length-preserving C-string
+replacement instead.
+///
+
+The `prefix_placeholder` field tells the installer to scan each file for the
+build-time prefix string and replace it with the actual install location.
+The behavior depends on the file mode:
+
+- **Text**: plain find-and-replace. Works for scripts, configuration files, and
+  anything where the file size can change freely.
+- **Binary**: length-preserving replacement. The new path is padded with null
+  bytes so the byte count stays the same. Compiled binaries contain fixed-size
+  C strings and would break if the file length changed. On macOS, modified
+  Mach-O binaries are automatically re-signed with `codesign`.
+
+We set this even though our Lua packages probably don't embed the build prefix.
+Without it, a build script that wrote an absolute path into a config file would
+leave a broken path after installation. Better safe than sorry. For compiled
+packages with shared libraries, this is how conda handles RPATH relocation: the
+builder records the build prefix, and the installer rewrites it to the target
+prefix at install time.
 
 ``` {.rust #build-sha256}
 fn sha256_and_size(path: &Path) -> miette::Result<(rattler_digest::Sha256Hash, u64)> {

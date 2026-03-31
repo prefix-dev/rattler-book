@@ -54,6 +54,7 @@ nav:
     - "10. The `build` Command": ch10-build.md
   - Rattler and Conda Deep Dives:
     - The conda Package Format: deep-dive-package-format.md
+    - Run Exports: deep-dive-run-exports.md
     - Virtual Packages: deep-dive-virtual-packages.md
     - The Networking Stack: deep-dive-networking.md
     - "The `resolvo` SAT Solver": deep-dive-resolvo.md

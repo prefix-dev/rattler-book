@@ -9,7 +9,9 @@ use fs_err as fs;
 use fs_err::File;
 use miette::{Context, IntoDiagnostic};
 use rattler_conda_types::compression_level::CompressionLevel;
-use rattler_conda_types::package::{IndexJson, PackageFile, PathType, PathsEntry, PathsJson};
+use rattler_conda_types::package::{
+    FileMode, IndexJson, PackageFile, PathType, PathsEntry, PathsJson, PrefixPlaceholder,
+};
 use rattler_conda_types::{NoArchType, PackageName, VersionWithSource};
 use rattler_index::{index_fs, IndexFsConfig};
 use rattler_package_streaming::write::write_conda_package;
@@ -247,7 +249,10 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
             relative_path: rel_path,
             no_link: false,
             path_type: PathType::HardLink,
-            prefix_placeholder: None,
+            prefix_placeholder: Some(PrefixPlaceholder {
+                file_mode: FileMode::Text,
+                placeholder: prefix.display().to_string(),
+            }),
             sha256: Some(sha256),
             size_in_bytes: Some(size),
         });
