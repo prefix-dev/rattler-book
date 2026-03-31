@@ -18,7 +18,7 @@ $ shot install
 $ shot run lua -e "require('lumen').thumbnail('photo.jpg', 128)"
 ```
 
-`lumen` is a small Lua module we will build in Chapter 10. It wraps
+`lumen` is a small Lua module we will build in [Chapter 10](ch10-build.md). It wraps
 ImageMagick's command-line tool, which means it depends on a C library with
 dozens of native dependencies. The interesting part is not the Lua code itself,
 but that our package manager handles the entire native dependency chain.

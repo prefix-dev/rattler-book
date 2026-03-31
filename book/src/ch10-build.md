@@ -610,7 +610,7 @@ The execute function now uses `Session` and delegates build-script execution
 to the `LuaBuildBackend` via the `BuildBackend` trait. The `BuildContext`
 bundles all the paths and metadata the backend needs.
 
-##### Packing and indexing
+### Packing and indexing
 
 We write package metadata, pack the `.conda` archive, and index the output
 channel so other tools can use it.

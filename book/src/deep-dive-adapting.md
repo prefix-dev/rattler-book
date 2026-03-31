@@ -6,17 +6,17 @@
 
 Chapters 1 through 9 are language-agnostic. Here is a quick inventory:
 
-- **Manifest and init** (ch3): the `[project]` and `[dependencies]` format works for any language. You would swap the default dependency (from `lua >=5.4` to your language runtime).
-- **Search and add** (ch4, ch5): repodata queries and manifest editing have nothing language-specific in them.
-- **Lock and solve** (ch6): the solver, lock file format, and `Session` abstraction work unchanged.
-- **Install** (ch7): the installer handles any conda package, regardless of what is inside.
-- **Shell-hook and run** (ch8, ch9): environment activation and subprocess launching are generic.
+- **Manifest and init** ([ch3](ch03-init.md)): the `[project]` and `[dependencies]` format works for any language. You would swap the default dependency (from `lua >=5.4` to your language runtime).
+- **Search and add** ([ch4](ch04-search.md), [ch5](ch05-add.md)): repodata queries and manifest editing have nothing language-specific in them.
+- **Lock and solve** ([ch6](ch06-lock.md)): the solver, lock file format, and `Session` abstraction work unchanged.
+- **Install** ([ch7](ch07-install.md)): the installer handles any conda package, regardless of what is inside.
+- **Shell-hook and run** ([ch8](ch08-shell-hook.md), [ch9](ch09-run.md)): environment activation and subprocess launching are generic.
 
 All of these pieces can move into a new project as-is.
 
 ## What changes: the build command
 
-Chapter 10 is where Lua-specific decisions concentrate. For a different language, here is what you would replace or extend.
+[Chapter 10](ch10-build.md) is where Lua-specific decisions concentrate. For a different language, here is what you would replace or extend.
 
 ### 1. The `noarch` default
 
@@ -47,7 +47,7 @@ This is what lets the solver distinguish two builds of the same package compiled
 
 ### 5. Interpreter lookup
 
-Moonshot's `find_lua` function searches for the Lua binary in the environment. For a compiled language there is no interpreter to find. Instead, compiler packages ship `activate.d/` scripts that set environment variables like `CC`, `CXX`, and `CFLAGS`. The activation mechanism from Chapter 8 already handles running these scripts.
+Moonshot's `find_lua` function searches for the Lua binary in the environment. For a compiled language there is no interpreter to find. Instead, compiler packages ship `activate.d/` scripts that set environment variables like `CC`, `CXX`, and `CFLAGS`. The activation mechanism from [Chapter 8](ch08-shell-hook.md) already handles running these scripts.
 
 ### 6. File modes in prefix replacement
 
@@ -72,7 +72,7 @@ This lets package authors write `__ruby >=3.2` in their dependencies, and the so
 Moonshot is a teaching tool. A production package manager would need several features it leaves out. For each one, there is an existing crate or tool you can reach for:
 
 - **`run_exports`**: a build dependency automatically adds runtime dependencies to the output package. See the [run exports deep dive](deep-dive-run-exports.md) and rattler-build.
-- **Cross-platform virtual packages**: moonshot detects from the host only, so solving for a different platform gives wrong results. The exercise in Chapter 6 addresses this. Pixi provides per-platform defaults.
+- **Cross-platform virtual packages**: moonshot detects from the host only, so solving for a different platform gives wrong results. The exercise in [Chapter 6](ch06-lock.md) addresses this. Pixi provides per-platform defaults.
 - **Multi-output recipes**: a single source producing multiple packages (e.g., `libfoo` and `libfoo-dev`). Handled by rattler-build.
 - **Source fetching**: downloading and extracting source tarballs or git repos before building. Handled by rattler-build.
 - **Test running**: conda packages can carry test scripts in `info/test/`. Moonshot does not run them.

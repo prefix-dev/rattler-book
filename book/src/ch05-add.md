@@ -269,4 +269,4 @@ luarocks = "*"
 
 In the next chapter we implement `shot lock`, which resolves the packages
 listed in the manifest and records the exact solution. `shot install` follows
-in Chapter 7.
+in [Chapter 7](ch07-install.md).
