@@ -16,11 +16,11 @@ archive. This file has five possible fields:
 
 | Field | Meaning |
 |---|---|
-| `weak` | Added when the package appears as a **host** dependency |
-| `strong` | Added when the package appears as a **host** or **build** dependency |
-| `noarch` | Added only when the target package is `noarch` |
-| `weak_constrains` | Like `weak`, but adds to `constrains` instead of `depends` |
-| `strong_constrains` | Like `strong`, but adds to `constrains` instead of `depends` |
+| **weak** | Added when the package appears as a **host** dependency |
+| **strong** | Added when the package appears as a **host** or **build** dependency |
+| **noarch** | Added only when the target package is `noarch` |
+| **weak_constrains** | Like weak, but adds to `constrains` instead of `depends` |
+| **strong_constrains** | Like strong, but adds to `constrains` instead of `depends` |
 
 All five fields are lists of dependency strings. Most packages only use `weak`.
 
@@ -105,9 +105,11 @@ package's `depends`. A weak export would have been silently skipped here, since
 gcc is not a host dependency. Strong exports exist precisely for this pattern:
 build-time tools that inject runtime requirements.
 
-The same logic applies to other compilers. The Fortran compiler `gfortran`
-contributes `libgfortran-ng` as a strong export. The C++ standard library
-follows a similar pattern through `libstdcxx-ng`.
+The same logic applies to other compilers:
+
+- The Fortran compiler `gfortran` contributes `libgfortran-ng` as a strong
+  export.
+- The C++ standard library follows a similar pattern through `libstdcxx-ng`.
 
 ## Example 3: Noarch exports (python)
 
@@ -163,6 +165,14 @@ dependencies.
 
 When [rattler-build] processes a recipe, it follows these steps:
 
+```mermaid
+graph LR
+    A[Host deps] --> C[Extract<br>run_exports.json]
+    B[Build deps] --> C
+    C --> D[Filter<br>ignore_run_exports]
+    D --> E[Merge into<br>output depends]
+```
+
 1. **Resolve and install** host and build dependencies into their respective
    prefixes.
 2. **Extract** `run_exports.json` from each installed dependency. Weak exports
@@ -196,8 +206,10 @@ contributed through `run_exports`.
 ## Relation to moonshot
 
 Moonshot skips `run_exports` entirely. It copies `[dependencies]` directly into
-the package's runtime requirements, which works for Lua scripts that have no
-compilation step. For compiled languages, `run_exports` are how the build system
+the package's runtime requirements. This works for Lua scripts that have no
+compilation step.
+
+Compiled languages need more care. `run_exports` are how the build system
 prevents [ABI breakage][abi] across the dependency graph. When a library bumps
 its soname, its `run_exports` version range changes, and every package rebuilt
 against it automatically picks up the new constraint. Without this mechanism,

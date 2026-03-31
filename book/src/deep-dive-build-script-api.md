@@ -32,12 +32,12 @@ The prelude reads them once and fails fast if any are missing:
 
 | Global | Source | Meaning |
 |---|---|---|
-| `PREFIX` | `--install-prefix` temp dir | Where the package should install files |
-| `SRC_DIR` | current working directory | Root of your source tree |
-| `BUILD_PREFIX` | `--build-prefix` temp dir | Where build dependencies live |
-| `PKG_NAME` | `moonshot.toml [project].name` | Package name |
-| `PKG_VERSION` | `moonshot.toml [project].version` | Package version |
-| `PKG_BUILD_NUM` | `moonshot.toml [build].build_number` | Build number (integer) |
+| **PREFIX** | `--install-prefix` temp dir | Where the package should install files |
+| **SRC_DIR** | current working directory | Root of your source tree |
+| **BUILD_PREFIX** | `--build-prefix` temp dir | Where build dependencies live |
+| **PKG_NAME** | `moonshot.toml [project].name` | Package name |
+| **PKG_VERSION** | `moonshot.toml [project].version` | Package version |
+| **PKG_BUILD_NUM** | `moonshot.toml [build].build_number` | Build number (integer) |
 
 `PREFIX` and `BUILD_PREFIX` are temporary directories created by `shot build`.
 Files installed into `PREFIX` end up in the `.conda` archive. Files in

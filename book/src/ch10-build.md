@@ -5,8 +5,8 @@ loop: building a new package from source and publishing it so others can install
 it.
 
 Up to now, lumen-app has only consumed packages that someone else built.
-By adding a build command, we can write our own library (`lumen`, a small Lua library
-that wraps ImageMagick), package it, host it on a local channel, and
+By adding a build command, we can write our own Lua module (`lumen`, a thin
+wrapper around ImageMagick), package it, host it on a local channel, and
 install it into lumen-app with the same tool.
 
 This is similar to how pyproject.toml works: the
@@ -962,7 +962,7 @@ Luckily if you build on top of conda there are existing hosting options.
 ## Try it
 
 Let's build a package and install it in lumen-app to see the full loop in
-action. We'll create `lumen`, a Lua image toolkit that wraps ImageMagick.
+action. We'll create `lumen`, a small Lua wrapper around ImageMagick's CLI.
 
 First, create a library project:
 

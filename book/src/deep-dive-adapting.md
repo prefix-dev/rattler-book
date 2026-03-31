@@ -33,7 +33,7 @@ Moonshot uses a single `[dependencies]` table for both install-time and build-ti
 - `[host-dependencies]`: libraries to link against (e.g., `openssl`, `zlib`)
 - `[build-dependencies]`: the compiler itself, cmake, pkg-config
 
-Rather than implementing this split yourself, consider using [rattler-build](https://github.com/prefix-dev/rattler-build) as a library. It handles the host/build/run separation, build string hashing, `run_exports`, and compiler activation. Its API is being made more library-friendly over time.
+Rather than implementing this split yourself, consider using [rattler-build](https://github.com/prefix-dev/rattler-build) as a library. It handles the host/build/run separation, build string hashing, `run_exports`, and compiler activation.
 
 ### 4. The build string
 
@@ -77,4 +77,4 @@ Moonshot is a teaching tool. A production package manager would need several fea
 - **Source fetching**: downloading and extracting source tarballs or git repos before building. Handled by rattler-build.
 - **Test running**: conda packages can carry test scripts in `info/test/`. Moonshot does not run them.
 
-The rattler crates handle the hard parts: solving, installing, networking, and activation. Your job is the manifest format, the build system, and the language-specific glue. Moonshot shows one way to wire these pieces together. Your language may need a different shape, but the building blocks are the same.
+The rattler crates handle the hard parts: solving, installing, networking, and activation. Your job is the manifest format, the build system, and the language-specific glue. Moonshot shows one way to wire these pieces together.

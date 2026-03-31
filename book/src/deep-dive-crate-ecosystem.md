@@ -5,15 +5,17 @@ shows how they depend on each other, and traces how the project grew over time.
 
 ## Why so many crates?
 
-[pixi] uses rattler to manage environments, [rattler-build] uses it to construct packages, 
-and standalone tools cherry-pick individual capabilities like lock-file parsing or repodata
-fetching.  By splitting functionality into focused crates, each consumer can
-depend on exactly the parts it needs, keeping compile times and binary sizes
-under control.
-Splitting into crates also enforces API boundaries.  When solving, networking,
-and package I/O live in separate crates, they *cannot* reach into each other's
-internals.  And in large Rust projects, smaller crates mean faster incremental
-builds.
+[pixi] uses rattler to manage environments, and [rattler-build] uses it to
+construct packages. Splitting into many crates pays off in three ways:
+
+- **Selective dependencies.** Standalone tools can cherry-pick individual
+  capabilities like lock-file parsing or repodata fetching. Each consumer
+  depends on exactly the parts it needs, keeping compile times and binary sizes
+  under control.
+- **Clean API separation.** When solving, networking, and package I/O live in
+  separate crates, they *cannot* reach into each other's internals.
+- **Faster incremental builds.** In large Rust projects, smaller crates mean the
+  compiler can skip unchanged units and rebuild only what changed.
 
 [pixi]: https://pixi.sh
 [rattler-build]: https://prefix-dev.github.io/rattler-build

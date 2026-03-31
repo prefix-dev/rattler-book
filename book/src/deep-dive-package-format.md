@@ -70,17 +70,38 @@ The modern `.conda` format is an **uncompressed ZIP** containing three members:
 </div>
 
 The outer ZIP is not compressed; the compression happens in the inner tars.
-Because ZIP stores a central directory at the end, tools can `mmap` the file,
-seek to the directory, and jump directly to the `info-*.tar.zst` without reading
-the payload.
+Because ZIP stores a central directory at the end of the file, a tool can read
+that directory first and then jump straight to `info-*.tar.zst` without
+downloading or reading the payload.
 
-The three members each serve a distinct purpose. `metadata.json` is a sentinel confirming this is a v2 package:
+The nesting of a `.conda` archive looks like this:
 
-```json
-{"conda_pkg_format_version": 2}
+```mermaid
+graph TD
+    A[".conda archive (ZIP)"] --> B["metadata.json"]
+    A --> C["info-*.tar.zst"]
+    A --> D["pkg-*.tar.zst"]
+    C --> E["info/index.json"]
+    C --> F["info/paths.json"]
+    C --> G["info/..."]
+    D --> H["bin/lua"]
+    D --> I["lib/liblua.so"]
+    D --> J["share/..."]
 ```
 
-`info-*.tar.zst` contains only the `info/` files -- useful for tools that only need metadata (solvers, indexers, search tools). `pkg-*.tar.zst` contains the actual payload files -- useful for installers that already have metadata and only need to extract files.
+The three members each serve a distinct purpose:
+
+- **`metadata.json`** is a sentinel confirming this is a v2 package:
+
+  ```json
+  {"conda_pkg_format_version": 2}
+  ```
+
+- **`info-*.tar.zst`** contains only the `info/` files. Solvers, indexers, and
+  search tools use this to read metadata without touching the payload.
+
+- **`pkg-*.tar.zst`** contains the actual payload files. Installers that already
+  have metadata can extract just this member.
 
 ## The `info/index.json`
 
@@ -106,35 +127,17 @@ the indexer.
 
 ### Key fields
 
-**`name`**: lowercase, hyphens allowed, no spaces.
-
-**`version`**: semantic versioning, but conda's version parser is more flexible
-than semver.  `5.4.7`, `1.0.0a1`, `2024.01.02` are all valid.
-
-**`build`**: a string that distinguishes packages with the same name and version
-but different compilation options.  Typically encodes a hash of the build
-dependencies.  The hash prevents tools from reusing a cached build artifact when
-the compiler or a dep changed.
-
-**`build_number`**: an integer, incremented when a package is rebuilt with bug
-fixes but the same source version.  The solver prefers higher build numbers.
-
-**`subdir`**: the platform this package was compiled for (`linux-64`,
-`osx-arm64`, `win-64`, `noarch`, ...).
-
-**`depends`**: runtime dependencies as MatchSpec strings.  Enforced at install
-time by the solver.
-
-**`constrains`**: *non-installed* constraints.  A package can say "if
-`old-library` is installed, it must be `>=2.0`" without depending on it.
-Useful for preventing known incompatibilities.
-
-**`noarch`**: if `"generic"`, the package is architecture-independent.  noarch
-packages live in the `noarch/` subdirectory of a channel and can be installed on
-any platform.  Set this for pure-Python or pure-Lua packages.
-
-**`timestamp`**: milliseconds since the Unix epoch.  Used as a tiebreaker when
-all other version-ordering criteria are equal.
+| Field | Meaning |
+|---|---|
+| **name** | Lowercase, hyphens allowed, no spaces. |
+| **version** | Conda's parser is more flexible than semver. `5.4.7`, `1.0.0a1`, `2024.01.02` are all valid. |
+| **build** | Distinguishes same-version packages with different build options. Typically a hash of the build inputs. |
+| **build_number** | Rebuild counter. The solver prefers higher values. |
+| **subdir** | Target platform: `linux-64`, `osx-arm64`, `win-64`, `noarch`, etc. |
+| **depends** | Runtime dependencies as MatchSpec strings. Enforced by the solver at install time. |
+| **constrains** | Optional constraints on packages that are *not* dependencies. "If `old-library` is present, it must be `>=2.0`." |
+| **noarch** | If `"generic"`, the package is platform-independent and lives in `noarch/`. |
+| **timestamp** | Milliseconds since the Unix epoch. Tiebreaker when all other ordering criteria are equal. |
 
 ## The `info/paths.json`
 
@@ -169,9 +172,9 @@ uses this to:
 
 | Type | Meaning |
 |---|---|
-| `hardlink` | A regular file; will be hard-linked from cache |
-| `softlink` | A symbolic link; the `dest` field gives the target |
-| `directory` | An empty directory |
+| **hardlink** | A regular file; will be hard-linked from cache |
+| **softlink** | A symbolic link; the `dest` field gives the target |
+| **directory** | An empty directory |
 
 Note that most files are `hardlink` even if the original build used symlinks.
 conda tools typically convert symlinks to hardlinks when packing to maximize
@@ -206,7 +209,7 @@ This is the **prefix record**, rattler's `PrefixRecord` type.  It's used by:
 ## Compression in the Rust ecosystem
 
 The `.conda` format uses **[zstd]** ([Zstandard]) compression.  zstd was designed by
-Yann Collet (now at Meta) with a focus on very fast decompression at competitive
+Yann Collet with a focus on very fast decompression at competitive
 ratios.
 
 The Rust ecosystem has mature crates for this:
@@ -260,9 +263,9 @@ memory.  This is how rattler can install a 500 MB package on a machine with only
 - `info/paths.json` lists every file with its SHA-256 hash.
 - `conda-meta/` records what was installed and where it came from.
 - zstd provides fast, parallel decompression.
+- Streaming I/O avoids loading entire archives into memory.
+
 [zstd]: https://docs.rs/zstd
 [Zstandard]: https://facebook.github.io/zstd/
 [rattler]: https://github.com/conda/rattler
 [rattler_package_streaming]: https://crates.io/crates/rattler_package_streaming
-
-- Streaming I/O avoids loading entire archives into memory.

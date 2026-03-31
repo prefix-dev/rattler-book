@@ -18,10 +18,11 @@ $ shot install
 $ shot run lua -e "require('lumen').thumbnail('photo.jpg', 128)"
 ```
 
-`lumen` is a Lua library we wrote ourselves. It depends on ImageMagick, a C
-library with dozens of native dependencies. Both were solved, installed, and
-activated by our package manager. Where did `lumen` come from? We built it
-with moonshot's other headline command:
+`lumen` is a small Lua module we will build in Chapter 10. It wraps
+ImageMagick's command-line tool, which means it depends on a C library with
+dozens of native dependencies. The interesting part is not the Lua code itself,
+but that our package manager handles the entire native dependency chain.
+Where did `lumen` come from? We built it with moonshot's other headline command:
 
 ```console
 $ shot build --output-dir ../channel

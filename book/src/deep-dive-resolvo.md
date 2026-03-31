@@ -12,8 +12,8 @@ specific optimizations that make resolvo fast in practice.
 
 ## Dependency solving as SAT
 
-**SAT** (Boolean satisfiability) asks: given a boolean formula, is there an
-assignment of variables to true/false that makes it true?
+**SAT** (Boolean satisfiability) is the problem of deciding whether a set of
+true/false variables can be assigned values so that every constraint is met.
 
 Dependency solving reduces to SAT by encoding each package version as a boolean
 variable:
@@ -34,8 +34,8 @@ Each constraint becomes a clause:
 - "The user requested `lua >= 5.4`":
   `lua_5_4_7 OR lua_5_4_6` (but not 5.3 or older)
 
-A SAT solver finds an assignment that satisfies all clauses, or reports UNSAT if
-none exists.
+A SAT solver finds an assignment that satisfies all clauses, or proves no
+solution exists.
 
 ## DPLL and CDCL: the solver algorithms
 
@@ -57,7 +57,7 @@ DPLL works by:
 ### CDCL: learning from conflicts
 
 CDCL improves DPLL by analyzing *why* a conflict occurred and adding a new clause
-that prevents reaching the same dead end via a different path.
+so the solver never hits the same dead end again.
 
 ```text
 Conflict: tried lua 5.4.7, failed because luarocks needs json-lib <2.0
@@ -70,6 +70,21 @@ Learned clause: NOT (web-server_2_0 AND legacy-plugin)
 
 The learned clause is added to the formula and persists for the rest of the
 search.  This can prune large sections of the search space.
+
+The following diagram shows the CDCL solver loop:
+
+```mermaid
+graph TD
+    A[Pick unassigned variable] --> B[Unit propagation]
+    B --> C{Conflict?}
+    C -->|No| D{All assigned?}
+    D -->|No| A
+    D -->|Yes| E[SAT: return solution]
+    C -->|Yes| F[Analyze conflict]
+    F --> G[Learn new clause]
+    G --> H[Backjump]
+    H --> B
+```
 
 ## `resolvo`'s design
 
@@ -136,14 +151,17 @@ lifetime annotations.
 A key unit propagation optimization is the **watch list** (also used in the
 famous [MiniSat] solver).
 
-For each clause `(A OR B OR C OR ...)`, we "watch" two of its literals.  When a
-watched literal becomes false, we try to find another literal to watch.  If we
-can't (because all other literals are also false), we've found a unit clause;
-the remaining watched literal must be true.
+The idea works in three steps:
 
-This avoids scanning all clauses on every assignment change.  Instead we maintain
-a list of clauses watching each literal, and only process those clauses when that
-literal changes.
+1. For each clause `(A OR B OR C OR ...)`, watch two of its literals.
+2. When a watched literal becomes false, scan the clause for a replacement
+   literal to watch.
+3. If no replacement exists (all other literals are also false), the clause is
+   unit and the remaining watched literal must be true.
+
+This avoids scanning all clauses on every assignment change. Instead, the solver
+maintains a list of clauses watching each literal, and only processes those
+clauses when that literal changes.
 
 ## Conda-specific heuristics
 
@@ -179,7 +197,7 @@ The following packages are incompatible:
   no solution exists.
 ```
 
-Generating this explanation is non-trivial.  The solver must trace back through
+Building this explanation takes real work.  The solver must trace back through
 its conflict graph to find the minimal set of incompatibilities.
 
 ## The conda scoring model
@@ -197,8 +215,8 @@ The key insight is that conda uses a **multi-objective** ordering:
 5. Prefer packages from earlier channels
 ```
 
-These objectives are combined into a single total ordering over candidate sets.
-The resolvo solver uses this ordering to guide its search.
+These objectives combine into one strict ranking of candidates.
+The resolvo solver uses this ranking to guide its search.
 
 ## Practical performance
 
@@ -268,6 +286,8 @@ It is the best starting point if you want to build a custom solver backend.
   efficiency.
 - Conda-specific heuristics encode version preferences and minimize changes.
 - Conflict explanations trace the incompatibility graph for human-readable errors.
+- resolvo is faster than libsolv and produces better diagnostics.
+
 [CDCL]: https://en.wikipedia.org/wiki/Conflict-driven_clause_learning
 [DPLL]: https://en.wikipedia.org/wiki/DPLL_algorithm
 [MiniSat]: http://minisat.se
@@ -276,5 +296,3 @@ It is the best starting point if you want to build a custom solver backend.
 [conda]: https://docs.conda.io
 [rattler]: https://github.com/conda/rattler
 [rattler_solve]: https://crates.io/crates/rattler_solve
-
-- resolvo is faster than libsolv and produces better diagnostics.

@@ -7,9 +7,7 @@ produces something like `__linux`, `__glibc =2.38`, and
 `__archspec =1 arm`. The solver uses these to filter out packages that are
 incompatible with your hardware.
 
-Virtual packages solve a real problem: how do you express that a package
-requires a minimum glibc version, or a CUDA GPU, without trying to install
-those things?
+Virtual packages exist because some host capabilities cannot be expressed as installable packages. How do you require a minimum glibc version, or a CUDA GPU, without trying to install those things?
 
 ## The problem
 
@@ -26,7 +24,7 @@ Packages may still require these.  A BLAS library compiled with AVX-512 will
 crash on a CPU without it.  A CUDA extension requires both a minimum CUDA
 version and a compatible GPU.
 
-## Virtual packages to the rescue
+## How virtual packages work
 
 Virtual packages are synthetic packages that represent host capabilities.  They
 exist only in the solver's view of the world; they're never installed.
@@ -36,12 +34,12 @@ A few examples:
 
 | Virtual package | Represents |
 |---|---|
-| `__linux` | Linux kernel (presence means "this is Linux") |
-| `__glibc =2.38` | GNU C Library version |
-| `__osx =14.4` | macOS version |
-| `__win` | Windows (presence = "this is Windows") |
-| `__cuda =12.3` | CUDA toolkit version |
-| `__archspec =1 x86_64_v3` | CPU instruction set level |
+| **__linux** | Linux kernel (presence means "this is Linux") |
+| **__glibc** =2.38 | GNU C Library version |
+| **__osx** =14.4 | macOS version |
+| **__win** | Windows (presence = "this is Windows") |
+| **__cuda** =12.3 | CUDA toolkit version |
+| **__archspec** =1 x86_64_v3 | CPU instruction set level |
 
 A package can declare:
 ```json
@@ -165,8 +163,7 @@ auto-detection".
 
 You are not limited to the five built-in virtual packages. The solver works with
 `GenericVirtualPackage` values, not the typed `VirtualPackage` enum, so you can
-construct your own and append them to the detected list. No changes to rattler's
-source needed.
+construct your own and append them to the detected list without modifying rattler.
 
 conda-forge already does this with `__python`. Here is how you would create one:
 
@@ -193,9 +190,9 @@ then declare dependencies on these virtual packages with normal constraint synta
 - Packages declare requirements on virtual packages just like regular deps.
 - Archspec maps CPUs to capability levels using CPUID/equivalent.
 - `GenericVirtualPackage` strips type information for the solver.
+- Overrides enable cross-compilation scenarios.
+
 [Archspec]: https://github.com/archspec/archspec
 [rattler_virtual_packages]: https://crates.io/crates/rattler_virtual_packages
 [rattler]: https://github.com/conda/rattler
 [Conda]: https://docs.conda.io
-
-- Overrides enable cross-compilation scenarios.

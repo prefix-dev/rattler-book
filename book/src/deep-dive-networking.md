@@ -16,7 +16,7 @@ This chapter explains how that stack is assembled and how each piece works.
 
 Key features we rely on:
 
-- **TLS**: we use `rustls-tls` (pure-Rust TLS, no OpenSSL dependency). We found that targeting rustls makes it easier to build, especially in containers using Alpine Linux for example, although with pixi pulling in an OpenSSL dependency is really easy!
+- **TLS**: we use `rustls-tls` (pure-Rust TLS, no OpenSSL dependency). Targeting rustls simplifies builds, especially in containers running Alpine Linux. With pixi, pulling in OpenSSL is easy too, but we prefer fewer C dependencies.
 - **Connection pooling**: persistent connections are reused across requests
 - **Response streaming**: response bodies can be read as streams without
   buffering the whole response
@@ -25,12 +25,16 @@ Key features we rely on:
 reqwest = { version = "0.12", default-features = false, features = ["stream"] }
 ```
 
-The direct `reqwest` dependency only enables `"stream"` (for streaming response
-bodies).  TLS is activated through Cargo feature propagation at the crate level:
-the project's `[features]` section defines a `rustls-tls` feature that enables
-`reqwest/rustls-tls` and `reqwest/rustls-tls-native-roots`, along with the
-matching feature on every rattler crate.  This avoids a dependency on [OpenSSL],
-which complicates static builds and cross-compilation.
+The way TLS reaches `reqwest` is worth unpacking:
+
+- The direct `reqwest` dependency only enables `"stream"` (for streaming
+  response bodies).
+- TLS is activated through Cargo feature propagation: the project's `[features]`
+  section defines a `rustls-tls` feature that enables `reqwest/rustls-tls` and
+  `reqwest/rustls-tls-native-roots`, along with the matching feature on every
+  rattler crate.
+- This avoids a dependency on [OpenSSL], which complicates static builds and
+  cross-compilation.
 
 ### The `no_gzip` flag
 
@@ -42,12 +46,23 @@ let raw_client = reqwest::Client::builder()
 
 By default reqwest negotiates gzip compression with servers (`Accept-Encoding:
 gzip`).  We disable this because repodata files are served pre-compressed as
-`.zst` or `.bz2`, and we handle decompression ourselves.  Letting reqwest add a
-second layer of compression would be wasteful.
+`.zst` or `.bz2`, and we handle decompression ourselves.  Double-compressing would waste CPU for no benefit.
 
 ## `reqwest_middleware`: the middleware chain
 
-[reqwest_middleware] wraps `reqwest::Client` with a chain of interceptors:
+[reqwest_middleware] wraps `reqwest::Client` with a chain of interceptors.
+
+A request passes through each middleware layer before reaching the server:
+
+```mermaid
+graph LR
+    Request --> Auth[Authentication]
+    Auth --> OCI[OCI Registry]
+    OCI --> Mirror[Mirror]
+    Mirror --> Retry[Retry]
+    Retry --> reqwest[reqwest::Client]
+    reqwest --> Server
+```
 
 ```rust
 let client = reqwest_middleware::ClientBuilder::new(raw_client.clone())
@@ -138,8 +153,8 @@ compatible but introduces a C dependency, complicates static builds, and causes
 security alerts when OpenSSL has vulnerabilities.
 
 **[rustls]**: a pure-Rust TLS 1.2/1.3 implementation.  No C code, no system
-dependency, easy to statically link.  It doesn't support some legacy features
-(TLS 1.0/1.1, older cipher suites), but that's a feature: rattler doesn't need
+dependency, easy to statically link.  It does not support some legacy features
+(TLS 1.0/1.1, older cipher suites), which is fine because rattler has no reason
 to talk to ancient servers.
 
 We use `rustls` via reqwest's `rustls-tls` feature flag.
@@ -210,6 +225,8 @@ hammering a struggling server.
 - `AuthenticationMiddleware` injects credentials for private channels.
 - `OciMiddleware` translates `oci://` URLs to registry API calls.
 - Streaming response bodies avoids loading large files into memory.
+- Retry middleware handles transient network failures gracefully.
+
 [reqwest]: https://docs.rs/reqwest
 [hyper]: https://hyper.rs
 [reqwest_middleware]: https://docs.rs/reqwest-middleware
@@ -218,5 +235,3 @@ hammering a struggling server.
 [reqwest-retry]: https://crates.io/crates/reqwest-retry
 [rattler]: https://github.com/conda/rattler
 [OpenSSL]: https://www.openssl.org
-
-- Retry middleware handles transient network failures gracefully.
