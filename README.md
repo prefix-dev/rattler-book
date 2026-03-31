@@ -36,11 +36,11 @@ The book covers the full lifecycle of a package manager:
 | 5 | The `add` Command | Adding packages to the manifest |
 | 6 | The `lock` Command | Dependency resolution and lock files |
 | 7 | The `install` Command | Downloading and linking packages |
-| 8 | The `shell` Command | Shell activation scripts |
+| 8 | The `shell-hook` Command | Shell activation scripts |
 | 9 | The `run` Command | Running commands in an environment |
 | 10 | The `build` Command | Building `.conda` packages |
 
-Plus deep-dive chapters on the conda package format, virtual packages, networking, the resolvo SAT solver, and the full Rattler crate ecosystem.
+Plus deep-dive chapters on the conda package format, run exports, virtual packages, networking, the resolvo SAT solver, the build script API, the full Rattler crate ecosystem, and adapting moonshot to your own language.
 
 ## The moonshot CLI
 
@@ -48,8 +48,11 @@ The worked example — **moonshot** — is a fully functional Lua package manage
 
 ```bash
 shot init                    # Create a new project
-shot add lua ">=5.4"         # Add a package
-shot install                 # Resolve and install dependencies
+shot search lua              # Search for packages
+shot add lua ">=5.4"         # Add a package to the manifest
+shot lock                    # Resolve dependencies and write the lock file
+shot install                 # Install packages into the environment
+shot shell-hook              # Print a shell activation script
 shot run lua my_script.lua   # Run a command in the environment
 shot build                   # Build a .conda package
 ```
@@ -67,13 +70,19 @@ examples/                # Example Lua packages (moonjson, mooncolor, moontempla
 Read the book online at **[prefix-dev.github.io/rattler-book](https://prefix-dev.github.io/rattler-book/)**, or build it locally:
 
 ```bash
-pixi run serve
+pixi run book-serve
 ```
 
 To build the moonshot CLI:
 
 ```bash
-cargo build --release
+pixi run build
+```
+
+Or without pixi (requires Rust 1.82+):
+
+```bash
+cargo build
 ```
 
 ## License
