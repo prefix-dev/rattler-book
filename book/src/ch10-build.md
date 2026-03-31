@@ -1074,40 +1074,6 @@ them in its manifest.
 That's the full loop. The `.conda` file you built is the same format that
 conda-forge uses to distribute tens of thousands of packages.
 
-## Wrapping vs layering
-
-There are two broad strategies for mixing conda with a language ecosystem.
-
-**Wrapping** means repackaging your language's libraries as `.conda` packages.
-The build script calls the language's own build tool (`gem build`,
-`python -m build`, `luarocks make`) and installs the result into `$PREFIX`.
-Everything goes through one solver, one lock file, one install. The solver sees
-the full dependency graph: native libraries and language packages together. This
-is what moonshot does for Lua, and what conda-forge does for Python and R.
-
-Wrapping works well when:
-
-- The language produces stable binary artifacts (interpreted, bytecode, or
-  stable C ABI)
-- The ecosystem is small enough to repackage, or conda-forge already did the
-  work
-
-**Layering** means using conda only for the native dependency graph. The
-language's packages stay in their own format (crates, npm packages, gems). Conda
-provides the native libraries (OpenSSL, libxml2, zlib) in the environment, and
-the language's build tool links against them at compile time.
-
-Layering is the pragmatic choice when:
-
-- The language has no stable ABI (Rust, Go), so prebuilt binaries would be tied
-  to a specific compiler version
-- The ecosystem is large and already has its own distribution (crates.io, npm)
-- You only need conda for the C/C++ dependencies underneath
-
-pixi supports both patterns. Python packages can be wrapped as conda packages or
-installed from PyPI alongside conda packages. The PyPI interop is a special case
-driven by conda's long history with Python, not a general pattern.
-
 ## Exercises
 
 !!! exercise-easy "Inspect Package Contents"
