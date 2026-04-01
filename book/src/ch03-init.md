@@ -119,7 +119,6 @@ alphabetical order, producing stable diffs when the manifest changes.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub project: ProjectMetadata,
-
     #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
     #[serde(default)]
     pub dependencies: BTreeMap<String, NamelessMatchSpec>,
@@ -147,6 +146,29 @@ it is a good default for getting started.
 The `platforms` field lists which platforms to solve for. By default it includes
 only the current platform, but you can add others (like `linux-64` or
 `osx-arm64`) to produce a lock file that works across machines.
+
+### `serde_with` and `DisplayFromStr`
+
+The dependency values in TOML are plain strings like `">=5.4"`, but we want them
+as typed `NamelessMatchSpec` values in Rust. The [serde_with] crate bridges this
+gap with `DisplayFromStr`:
+
+- **On read**: calls `NamelessMatchSpec::from_str` for each value
+- **On write**: calls `Display::fmt` to turn it back into a string
+- **Keys** are left alone (they're already `String`s)
+
+/// margin-note
+Confusingly, `serde_with` (the crate) exports `serde_as`. Also the `DisplayFromStr` is a somewhat
+confusing name and should be interpreted as that the type needs to implement the traits: `FromStr` and `Display`.
+///
+This follows "parse, don't validate": convert raw data into typed
+values at the boundary, so the rest of your code can assume validity without
+re-checking. The payoff is early error detection: a typo like `lua = ">==5.4"`
+is caught during TOML deserialization itself. If the spec string is malformed,
+`toml::from_str` returns an error before `Manifest` is ever constructed.
+
+`rattler_conda_types` already uses `serde_with` internally, so I felt we should
+introduce this here to get you familiar with it.
 
 ```{.rust #manifest-structs}
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -190,25 +212,6 @@ The `version`, `license`, and `description` fields are all optional. The
 `build` field references `BuildConfig`, which we define in
 [Chapter 10](ch10-build.md) when we implement `shot build`. An application
 project can leave all of these out.
-
-### `serde_with` and `DisplayFromStr`
-
-The dependency values in TOML are plain strings like `">=5.4"`, but we want them
-as typed `NamelessMatchSpec` values in Rust. The [serde_with] crate bridges this
-gap with `DisplayFromStr`:
-
-- **On read**: calls `NamelessMatchSpec::from_str` for each value
-- **On write**: calls `Display::fmt` to turn it back into a string
-- **Keys** are left alone (they're already `String`s)
-
-This follows the "parse, don't validate" principle: convert raw data into typed
-values at the boundary, so the rest of your code can assume validity without
-re-checking. The payoff is early error detection: a typo like `lua = ">==5.4"`
-is caught during TOML deserialization itself. If the spec string is malformed,
-`toml::from_str` returns an error before `Manifest` is ever constructed.
-
-`rattler_conda_types` already uses `serde_with` internally, so adding it here
-does not introduce a new transitive dependency.
 
 We list channels in the manifest rather than in a global config file.
 Historically in conda and pip, a lot of config lives in your global
