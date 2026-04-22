@@ -147,6 +147,19 @@ pub async fn execute(args: Args) -> miette::Result<()> {
 // ~/~ end
 }
 // ~/~ end
+// ~/~ begin <<book/src/ch10-build.md#build-reproducible-timestamp>>[init]
+/// Canonical placeholder recorded in `paths.json` instead of the real
+/// (random) build prefix. Matches conda-build's long-padded sentinel so the
+/// installer can perform length-preserving replacement on binary files.
+const PREFIX_PLACEHOLDER: &str = "/opt/anaconda1anaconda2anaconda3";
+
+fn build_timestamp() -> Option<chrono::DateTime<chrono::Utc>> {
+    std::env::var("SOURCE_DATE_EPOCH")
+        .ok()
+        .and_then(|s| s.parse::<i64>().ok())
+        .and_then(|s| chrono::DateTime::from_timestamp(s, 0))
+}
+// ~/~ end
 // ~/~ begin <<book/src/ch10-build.md#build-write-metadata>>[init]
 fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette::Result<()> {
 // ~/~ begin <<book/src/ch10-build.md#create-index-json>>[init]
@@ -197,9 +210,8 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
         purls: None,
         python_site_packages_path: None,
         track_features: vec![],
-        timestamp: Some(
-            rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now()),
-        ),
+        timestamp: build_timestamp()
+            .map(rattler_conda_types::utils::TimestampMs::from_datetime_millis),
     };
 // ~/~ end
 // ~/~ begin <<book/src/ch10-build.md#write-meta-files>>[init]
@@ -229,7 +241,11 @@ fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette:
 fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
     let mut entries = Vec::new();
 
-    for entry in WalkDir::new(prefix).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(prefix)
+        .sort_by_file_name()
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
         let meta = entry.metadata().into_diagnostic()?;
         if !meta.is_file() {
             continue;
@@ -251,7 +267,7 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
             path_type: PathType::HardLink,
             prefix_placeholder: Some(PrefixPlaceholder {
                 file_mode: FileMode::Text,
-                placeholder: prefix.display().to_string(),
+                placeholder: PREFIX_PLACEHOLDER.to_string(),
             }),
             sha256: Some(sha256),
             size_in_bytes: Some(size),
@@ -291,8 +307,10 @@ fn pack_conda(
     output_path: &Path,
     manifest: &Manifest,
 ) -> miette::Result<()> {
-    // Collect all files relative to the install prefix.
+    // Collect all files relative to the install prefix, sorted so the
+    // resulting archive has a stable file order (bit-reproducible builds).
     let files: Vec<PathBuf> = WalkDir::new(install_prefix)
+        .sort_by_file_name()
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_file())
@@ -326,7 +344,7 @@ fn pack_conda(
         manifest.build_string()
     );
 
-    let now = chrono::Utc::now();
+    let timestamp = build_timestamp();
     write_conda_package(
         writer,
         install_prefix,
@@ -334,7 +352,7 @@ fn pack_conda(
         CompressionLevel::Default,
         None, // use all available CPU threads for zstd
         &out_name,
-        Some(&now),
+        timestamp.as_ref(),
         None, // no progress bar (already shown by our spinner)
     )
     .into_diagnostic()

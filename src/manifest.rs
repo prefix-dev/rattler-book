@@ -19,7 +19,6 @@ pub const MANIFEST_FILENAME: &str = "moonshot.toml";
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Manifest {
     pub project: ProjectMetadata,
-
     #[serde_as(as = "BTreeMap<_, DisplayFromStr>")]
     #[serde(default)]
     pub dependencies: BTreeMap<String, NamelessMatchSpec>,

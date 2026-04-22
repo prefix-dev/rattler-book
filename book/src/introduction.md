@@ -6,16 +6,17 @@ A package manager automates finding, downloading, and installing software librar
 Here is what using the finished tool will look like:
 
 ```console
-$ shot init my-app --channel conda-forge --channel ../channel
+$ shot init my-app --channel ../channel --channel conda-forge
 $ shot add lumen
 $ shot install
-  1523 repodata records loaded
-  Solved 12 packages in 0.3s
-✔ Wrote moonshot.lock (12 packages)
-✔ Environment updated in 2.1s
+  47251 repodata records loaded
+  Solved 85 packages in 0.8s
+✔ Wrote moonshot.lock (85 packages)
+✔ Environment updated in 14.4s
   Activate with:  eval $(shot shell-hook)
 
 $ shot run lua -e "require('lumen').thumbnail('photo.jpg', 128)"
+wrote photo_thumb.jpg (128px thumbnail of photo.jpg)
 ```
 
 `lumen` is a small Lua module we will build in [Chapter 10](ch10-build.md). It wraps
@@ -29,7 +30,7 @@ $ shot build --output-dir ../channel
 Building lumen 0.1.0 (build lua_0)
   → Installing 1 build dependencies…
   → Running build script `build.lua`
-  → Packing 2 files…
+  → Packing 3 files…
   → Indexing channel at ../channel
 ✔ Built lumen-0.1.0-lua_0.conda
   package → ../channel/noarch/lumen-0.1.0-lua_0.conda

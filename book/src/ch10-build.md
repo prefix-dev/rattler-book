@@ -479,6 +479,7 @@ defined as we encounter it:
 <<build-imports>>
 <<build-args>>
 <<build-execute>>
+<<build-reproducible-timestamp>>
 <<build-write-metadata>>
 <<build-collect-paths>>
 <<build-sha256>>
@@ -684,9 +685,42 @@ Once the build script finishes, we turn the install prefix into a `.conda`
 archive. This involves writing metadata files, collecting file hashes, packing
 the archive, and indexing the output channel.
 
+First, a word on **reproducibility**. Without care, every rebuild of the
+same source produces a different archive, because wall-clock timestamps
+get stamped into the metadata, filesystem iteration order isn't guaranteed
+to be stable, and the random temp-directory path we use as the build
+prefix leaks into `paths.json` as `prefix_placeholder`. We sort directory
+walks explicitly, drive both timestamps from a single function, and record
+a canonical placeholder path rather than the real tempdir.
+
+The timestamp follows the [`SOURCE_DATE_EPOCH`] convention from
+reproducible-builds.org: if the environment variable is set, use it;
+otherwise omit the timestamp. The canonical placeholder matches
+conda-build's convention. It's a fixed, long string that the installer
+substitutes with the real install prefix at install time. For pure-noarch
+packages whose files don't embed absolute paths, that substitution never
+fires, but recording the canonical placeholder still makes the archive
+byte-identical across builds.
+
+``` {.rust #build-reproducible-timestamp}
+/// Canonical placeholder recorded in `paths.json` instead of the real
+/// (random) build prefix. Matches conda-build's long-padded sentinel so the
+/// installer can perform length-preserving replacement on binary files.
+const PREFIX_PLACEHOLDER: &str = "/opt/anaconda1anaconda2anaconda3";
+
+fn build_timestamp() -> Option<chrono::DateTime<chrono::Utc>> {
+    std::env::var("SOURCE_DATE_EPOCH")
+        .ok()
+        .and_then(|s| s.parse::<i64>().ok())
+        .and_then(|s| chrono::DateTime::from_timestamp(s, 0))
+}
+```
+
 Every conda package contains an `info/` directory with metadata. We need two
 files: `index.json` (which the solver reads to understand the package) and
 `paths.json` (which lists every file with its checksum).
+
+[`SOURCE_DATE_EPOCH`]: https://reproducible-builds.org/specs/source-date-epoch/
 
 ``` {.rust #build-write-metadata}
 fn write_package_metadata(install_prefix: &Path, manifest: &Manifest) -> miette::Result<()> {
@@ -749,9 +783,8 @@ runtime dependencies; and `noarch`/`subdir` control platform targeting.
         purls: None,
         python_site_packages_path: None,
         track_features: vec![],
-        timestamp: Some(
-            rattler_conda_types::utils::TimestampMs::from_datetime_millis(chrono::Utc::now()),
-        ),
+        timestamp: build_timestamp()
+            .map(rattler_conda_types::utils::TimestampMs::from_datetime_millis),
     };
 ```
 
@@ -788,7 +821,11 @@ in a `PathsJson` manifest:
 fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
     let mut entries = Vec::new();
 
-    for entry in WalkDir::new(prefix).into_iter().filter_map(|e| e.ok()) {
+    for entry in WalkDir::new(prefix)
+        .sort_by_file_name()
+        .into_iter()
+        .filter_map(|e| e.ok())
+    {
         let meta = entry.metadata().into_diagnostic()?;
         if !meta.is_file() {
             continue;
@@ -810,7 +847,7 @@ fn collect_paths_json(prefix: &Path) -> miette::Result<PathsJson> {
             path_type: PathType::HardLink,
             prefix_placeholder: Some(PrefixPlaceholder {
                 file_mode: FileMode::Text,
-                placeholder: prefix.display().to_string(),
+                placeholder: PREFIX_PLACEHOLDER.to_string(),
             }),
             sha256: Some(sha256),
             size_in_bytes: Some(size),
@@ -881,8 +918,10 @@ fn pack_conda(
     output_path: &Path,
     manifest: &Manifest,
 ) -> miette::Result<()> {
-    // Collect all files relative to the install prefix.
+    // Collect all files relative to the install prefix, sorted so the
+    // resulting archive has a stable file order (bit-reproducible builds).
     let files: Vec<PathBuf> = WalkDir::new(install_prefix)
+        .sort_by_file_name()
         .into_iter()
         .filter_map(|e| e.ok())
         .filter(|e| e.path().is_file())
@@ -916,7 +955,7 @@ fn pack_conda(
         manifest.build_string()
     );
 
-    let now = chrono::Utc::now();
+    let timestamp = build_timestamp();
     write_conda_package(
         writer,
         install_prefix,
@@ -924,7 +963,7 @@ fn pack_conda(
         CompressionLevel::Default,
         None, // use all available CPU threads for zstd
         &out_name,
-        Some(&now),
+        timestamp.as_ref(),
         None, // no progress bar (already shown by our spinner)
     )
     .into_diagnostic()

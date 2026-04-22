@@ -1,0 +1,14 @@
+[project]
+name        = "lumen"
+version     = "0.1.0"
+license     = "MIT"
+description = "A tiny Lua thumbnail helper"
+channels    = ["conda-forge"]
+
+[dependencies]
+lua = ">=5.4,<5.5"
+imagemagick = "*"
+
+[build]
+script = "build.lua"
+noarch = true
