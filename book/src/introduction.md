@@ -15,7 +15,7 @@ $ shot install
   47253 repodata records loaded
   Solved 85 packages in 0.9s
 ✔ Wrote moonshot.lock (85 packages)
-✔ Environment updated in 10.7s
+✔ Environment updated
   Activate with:  eval $(shot shell-hook)
 
 # Run a simple lua script in an isolated environment
