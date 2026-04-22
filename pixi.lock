@@ -543,11 +543,13 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/linux-64/bzip2-1.0.8-hda65f42_9.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/ca-certificates-2026.2.25-hbd8a1cb_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/cairo-1.18.4-he90730b_1.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/chafa-1.18.0-hdcaf24f_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/dav1d-1.2.1-hd590300_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/dbus-1.16.2-h24cb091_1.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/epoxy-1.5.10-hb03c661_2.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/ffmpeg-8.0.1-gpl_h44a2f75_915.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/fftw-3.3.11-nompi_h3b011a4_100.conda
+      - conda: https://conda.anaconda.org/conda-forge/linux-64/fish-4.6.0-h5f5450b_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-dejavu-sans-mono-2.37-hab24e00_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-inconsolata-3.000-h77eed37_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-source-code-pro-2.038-h77eed37_0.tar.bz2
@@ -738,6 +740,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/cairo-1.18.4-h7656bdc_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/cctools_impl_osx-64-1030.6.3-llvm22_1_h8fe25a2_4.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/cctools_osx-64-1030.6.3-llvm22_1_h0a1bb1c_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/chafa-1.18.0-h4b2bda9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/clang-22-22.1.0-default_h3b8fe2e_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/clang_impl_osx-64-22.1.0-default_he9bf3b8_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/clang_osx-64-22.1.0-hdc753ca_31.conda
@@ -750,6 +753,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-64/epoxy-1.5.10-h8616949_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/ffmpeg-8.0.1-gpl_hf5a4fc9_115.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-64/fftw-3.3.11-nompi_h54214ab_100.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-64/fish-4.6.0-ha09e916_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-dejavu-sans-mono-2.37-hab24e00_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-inconsolata-3.000-h77eed37_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-source-code-pro-2.038-h77eed37_0.tar.bz2
@@ -894,6 +898,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/cairo-1.18.4-he0f2337_1.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/cctools_impl_osx-arm64-1030.6.3-llvm22_1_hb5e89dc_4.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/cctools_osx-arm64-1030.6.3-llvm22_1_hbe26303_4.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/chafa-1.18.0-h0f4c7c5_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/clang-22-22.1.0-default_hb52604d_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/clang_impl_osx-arm64-22.1.0-default_h17d1ed9_0.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/clang_osx-arm64-22.1.0-hec3a5e5_31.conda
@@ -906,6 +911,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/epoxy-1.5.10-hc919400_2.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/ffmpeg-8.0.1-gpl_ha5d8480_115.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/fftw-3.3.11-nompi_haf1500d_100.conda
+      - conda: https://conda.anaconda.org/conda-forge/osx-arm64/fish-4.6.0-h6f4fc28_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-dejavu-sans-mono-2.37-hab24e00_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-inconsolata-3.000-h77eed37_0.tar.bz2
       - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-source-code-pro-2.038-h77eed37_0.tar.bz2
@@ -1475,6 +1481,70 @@ packages:
   version: 2026.2.25
   sha256: 027692e4402ad994f1c42e52a4997a9763c646b73e4096e4d5d6db8af1d6f0fa
   requires_python: '>=3.7'
+- conda: https://conda.anaconda.org/conda-forge/linux-64/chafa-1.18.0-hdcaf24f_0.conda
+  sha256: 9ac676cf022c8d0ef9a68d4b78a8c340bc3ad0b245f33fa6a1c26d5e03452cf4
+  md5: 9c203b7f279991ed6ed2c68631a2342c
+  depends:
+  - libgcc >=14
+  - __glibc >=2.17,<3.0.a0
+  - libglib >=2.86.1,<3.0a0
+  - libzlib >=1.3.1,<2.0a0
+  - libjpeg-turbo >=3.1.2,<4.0a0
+  - librsvg >=2.60.0,<3.0a0
+  - libwebp-base >=1.6.0,<2.0a0
+  - libfreetype >=2.14.1
+  - libfreetype6 >=2.14.1
+  - libavif16 >=1.3.0,<2.0a0
+  - libtiff >=4.7.1,<4.8.0a0
+  - cairo >=1.18.4,<2.0a0
+  - libjxl >=0.11,<0.12.0a0
+  - libpng >=1.6.50,<1.7.0a0
+  license: LGPL-3.0-or-later
+  license_family: LGPL
+  size: 519025
+  timestamp: 1762743770563
+- conda: https://conda.anaconda.org/conda-forge/osx-64/chafa-1.18.0-h4b2bda9_0.conda
+  sha256: 99014d3febe03d969c720b46c9ddc0288b03bc3af0164f8958a79ae9c635a73e
+  md5: 7399da0dd1e552a247d650a5d5fe2d78
+  depends:
+  - __osx >=10.13
+  - libfreetype >=2.14.1
+  - libfreetype6 >=2.14.1
+  - libjpeg-turbo >=3.1.2,<4.0a0
+  - libjxl >=0.11,<0.12.0a0
+  - cairo >=1.18.4,<2.0a0
+  - libintl >=0.25.1,<1.0a0
+  - librsvg >=2.60.0,<3.0a0
+  - libavif16 >=1.3.0,<2.0a0
+  - libwebp-base >=1.6.0,<2.0a0
+  - libtiff >=4.7.1,<4.8.0a0
+  - gdk-pixbuf >=2.44.4,<3.0a0
+  - libglib >=2.86.1,<3.0a0
+  license: LGPL-3.0-or-later
+  license_family: LGPL
+  size: 421050
+  timestamp: 1762743815414
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/chafa-1.18.0-h0f4c7c5_0.conda
+  sha256: 148aff8c22db70d125d7f0d7696ee2bc3caa7e687b2ad78b415cc49e7531658d
+  md5: 6cd01814b05f62d3e8d0c46ffeebc1b2
+  depends:
+  - __osx >=11.0
+  - libjxl >=0.11,<0.12.0a0
+  - gdk-pixbuf >=2.44.4,<3.0a0
+  - libtiff >=4.7.1,<4.8.0a0
+  - libjpeg-turbo >=3.1.2,<4.0a0
+  - libintl >=0.25.1,<1.0a0
+  - libavif16 >=1.3.0,<2.0a0
+  - libglib >=2.86.1,<3.0a0
+  - cairo >=1.18.4,<2.0a0
+  - libfreetype >=2.14.1
+  - libfreetype6 >=2.14.1
+  - libwebp-base >=1.6.0,<2.0a0
+  - librsvg >=2.60.0,<3.0a0
+  license: LGPL-3.0-or-later
+  license_family: LGPL
+  size: 385505
+  timestamp: 1762743815738
 - pypi: https://files.pythonhosted.org/packages/25/6f/ffe1e1259f384594063ea1869bfb6be5cdb8bc81020fc36c3636bc8302a1/charset_normalizer-3.4.6-cp314-cp314-macosx_10_15_universal2.whl
   name: charset-normalizer
   version: 3.4.6
@@ -2032,6 +2102,46 @@ packages:
   version: 3.25.2
   sha256: ca8afb0da15f229774c9ad1b455ed96e85a81373065fb10446672f64444ddf70
   requires_python: '>=3.10'
+- conda: https://conda.anaconda.org/conda-forge/linux-64/fish-4.6.0-h5f5450b_0.conda
+  sha256: c189371acefe2ceadcfe8bb1207592e14279bbb2041bca5ded38d6a099a0527e
+  md5: dc1c21bfd5e97f0c11906fab129f15ff
+  depends:
+  - libgcc >=14
+  - __glibc >=2.17,<3.0.a0
+  - ncurses >=6.5,<7.0a0
+  - pcre2 >=10.47,<10.48.0a0
+  constrains:
+  - __glibc >=2.17
+  license: GPL-2.0-only
+  license_family: GPL
+  size: 10832475
+  timestamp: 1774679111989
+- conda: https://conda.anaconda.org/conda-forge/osx-64/fish-4.6.0-ha09e916_0.conda
+  sha256: d0d33159bc5e08710646363c8cfc4aa9c3d03f8f5a36308a01a356a8112987e9
+  md5: d738fa29d86a810993fefec866978610
+  depends:
+  - __osx >=11.0
+  - ncurses >=6.5,<7.0a0
+  - pcre2 >=10.47,<10.48.0a0
+  constrains:
+  - __osx >=10.13
+  license: GPL-2.0-only
+  license_family: GPL
+  size: 10616294
+  timestamp: 1774679256083
+- conda: https://conda.anaconda.org/conda-forge/osx-arm64/fish-4.6.0-h6f4fc28_0.conda
+  sha256: 08ea663ecb5f60481b5798d48d179597e90102e35c41b73c4a74bb3d98b29df3
+  md5: b672e875a12fca11231789278071a265
+  depends:
+  - __osx >=11.0
+  - ncurses >=6.5,<7.0a0
+  - pcre2 >=10.47,<10.48.0a0
+  constrains:
+  - __osx >=11.0
+  license: GPL-2.0-only
+  license_family: GPL
+  size: 10255140
+  timestamp: 1774679304518
 - conda: https://conda.anaconda.org/conda-forge/noarch/font-ttf-dejavu-sans-mono-2.37-hab24e00_0.tar.bz2
   sha256: 58d7f40d2940dd0a8aa28651239adbf5613254df0f75789919c4e6762054403b
   md5: 0c96522c6bdaed4b1566d11387caaf45

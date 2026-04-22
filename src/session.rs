@@ -232,7 +232,7 @@ impl Session {
             .with_download_client(self.client.clone())
             .with_target_platform(platform)
             .with_installed_packages(installed_packages)
-            .with_execute_link_scripts(true)
+            .with_execute_link_scripts(false)
             .with_requested_specs(specs)
             .with_reporter(IndicatifReporter::builder().finish())
             .install(prefix, solution)

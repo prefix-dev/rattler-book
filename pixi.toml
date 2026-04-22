@@ -22,7 +22,9 @@ platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [feature.recording.dependencies]
 vhs = "*"                         # scripted terminal recordings → GIF (casts/*.tape → casts/*.gif)
-imagemagick = "*"                 # used by scripts/record-prep.sh to synthesize photo.jpg
+imagemagick = "*"                 # used by scripts/record-prep.sh to synthesize photo.jpg + bg.png
+chafa = "*"                       # renders photo_thumb.jpg as Unicode block art at end of cast
+fish = "*"                        # recording shell — highlights `shot` as a command keyword inline
 
 [feature.recording.tasks]
 _record-prep = { cmd = "bash scripts/record-prep.sh", depends-on = ["build-release"], description = "Build shot + lumen channel + seed photo.jpg/lumen.lua in /tmp/shot-demo/" }

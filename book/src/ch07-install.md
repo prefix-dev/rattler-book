@@ -165,7 +165,7 @@ impl Session {
             .with_download_client(self.client.clone())
             .with_target_platform(platform)
             .with_installed_packages(installed_packages)
-            .with_execute_link_scripts(true)
+            .with_execute_link_scripts(false)
             .with_requested_specs(specs)
             .with_reporter(IndicatifReporter::builder().finish())
             .install(prefix, solution)
@@ -214,10 +214,9 @@ in user environments.
 progress bars during download and extraction. If you want custom progress
 display, you can implement your own; it's a trait, not a concrete type.
 
-Setting `with_execute_link_scripts(true)` tells the installer to run conda's
-**link scripts** after installation. These are scripts in
-`<prefix>/etc/conda/activate.d/` that some packages use to set up post-install
-configuration (updating `PKG_CONFIG_PATH`, for example).
+`with_execute_link_scripts(false)` skips conda's **link scripts**, shell
+scripts that packages run after install. They're slow and a security
+footgun, and most modern recipes don't need them.
 
 The `resolve_and_install` method resolves and installs in one step, without writing a lock file.
 We'll reuse it in the build command ([Chapter 10](ch10-build.md)) to install

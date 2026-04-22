@@ -12,13 +12,13 @@ $ shot init my-app --channel ../channel --channel conda-forge
 $ shot add lumen
 # Install your environment
 $ shot install
-  47253 repodata records loaded
-  Solved 85 packages in 0.9s
+  47255 repodata records loaded
+  Solved 85 packages in 0.8s
 ✔ Wrote moonshot.lock (85 packages)
 ✔ Environment updated
   Activate with:  eval $(shot shell-hook)
 
-# Run a simple lua script in an isolated environment
+# Use lumen, the library we built, to write a 128px thumbnail of photo.jpg
 $ shot run lua -e "require('lumen').thumbnail('photo.jpg', 128)"
 wrote photo_thumb.jpg (128px thumbnail of photo.jpg)
 ```
