@@ -6,15 +6,19 @@ A package manager automates finding, downloading, and installing software librar
 Here is what using the finished tool will look like:
 
 ```console
+# Create a new project
 $ shot init my-app --channel ../channel --channel conda-forge
+# Add any conda dependency
 $ shot add lumen
+# Install your environment
 $ shot install
-  47251 repodata records loaded
-  Solved 85 packages in 0.8s
+  47253 repodata records loaded
+  Solved 85 packages in 0.9s
 ✔ Wrote moonshot.lock (85 packages)
-✔ Environment updated in 14.4s
+✔ Environment updated in 10.7s
   Activate with:  eval $(shot shell-hook)
 
+# Run a simple lua script in an isolated environment
 $ shot run lua -e "require('lumen').thumbnail('photo.jpg', 128)"
 wrote photo_thumb.jpg (128px thumbnail of photo.jpg)
 ```

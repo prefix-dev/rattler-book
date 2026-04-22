@@ -1,10 +1,22 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Build the `lumen` package into /tmp/shot-demo/channel/ and set up a clean
-# working directory at /tmp/shot-demo/work/ for recording.
+# Prep state for both VHS recordings.
 #
-# Prerequisite: `target/release/shot` already built (task has depends-on = build-release).
+#   /tmp/shot-demo/
+#     channel/        ← lumen package (populated via `shot build`)
+#     work/           ← cwd for install-and-run.tape
+#       photo.jpg     (seed image for lumen.thumbnail)
+#     lumen-build/    ← fresh copy of examples/lumen for build.tape
+#     build-channel/  ← cold output dir for build.tape
+#
+# Also primes the rattler package cache by running a throwaway
+# `shot install` once, so the in-tape install hits warm-cache speeds.
+#
+# Prerequisite: `target/release/shot` already built (build-release is a
+# depends-on of the pixi task). We use the global `shot` on PATH for the
+# recording itself (user has it installed at ~/.pixi/bin/shot), but prep
+# uses the local debug/release binary so a fresh clone works.
 
 REPO="$PWD"
 SHOT="$REPO/target/release/shot"
@@ -17,15 +29,29 @@ if [[ ! -x "$SHOT" ]]; then
 fi
 
 rm -rf "$ROOT"
-mkdir -p "$ROOT/channel"
+mkdir -p "$ROOT/channel" "$ROOT/work"
 
+# Build the lumen package into ../channel.
 cp -r "$REPO/examples/lumen" "$ROOT/lumen-src"
 (cd "$ROOT/lumen-src" && "$SHOT" build --output-dir ../channel)
 
-mkdir -p "$ROOT/work"
-
-# Seed a demo photo.jpg so `shot run lua -e "require('lumen').thumbnail(...)"`
-# has an input to operate on. magick is in the recording pixi env.
+# Seed the input image for lumen.thumbnail.
 magick -size 512x512 gradient:blue-orange "$ROOT/work/photo.jpg"
 
-echo "record-prep: lumen channel ready at $ROOT/channel"
+# Prime rattler's package cache with lumen + its transitive deps so the
+# tape's `shot install` completes in ~1 s instead of 15-30 s.
+mkdir -p "$ROOT/warmup"
+(
+    cd "$ROOT/warmup"
+    "$SHOT" init warmup --channel ../channel --channel conda-forge >/dev/null
+    "$SHOT" add lumen >/dev/null
+    "$SHOT" install >/dev/null
+)
+rm -rf "$ROOT/warmup"
+
+# Fresh build dir for build.tape (no sharing with the prep build).
+rm -rf "$ROOT/lumen-build" "$ROOT/build-channel"
+cp -r "$REPO/examples/lumen" "$ROOT/lumen-build"
+mkdir -p "$ROOT/build-channel"
+
+echo "record-prep: ready at $ROOT"

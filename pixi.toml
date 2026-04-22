@@ -21,13 +21,13 @@ moonshot = { path = "." }
 platforms = ["osx-arm64", "osx-64", "linux-64"]
 
 [feature.recording.dependencies]
-asciinema = "*"
+vhs = "*"                         # scripted terminal recordings → GIF (casts/*.tape → casts/*.gif)
 imagemagick = "*"                 # used by scripts/record-prep.sh to synthesize photo.jpg
 
 [feature.recording.tasks]
-_record-prep = { cmd = "bash scripts/record-prep.sh", depends-on = ["build-release"], description = "Build shot + lumen channel in /tmp/shot-demo/" }
-_record-install-and-run = { cmd = "bash scripts/record-install-and-run.sh", depends-on = ["_record-prep"], description = "Record casts/install-and-run.cast" }
-_record-build = { cmd = "bash scripts/record-build.sh", depends-on = ["_record-prep"], description = "Record casts/build.cast" }
+_record-prep = { cmd = "bash scripts/record-prep.sh", depends-on = ["build-release"], description = "Build shot + lumen channel + seed photo.jpg/lumen.lua in /tmp/shot-demo/" }
+_record-install-and-run = { cmd = "vhs casts/install-and-run.tape", depends-on = ["_record-prep"], description = "Record casts/install-and-run.gif" }
+_record-build = { cmd = "vhs casts/build.tape", depends-on = ["_record-prep"], description = "Record casts/build.gif" }
 
 [feature.book.dependencies]
 python = ">=3.11"
@@ -122,10 +122,10 @@ test = { depends-on = [
 bump = { cmd = "python scripts/set_version.py", description = "Bump version in pixi.toml and Cargo.toml (e.g. pixi run bump 0.2.0)" }
 release = { cmd = "gh workflow run release.yml", description = "Bump version, commit, push, and trigger release workflow" }
 
-# Blog recordings (asciinema .cast files in casts/)
-record-install-and-run = { depends-on = [{ task = "_record-install-and-run", environment = "recording" }], description = "Record casts/install-and-run.cast" }
-record-build = { depends-on = [{ task = "_record-build", environment = "recording" }], description = "Record casts/build.cast" }
-record-casts = { depends-on = ["record-install-and-run", "record-build"], description = "Record both .cast files for the blog" }
+# Blog recordings (VHS .gif files in casts/)
+record-install-and-run = { depends-on = [{ task = "_record-install-and-run", environment = "recording" }], description = "Record casts/install-and-run.gif" }
+record-build = { depends-on = [{ task = "_record-build", environment = "recording" }], description = "Record casts/build.gif" }
+record-casts = { depends-on = ["record-install-and-run", "record-build"], description = "Record both .gif files for the blog" }
 
 [environments]
 default = { solve-group = "default" }
